@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import DashboardPage from './assets/pages/DashboardPage'
+import CreateComplaintPage from './assets/pages/CreateComplaintPage'
 import LoginPage from './assets/pages/LoginPage'
 import RegisterPage from './assets/pages/RegisterPage'
 
@@ -24,6 +25,15 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
 
       <Route path="/cadastro" element={<RegisterPage />} />
+
+      <Route
+        path="/registrar-denuncia"
+        element={
+          <ProtectedRoute>
+            <CreateComplaintPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/dashboard"

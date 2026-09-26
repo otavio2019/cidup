@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import '../../App.css'
 
 // TODO: substituir os números e denúncias simulados pelos dados da API.
@@ -88,7 +89,7 @@ function DashboardPage() {
             <p>O que você deseja fazer hoje?</p>
           </div>
 
-          <a className="report-card" href="#denuncia">
+          <Link className="report-card" to="/registrar-denuncia">
             <div className="report-icon">!</div>
 
             <div>
@@ -97,7 +98,7 @@ function DashboardPage() {
             </div>
 
             <span className="report-arrow">→</span>
-          </a>
+          </Link>
 
           <section className="ai-report-section" id="denuncia">
             <div className="section-heading">
