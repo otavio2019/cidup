@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import DashboardPage from './assets/pages/DashboardPage'
+import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
 import CreateComplaintPage from './assets/pages/CreateComplaintPage'
+import DashboardPage from './assets/pages/DashboardPage'
 import LoginPage from './assets/pages/LoginPage'
 import RegisterPage from './assets/pages/RegisterPage'
-import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
-
 
 // TODO: substituir a proteção local por validação real do token JWT.
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -23,9 +22,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-
       <Route path="/login" element={<LoginPage />} />
-
       <Route path="/cadastro" element={<RegisterPage />} />
 
       <Route
@@ -37,6 +34,15 @@ function App() {
         }
       />
 
+      {/* Mantemos as duas URLs durante a transição do fluxo da equipe. */}
+      <Route
+        path="/registrar-denuncia/localizacao"
+        element={
+          <ProtectedRoute>
+            <ComplaintLocationPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/denuncia/localizacao"
         element={

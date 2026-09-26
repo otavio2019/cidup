@@ -16,31 +16,27 @@ type ComplaintData = {
 function ComplaintLocationPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
+  const [error, setError] = useState('')
 
-  const savedComplaint = useMemo(() => {
+  const complaint = useMemo(() => {
+    const stateData = routeLocation.state as ComplaintData | null
+    if (stateData) return stateData
+
     const savedData = sessionStorage.getItem('cidup-complaint-draft')
-
-    if (!savedData) {
-      return {}
-    }
+    if (!savedData) return {}
 
     try {
       return JSON.parse(savedData) as ComplaintData
     } catch {
       return {}
     }
-  }, [])
-
-  const complaint = (routeLocation.state as ComplaintData | null) ?? savedComplaint
+  }, [routeLocation.state])
 
   const [address, setAddress] = useState(
-    complaint.address ? `${complaint.address}, ${complaint.number}` : '',
+    complaint.address ? `${complaint.address}, ${complaint.number ?? 'S/N'}` : '',
   )
-  const [neighborhood, setNeighborhood] = useState(
-    complaint.neighborhood ?? '',
-  )
+  const [neighborhood, setNeighborhood] = useState(complaint.neighborhood ?? '')
   const [reference, setReference] = useState(complaint.complement ?? '')
-  const [error, setError] = useState('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -64,39 +60,28 @@ function ComplaintLocationPage() {
       longitude: null,
     }
 
-    sessionStorage.setItem(
-      'cidup-complaint-location',
-      JSON.stringify(locationData),
-    )
+    sessionStorage.setItem('cidup-complaint-location', JSON.stringify(locationData))
 
-    navigate('/denuncia/confirmacao', {
-      state: locationData,
-    })
+    // TODO: navegar para a confirmação quando ComplaintConfirmationPage estiver pronta.
+    navigate('/dashboard')
   }
 
   return (
     <main className="location-page">
       <header className="complaint-header">
-        <Link className="complaint-brand" to="/dashboard">
-          <span className="complaint-brand-mark" aria-hidden="true">
-            C
-          </span>
+        <Link className="complaint-brand" to="/dashboard" aria-label="Voltar ao Dashboard">
+          <span className="complaint-brand-mark" aria-hidden="true">C</span>
           <span>CidUp</span>
         </Link>
-
         <span className="complaint-step">Etapa 2 de 3</span>
       </header>
 
       <section className="location-shell" aria-labelledby="location-title">
-        <Link className="back-link" to="/registrar-denuncia">
-          ← Voltar para a denúncia
-        </Link>
+        <Link className="back-link" to="/registrar-denuncia">← Voltar para a denúncia</Link>
 
         <div className="location-heading">
           <p className="complaint-kicker">LOCALIZAÇÃO</p>
-
           <h1 id="location-title">Onde aconteceu?</h1>
-
           <p>
             Confirme o local do problema para que a equipe responsável consiga
             encontrar a ocorrência.
@@ -107,7 +92,6 @@ function ComplaintLocationPage() {
           <section className="location-card">
             <div className="form-section-title">
               <span>01</span>
-
               <div>
                 <h2>Confirme o endereço</h2>
                 <p>Revise os dados informados na etapa anterior.</p>
@@ -115,10 +99,7 @@ function ComplaintLocationPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="location-address">
-                Rua ou avenida <span>*</span>
-              </label>
-
+              <label htmlFor="location-address">Rua ou avenida <span>*</span></label>
               <input
                 id="location-address"
                 type="text"
@@ -132,10 +113,7 @@ function ComplaintLocationPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="location-neighborhood">
-                Bairro <span>*</span>
-              </label>
-
+              <label htmlFor="location-neighborhood">Bairro <span>*</span></label>
               <input
                 id="location-neighborhood"
                 type="text"
@@ -149,10 +127,7 @@ function ComplaintLocationPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="location-reference">
-                Ponto de referência <small>(opcional)</small>
-              </label>
-
+              <label htmlFor="location-reference">Ponto de referência <small>(opcional)</small></label>
               <input
                 id="location-reference"
                 type="text"
@@ -164,31 +139,16 @@ function ComplaintLocationPage() {
           </section>
 
           <section className="map-placeholder" aria-label="Mapa da localização">
-            <div className="map-placeholder-icon" aria-hidden="true">
-              ⌖
-            </div>
-
+            <div className="map-placeholder-icon" aria-hidden="true">⌖</div>
             <h2>Mapa da ocorrência</h2>
-
-            <p>
-              O mapa será integrado nesta etapa para confirmar a latitude e a
-              longitude do local.
-            </p>
-
+            <p>O mapa será integrado depois para confirmar a latitude e a longitude do local.</p>
             <span className="map-status">Localização manual confirmada</span>
           </section>
 
-          {error && (
-            <p className="form-message complaint-submit-error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <p className="form-message complaint-submit-error" role="alert">{error}</p>}
 
           <div className="complaint-actions">
-            <Link className="secondary-action" to="/registrar-denuncia">
-              Voltar
-            </Link>
-
+            <Link className="secondary-action" to="/registrar-denuncia">Voltar</Link>
             <button className="primary-action" type="submit">
               Confirmar localização <span aria-hidden="true">→</span>
             </button>
