@@ -4,6 +4,7 @@ import DashboardPage from './assets/pages/DashboardPage'
 import LoginPage from './assets/pages/LoginPage'
 import RegisterPage from './assets/pages/RegisterPage'
 
+// TODO: substituir a proteção local por validação real do token JWT.
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const isAuthenticated =
     localStorage.getItem('cidup-authenticated') === 'true'

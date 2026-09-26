@@ -1,5 +1,7 @@
 import '../../App.css'
 
+// TODO: substituir os números e denúncias simulados pelos dados da API.
+// TODO: conectar os links às telas de registrar denúncia e detalhes.
 function DashboardPage() {
   return (
     <main className="dashboard-page">

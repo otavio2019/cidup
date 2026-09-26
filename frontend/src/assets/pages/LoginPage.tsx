@@ -17,7 +17,8 @@ function LoginPage() {
       return
     }
 
-    // Simulação de login. Depois substituiremos por uma chamada para a API.
+    // HACK: login temporário para testar a navegação sem o backend conectado.
+    // TODO: substituir por POST /auth/login e salvar o JWT retornado pela API.
     localStorage.setItem('cidup-authenticated', 'true')
     navigate('/dashboard')
   }

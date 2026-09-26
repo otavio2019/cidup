@@ -23,6 +23,8 @@ function RegisterPage() {
       return
     }
 
+    // TODO: enviar nome, e-mail e senha para POST /auth/register.
+    // HACK: redirecionamento temporário enquanto a API não está conectada.
     setMensagem('Cadastro realizado! Redirecionando para o login...')
     window.setTimeout(() => navigate('/login'), 900)
   }
