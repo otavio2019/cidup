@@ -4,6 +4,8 @@ import DashboardPage from './assets/pages/DashboardPage'
 import CreateComplaintPage from './assets/pages/CreateComplaintPage'
 import LoginPage from './assets/pages/LoginPage'
 import RegisterPage from './assets/pages/RegisterPage'
+import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
+
 
 // TODO: substituir a proteção local por validação real do token JWT.
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -31,6 +33,15 @@ function App() {
         element={
           <ProtectedRoute>
             <CreateComplaintPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/denuncia/localizacao"
+        element={
+          <ProtectedRoute>
+            <ComplaintLocationPage />
           </ProtectedRoute>
         }
       />

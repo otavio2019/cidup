@@ -1430,3 +1430,127 @@ a {
     width: 100%;
   }
 }
+
+.location-page {
+  min-height: 100vh;
+  background: #f5f8fb;
+  color: #263238;
+}
+
+.location-shell {
+  width: min(860px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 46px 0 64px;
+}
+
+.location-heading {
+  margin-bottom: 30px;
+}
+
+.location-heading h1 {
+  margin: 0 0 10px;
+  color: #0d2b45;
+  font-size: clamp(30px, 5vw, 44px);
+  letter-spacing: -1.5px;
+}
+
+.location-heading > p:last-child {
+  max-width: 620px;
+  margin: 0;
+  color: #718096;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.location-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.location-card,
+.map-placeholder {
+  padding: 28px;
+  border: 1px solid #dfe8ef;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgba(13, 43, 69, 0.05);
+}
+
+.location-card .complaint-field {
+  margin-top: 18px;
+}
+
+.location-card .complaint-field:first-of-type {
+  margin-top: 0;
+}
+
+.map-placeholder {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 250px;
+  text-align: center;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.84)),
+    repeating-linear-gradient(
+      45deg,
+      #eaf3f8,
+      #eaf3f8 10px,
+      #f5f9fb 10px,
+      #f5f9fb 20px
+    );
+}
+
+.map-placeholder-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #1565c0;
+  font-size: 30px;
+}
+
+.map-placeholder h2 {
+  margin: 14px 0 6px;
+  color: #0d2b45;
+  font-size: 20px;
+}
+
+.map-placeholder p {
+  max-width: 430px;
+  margin: 0;
+  color: #718096;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.map-status {
+  margin-top: 16px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #236b2c;
+  background: #e8f5e9;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+@media (max-width: 600px) {
+  .location-shell {
+    width: calc(100% - 28px);
+    padding: 30px 0 42px;
+  }
+
+  .location-card,
+  .map-placeholder {
+    padding: 21px 18px;
+    border-radius: 13px;
+  }
+
+  .map-placeholder {
+    min-height: 220px;
+  }
+}
