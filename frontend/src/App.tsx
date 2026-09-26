@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
+import DashboardPage from './assets/pages/DashboardPage'
+import LoginPage from './assets/pages/LoginPage'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const isAuthenticated =
     localStorage.getItem('cidup-authenticated') === 'true'
 

@@ -1,6 +1,6 @@
-import './App.css'
+import '../../App.css'
 
-function App() {
+function DashboardPage() {
   return (
     <main className="dashboard-page">
       <header className="dashboard-header">
@@ -147,4 +147,4 @@ function App() {
   )
 }
 
-export default App
+export default DashboardPage
