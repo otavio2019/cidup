@@ -33,6 +33,24 @@ Na raiz do projeto, execute:
 docker compose up --build
 ```
 
+O arquivo `.env` é opcional enquanto o assistente de IA não estiver sendo
+utilizado. Para criar uma configuração local, copie o modelo:
+
+```bash
+cp .env.example .env
+```
+
+Se o Docker apresentar `permission denied` ao acessar `/var/run/docker.sock`,
+adicione o usuário ao grupo do Docker e abra uma nova sessão:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps
+```
+
+Como alternativa temporária, use `sudo docker compose up --build -d`.
+
 Endereços locais:
 
 - Frontend: <http://localhost:5173>
