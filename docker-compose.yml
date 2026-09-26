@@ -8,6 +8,9 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
+      AI_API_KEY: ${AI_API_KEY}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules

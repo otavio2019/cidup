@@ -1,8 +1,62 @@
+import { useState } from 'react'
 import '../../App.css'
 
 // TODO: substituir os números e denúncias simulados pelos dados da API.
 // TODO: conectar os links às telas de registrar denúncia e detalhes.
 function DashboardPage() {
+  const [description, setDescription] = useState('')
+  const [draft, setDraft] = useState<{
+    title: string
+    category: string
+    priority: string
+    summary: string
+  } | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [aiMessage, setAiMessage] = useState('')
+
+  async function generateDraft() {
+    setAiMessage('')
+    setDraft(null)
+    setIsGenerating(true)
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/ai/complaint-draft`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description }),
+        },
+      )
+      const data = (await response.json()) as {
+        error?: string
+        title?: string
+        category?: string
+        priority?: string
+        summary?: string
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Não foi possível gerar o rascunho.')
+      }
+
+      setDraft({
+        title: data.title ?? '',
+        category: data.category ?? '',
+        priority: data.priority ?? '',
+        summary: data.summary ?? '',
+      })
+    } catch (error) {
+      setAiMessage(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível gerar o rascunho.',
+      )
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   return (
     <main className="dashboard-page">
       <header className="dashboard-header">
@@ -44,6 +98,50 @@ function DashboardPage() {
 
             <span className="report-arrow">→</span>
           </a>
+
+          <section className="ai-report-section" id="denuncia">
+            <div className="section-heading">
+              <div>
+                <p className="ai-kicker">ASSISTENTE DE DENÚNCIA</p>
+                <h3>Transforme seu relato em uma denúncia clara</h3>
+              </div>
+              <span className="ai-badge">IA</span>
+            </div>
+
+            <p className="ai-description">
+              Conte o que aconteceu, onde foi e qualquer detalhe importante.
+              A IA vai preparar um rascunho para você revisar.
+            </p>
+            <textarea
+              className="ai-textarea"
+              placeholder="Ex.: Há um buraco grande na Rua das Flores, perto da escola..."
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={4}
+            />
+            <button
+              className="ai-button"
+              type="button"
+              onClick={generateDraft}
+              disabled={isGenerating || description.trim().length < 10}
+            >
+              {isGenerating ? 'Preparando rascunho...' : 'Preparar denúncia'}
+            </button>
+
+            {aiMessage && <p className="ai-message">{aiMessage}</p>}
+
+            {draft && (
+              <div className="ai-draft" aria-live="polite">
+                <span className="draft-label">RASCUNHO PARA REVISÃO</span>
+                <h4>{draft.title}</h4>
+                <div className="draft-meta">
+                  <span>{draft.category}</span>
+                  <span>{draft.priority}</span>
+                </div>
+                <p>{draft.summary}</p>
+              </div>
+            )}
+          </section>
 
           <div className="summary-grid">
             <article className="summary-card blue-card">
