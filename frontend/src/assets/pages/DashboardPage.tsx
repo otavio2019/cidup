@@ -72,7 +72,7 @@ function DashboardPage() {
           </a>
 
           <a href="#denuncia">Registrar denúncia</a>
-          <a href="#minhas-denuncias">Minhas denúncias</a>
+          <Link to="/minhas-denuncias">Minhas denúncias</Link>
           <a href="#perfil">Perfil</a>
         </nav>
 
@@ -170,7 +170,7 @@ function DashboardPage() {
           <section className="complaints-section">
             <div className="section-heading">
               <h3>Acompanhe suas denúncias</h3>
-              <a href="#todas">Ver todas →</a>
+              <Link to="/minhas-denuncias">Ver todas →</Link>
             </div>
 
             <article className="complaint-item">

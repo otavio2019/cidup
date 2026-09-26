@@ -617,6 +617,246 @@ a {
   background: #f5f7fa;
 }
 
+/* Base da área de acompanhamento e do cabeçalho compartilhado. */
+.my-complaints-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.complaints-brand {
+  display: block;
+}
+
+.complaints-page-content {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: 52px 28px 72px;
+}
+
+/* Títulos e itens da listagem. */
+.my-complaints-heading,
+.complaint-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.my-complaints-heading {
+  margin-bottom: 28px;
+}
+
+.my-complaints-heading h2,
+.complaint-detail-heading h2 {
+  margin: 0;
+  color: #0d2b45;
+  font-size: 34px;
+  line-height: 1.2;
+}
+
+.my-complaints-heading > div > p:last-child,
+.complaints-empty-state p {
+  color: #647482;
+  line-height: 1.5;
+}
+
+.my-complaints-heading > div > p:last-child {
+  margin: 9px 0 0;
+}
+
+.my-complaints-list {
+  border-top: 1px solid #d9e2e8;
+}
+
+.my-complaint-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 24px 4px;
+  border-bottom: 1px solid #d9e2e8;
+}
+
+.my-complaint-main {
+  min-width: 0;
+}
+
+.complaint-protocol {
+  color: #34705e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.my-complaint-main h3 {
+  margin: 7px 0 5px;
+  color: #183b35;
+  font-size: 20px;
+}
+
+.my-complaint-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #52645f;
+  line-height: 1.5;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.my-complaint-address,
+.my-complaint-date {
+  margin: 10px 0 0;
+}
+
+.my-complaint-address {
+  color: #475a55;
+  font-size: 14px;
+}
+
+.my-complaint-address span {
+  margin-right: 7px;
+  color: #34705e;
+}
+
+.my-complaint-date {
+  color: #75827e;
+  font-size: 13px;
+}
+
+.my-complaint-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.complaint-details-link,
+.complaints-back-link {
+  color: #176b55;
+  font-weight: 700;
+}
+
+.complaint-details-link {
+  white-space: nowrap;
+}
+
+.complaint-details-link:hover,
+.complaints-back-link:hover {
+  text-decoration: underline;
+}
+
+/* Cores de status e superfícies vazias/de detalhe. */
+.status-received {
+  color: #205d4b;
+  background: #e0f1e9;
+}
+
+.status-service {
+  color: #285c87;
+  background: #e2eff8;
+}
+
+.status-canceled {
+  color: #75483e;
+  background: #f6e8e3;
+}
+
+.complaints-empty-state,
+.complaint-detail-panel {
+  padding: 30px;
+  border: 1px solid #dce5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.complaints-empty-state {
+  text-align: center;
+}
+
+.complaints-empty-state > span {
+  color: #34705e;
+  font-size: 34px;
+}
+
+.complaints-empty-state h2,
+.complaints-empty-state h3 {
+  margin: 12px 0 8px;
+  color: #183b35;
+}
+
+.complaints-empty-state p {
+  margin: 0 0 20px;
+}
+
+/* Informações completas da denúncia. */
+.complaints-back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.complaint-detail-heading {
+  align-items: flex-start;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e2e8e5;
+}
+
+.complaint-detail-heading .complaint-protocol {
+  display: inline-block;
+  margin-top: 12px;
+}
+
+.complaint-detail-list {
+  display: grid;
+  gap: 20px;
+  margin: 24px 0 0;
+}
+
+.complaint-detail-list dt {
+  margin-bottom: 6px;
+  color: #647482;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.complaint-detail-list dd {
+  margin: 0;
+  color: #263b35;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Empilha os controles em telas estreitas. */
+@media (max-width: 680px) {
+  .complaints-page-content {
+    padding: 34px 18px 52px;
+  }
+
+  .my-complaints-heading,
+  .my-complaint-item,
+  .complaint-detail-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .my-complaints-heading h2,
+  .complaint-detail-heading h2 {
+    font-size: 28px;
+  }
+
+  .my-complaint-actions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .complaints-empty-state,
+  .complaint-detail-panel {
+    padding: 22px;
+  }
+}
+
 
 /* Login — visual institucional, acolhedor e responsivo */
 .login-page {

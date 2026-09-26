@@ -3,6 +3,9 @@ import { Link, useLocation } from 'react-router-dom'
 import '../../App.css'
 
 type ComplaintData = {
+  protocol?: string
+  registeredAt?: string
+  status?: string
   type?: string
   description?: string
   address?: string
@@ -28,8 +31,7 @@ function ComplaintConfirmationPage() {
     }
   }, [location.state])
 
-  // TODO: substituir pelo protocolo gerado pela API e salvo no banco.
-  const protocol = 'CIDUP-000001'
+  const protocol = complaint.protocol ?? 'CIDUP-000001'
 
   return (
     <main className="confirmation-page">
@@ -73,7 +75,7 @@ function ComplaintConfirmationPage() {
         </div>
 
         <div className="confirmation-actions">
-          <Link className="primary-action" to="/dashboard">
+          <Link className="primary-action" to="/minhas-denuncias">
             Acompanhar minhas denúncias
           </Link>
           <Link className="secondary-action" to="/dashboard">

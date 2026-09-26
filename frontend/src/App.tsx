@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ComplaintConfirmationPage from './assets/pages/ComplaintConfirmationPage'
+import ComplaintDetailsPage from './assets/pages/ComplaintDetailsPage'
 import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
 import CreateComplaintPage from './assets/pages/CreateComplaintPage'
 import DashboardPage from './assets/pages/DashboardPage'
 import LoginPage from './assets/pages/LoginPage'
+import MyComplaintsPage from './assets/pages/MyComplaintsPage'
 import RegisterPage from './assets/pages/RegisterPage'
 
 // TODO: substituir a proteção local por validação real do token JWT.
@@ -67,6 +69,24 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/minhas-denuncias"
+        element={
+          <ProtectedRoute>
+            <MyComplaintsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/denuncias/:protocol"
+        element={
+          <ProtectedRoute>
+            <ComplaintDetailsPage />
           </ProtectedRoute>
         }
       />

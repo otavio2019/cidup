@@ -13,6 +13,12 @@ type ComplaintData = {
   photoName?: string | null
 }
 
+type RegisteredComplaint = ComplaintData & {
+  protocol: string
+  registeredAt: string
+  status: string
+}
+
 function ComplaintLocationPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
@@ -60,10 +66,35 @@ function ComplaintLocationPage() {
       longitude: null,
     }
 
+    let existingComplaints: RegisteredComplaint[] = []
+    try {
+      const storedComplaints = JSON.parse(
+        localStorage.getItem('cidup-complaints') ?? '[]',
+      ) as RegisteredComplaint[]
+      if (Array.isArray(storedComplaints)) existingComplaints = storedComplaints
+    } catch {
+      existingComplaints = []
+    }
+
+    const nextNumber = existingComplaints.reduce((highest, item) => {
+      const number = Number(item.protocol?.replace('CIDUP-', ''))
+      return Number.isFinite(number) ? Math.max(highest, number) : highest
+    }, 0) + 1
+    const registeredComplaint: RegisteredComplaint = {
+      ...locationData,
+      protocol: `CIDUP-${String(nextNumber).padStart(6, '0')}`,
+      registeredAt: new Date().toISOString(),
+      status: 'Recebida',
+    }
+
+    localStorage.setItem(
+      'cidup-complaints',
+      JSON.stringify([...existingComplaints, registeredComplaint]),
+    )
     sessionStorage.setItem('cidup-complaint-location', JSON.stringify(locationData))
 
     navigate('/denuncia/confirmacao', {
-      state: locationData,
+      state: registeredComplaint,
     })
   }
 
