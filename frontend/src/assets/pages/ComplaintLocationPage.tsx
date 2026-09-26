@@ -62,8 +62,9 @@ function ComplaintLocationPage() {
 
     sessionStorage.setItem('cidup-complaint-location', JSON.stringify(locationData))
 
-    // TODO: navegar para a confirmação quando ComplaintConfirmationPage estiver pronta.
-    navigate('/dashboard')
+    navigate('/denuncia/confirmacao', {
+      state: locationData,
+    })
   }
 
   return (

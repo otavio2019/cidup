@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import ComplaintConfirmationPage from './assets/pages/ComplaintConfirmationPage'
 import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
 import CreateComplaintPage from './assets/pages/CreateComplaintPage'
 import DashboardPage from './assets/pages/DashboardPage'
@@ -48,6 +49,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ComplaintLocationPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/denuncia/confirmacao"
+        element={
+          <ProtectedRoute>
+            <ComplaintConfirmationPage />
           </ProtectedRoute>
         }
       />
