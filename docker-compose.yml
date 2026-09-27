@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cidup
+      POSTGRES_PASSWORD: cidup_dev
+      POSTGRES_DB: cidup
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ./backend
@@ -8,6 +20,7 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
+      DATABASE_URL: postgresql://cidup:cidup_dev@db:5432/cidup?schema=public
       AI_API_KEY: ${AI_API_KEY:-}
       AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
       AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
@@ -15,6 +28,8 @@ services:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
     command: npm run dev
+    depends_on:
+      - db
 
   frontend:
     build:
@@ -33,5 +48,6 @@ services:
       - backend
 
 volumes:
+  postgres_data:
   backend_node_modules:
   frontend_node_modules:

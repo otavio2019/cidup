@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { apiRequest, type Complaint } from '../../api'
 import '../../App.css'
 
 // TODO: substituir os números e denúncias simulados pelos dados da API.
 // TODO: conectar os links às telas de registrar denúncia e detalhes.
 function DashboardPage() {
+  const [complaints, setComplaints] = useState<Complaint[]>([])
+  const [complaintMessage, setComplaintMessage] = useState('')
   const [description, setDescription] = useState('')
   const [draft, setDraft] = useState<{
     title: string
@@ -14,6 +17,22 @@ function DashboardPage() {
   } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
+
+  useEffect(() => {
+    apiRequest<{ complaints: Complaint[] }>('/api/complaints')
+      .then((data) => setComplaints(data.complaints))
+      .catch((error: unknown) => setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível carregar as denúncias.'))
+  }, [])
+
+  async function removeComplaint(id: number) {
+    if (!window.confirm('Excluir esta denúncia?')) return
+    try {
+      await apiRequest(`/api/complaints/${id}`, { method: 'DELETE' })
+      setComplaints((current) => current.filter((complaint) => complaint.id !== id))
+    } catch (error) {
+      setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível excluir a denúncia.')
+    }
+  }
 
   async function generateDraft() {
     setAiMessage('')
@@ -148,21 +167,21 @@ function DashboardPage() {
             <article className="summary-card blue-card">
               <span className="summary-icon">▣</span>
               <p>Denúncias abertas</p>
-              <strong>12</strong>
+              <strong>{complaints.filter((complaint) => complaint.status === 'RECEIVED' || complaint.status === 'IN_ANALYSIS').length}</strong>
               <span>Aguardando análise</span>
             </article>
 
             <article className="summary-card yellow-card">
               <span className="summary-icon">◷</span>
               <p>Em atendimento</p>
-              <strong>8</strong>
+              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE').length}</strong>
               <span>Em análise pelos órgãos</span>
             </article>
 
             <article className="summary-card green-card">
               <span className="summary-icon">✓</span>
               <p>Resolvidas</p>
-              <strong>24</strong>
+              <strong>{complaints.filter((complaint) => complaint.status === 'RESOLVED').length}</strong>
               <span>Problemas solucionados</span>
             </article>
           </div>
@@ -173,29 +192,19 @@ function DashboardPage() {
               <Link to="/minhas-denuncias">Ver todas →</Link>
             </div>
 
-            <article className="complaint-item">
-              <div>
-                <strong>#2024-001234</strong>
-                <p>Buraco na via pública</p>
-                <small>Registrada em 12/04/2024</small>
-              </div>
-
-              <span className="status status-analysis">Em análise</span>
-
-              <a href="#detalhes">Ver detalhes →</a>
-            </article>
-
-            <article className="complaint-item">
-              <div>
-                <strong>#2024-000987</strong>
-                <p>Lâmpada queimada</p>
-                <small>Registrada em 03/04/2024</small>
-              </div>
-
-              <span className="status status-solved">Resolvida</span>
-
-              <a href="#detalhes">Ver detalhes →</a>
-            </article>
+            {complaintMessage && <p className="form-message" role="alert">{complaintMessage}</p>}
+            {complaints.length === 0 && !complaintMessage && <p>Nenhuma denúncia registrada ainda.</p>}
+            {complaints.slice(0, 5).map((complaint) => (
+              <article className="complaint-item" key={complaint.id}>
+                <div>
+                  <strong>{complaint.protocol}</strong>
+                  <p>{complaint.title}</p>
+                  <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
+                </div>
+                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : 'status-analysis'}`}>{complaint.status}</span>
+                <button type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
+              </article>
+            ))}
           </section>
         </div>
 

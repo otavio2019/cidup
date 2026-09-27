@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { apiRequest } from '../../api'
 import '../../App.css'
 
 type ComplaintFormData = {
@@ -124,7 +125,7 @@ function CreateComplaintPage() {
     return nextErrors
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors = validateForm()
 
@@ -144,12 +145,16 @@ function CreateComplaintPage() {
       photoName: photo?.name ?? null,
     }
 
-    // HACK: guardar temporariamente até a API POST /api/complaints existir.
-    sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(complaintDraft))
-    setSubmitError('')
-    navigate('/registrar-denuncia/localizacao', {
-      state: complaintDraft,
-    })
+    try {
+      const data = await apiRequest<{ complaint: { protocol: string } }>('/api/complaints', {
+        method: 'POST',
+        body: JSON.stringify(complaintDraft),
+      })
+      setSubmitError('')
+      navigate('/dashboard', { state: { protocol: data.complaint.protocol } })
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Não foi possível registrar a denúncia.')
+    }
   }
 
   return (

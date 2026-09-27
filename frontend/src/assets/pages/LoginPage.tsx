@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { apiRequest } from '../../api'
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -9,7 +10,7 @@ function LoginPage() {
   const [mensagem, setMensagem] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!email || !senha) {
@@ -17,10 +18,17 @@ function LoginPage() {
       return
     }
 
-    // HACK: login temporário para testar a navegação sem o backend conectado.
-    // TODO: substituir por POST /auth/login e salvar o JWT retornado pela API.
-    localStorage.setItem('cidup-authenticated', 'true')
-    navigate('/dashboard')
+    try {
+      const data = await apiRequest<{ user: { id: number } }>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password: senha }),
+      })
+      localStorage.setItem('cidup-authenticated', 'true')
+      localStorage.setItem('cidup-user-id', String(data.user.id))
+      navigate('/dashboard')
+    } catch (error) {
+      setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')
+    }
   }
 
   return (

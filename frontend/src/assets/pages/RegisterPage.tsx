@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { apiRequest } from '../../api'
 
 function RegisterPage() {
   const navigate = useNavigate()
@@ -11,7 +12,7 @@ function RegisterPage() {
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!nome || !email || !telefone || !senha || !confirmarSenha) {
@@ -24,17 +25,22 @@ function RegisterPage() {
       return
     }
 
-    localStorage.setItem('cidup-profile', JSON.stringify({
-      name: nome.trim(),
-      email: email.trim(),
-      phone: telefone.trim(),
-      registeredAt: new Date().toISOString(),
-    }))
-
-    // TODO: enviar nome, e-mail, telefone e senha para POST /auth/register.
-    // HACK: redirecionamento temporário enquanto a API não está conectada.
-    setMensagem('Cadastro realizado! Redirecionando para o login...')
-    window.setTimeout(() => navigate('/login'), 900)
+    try {
+      await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name: nome, email, phone: telefone, password: senha }),
+      })
+      localStorage.setItem('cidup-profile', JSON.stringify({
+        name: nome.trim(),
+        email: email.trim(),
+        phone: telefone.trim(),
+        registeredAt: new Date().toISOString(),
+      }))
+      setMensagem('Cadastro realizado! Redirecionando para o login...')
+      window.setTimeout(() => navigate('/login'), 900)
+    } catch (error) {
+      setMensagem(error instanceof Error ? error.message : 'Não foi possível criar o cadastro.')
+    }
   }
 
   return (
