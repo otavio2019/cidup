@@ -2018,3 +2018,98 @@ a {
     text-align: left;
   }
 }
+
+
+/* Linha do tempo do acompanhamento da denúncia */
+.complaint-timeline {
+  margin: 26px 0 4px;
+  padding: 22px 0 4px;
+  border-bottom: 1px solid #e2e8e5;
+}
+
+.complaint-timeline h3 {
+  margin: 0 0 20px;
+  color: #183b35;
+  font-size: 18px;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-list li,
+.timeline-canceled {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  min-height: 66px;
+}
+
+.timeline-list li:not(:last-child)::after {
+  position: absolute;
+  top: 31px;
+  bottom: 0;
+  left: 14px;
+  width: 2px;
+  content: '';
+  background: #dce5e1;
+}
+
+.timeline-marker {
+  z-index: 1;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 2px solid #cbd8d2;
+  border-radius: 50%;
+  color: #81918a;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.timeline-list li.is-completed .timeline-marker {
+  border-color: #34705e;
+  color: #ffffff;
+  background: #34705e;
+}
+
+.timeline-list li.is-completed:not(:last-child)::after {
+  background: #7fb5a3;
+}
+
+.timeline-list li.is-current .timeline-marker {
+  box-shadow: 0 0 0 5px rgba(52, 112, 94, 0.13);
+}
+
+.timeline-list strong,
+.timeline-canceled strong {
+  display: block;
+  padding-top: 4px;
+  color: #263b35;
+  font-size: 14px;
+}
+
+.timeline-list p,
+.timeline-canceled p {
+  margin: 4px 0 0;
+  color: #75827e;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.timeline-canceled {
+  min-height: 48px;
+}
+
+.timeline-canceled .timeline-marker {
+  border-color: #a85c4c;
+  color: #ffffff;
+  background: #a85c4c;
+}
