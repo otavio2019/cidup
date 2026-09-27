@@ -73,13 +73,13 @@ function DashboardPage() {
 
           <a href="#denuncia">Registrar denúncia</a>
           <Link to="/minhas-denuncias">Minhas denúncias</Link>
-          <a href="#perfil">Perfil</a>
+          <Link to="/perfil">Perfil</Link>
         </nav>
 
-        <button className="profile-button" type="button">
+        <Link className="profile-button" to="/perfil">
           <span className="profile-icon">●</span>
           Meu perfil
-        </button>
+        </Link>
       </header>
 
       <section className="dashboard-content">
@@ -209,14 +209,14 @@ function DashboardPage() {
           </div>
 
           <div className="sidebar-menu">
-            <a href="#perfil">
+            <Link to="/perfil">
               <span>●</span>
               <div>
                 <strong>Meu perfil</strong>
                 <small>Visualize e edite seus dados</small>
               </div>
               <b>›</b>
-            </a>
+            </Link>
 
             <a href="#configuracoes">
               <span>⚙</span>

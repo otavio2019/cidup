@@ -6,6 +6,7 @@ function RegisterPage() {
   const navigate = useNavigate()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
   const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
@@ -13,7 +14,7 @@ function RegisterPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!nome || !email || !senha || !confirmarSenha) {
+    if (!nome || !email || !telefone || !senha || !confirmarSenha) {
       setMensagem('Preencha todos os campos para continuar.')
       return
     }
@@ -23,7 +24,14 @@ function RegisterPage() {
       return
     }
 
-    // TODO: enviar nome, e-mail e senha para POST /auth/register.
+    localStorage.setItem('cidup-profile', JSON.stringify({
+      name: nome.trim(),
+      email: email.trim(),
+      phone: telefone.trim(),
+      registeredAt: new Date().toISOString(),
+    }))
+
+    // TODO: enviar nome, e-mail, telefone e senha para POST /auth/register.
     // HACK: redirecionamento temporário enquanto a API não está conectada.
     setMensagem('Cadastro realizado! Redirecionando para o login...')
     window.setTimeout(() => navigate('/login'), 900)
@@ -92,6 +100,21 @@ function RegisterPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="cadastro-telefone">Telefone</label>
+              <div className="input-wrap">
+                <span className="input-icon" aria-hidden="true">☎</span>
+                <input
+                  id="cadastro-telefone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={telefone}
+                  onChange={(event) => setTelefone(event.target.value)}
+                  autoComplete="tel"
                 />
               </div>
             </div>

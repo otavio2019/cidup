@@ -7,6 +7,7 @@ import CreateComplaintPage from './assets/pages/CreateComplaintPage'
 import DashboardPage from './assets/pages/DashboardPage'
 import LoginPage from './assets/pages/LoginPage'
 import MyComplaintsPage from './assets/pages/MyComplaintsPage'
+import ProfilePage from './assets/pages/ProfilePage'
 import RegisterPage from './assets/pages/RegisterPage'
 
 // TODO: substituir a proteção local por validação real do token JWT.
@@ -78,6 +79,15 @@ function App() {
         element={
           <ProtectedRoute>
             <MyComplaintsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/perfil"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

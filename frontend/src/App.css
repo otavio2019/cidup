@@ -617,6 +617,84 @@ a {
   background: #f5f7fa;
 }
 
+/* Dados do cidadão exibidos na página de perfil. */
+.profile-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.profile-content {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 52px 28px 72px;
+}
+
+.profile-heading {
+  margin-bottom: 24px;
+}
+
+.profile-heading h2 {
+  margin: 0;
+  color: #0d2b45;
+  font-size: 34px;
+}
+
+.profile-panel {
+  padding: 8px 28px 28px;
+  border: 1px solid #dce5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.profile-fields {
+  margin: 0;
+}
+
+.profile-field {
+  padding: 19px 0;
+  border-bottom: 1px solid #e2e8e5;
+}
+
+.profile-field dt {
+  margin-bottom: 6px;
+  color: #647482;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-field dd {
+  margin: 0;
+  color: #263b35;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.profile-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 680px) {
+  .profile-content {
+    padding: 34px 18px 52px;
+  }
+
+  .profile-heading h2 {
+    font-size: 28px;
+  }
+
+  .profile-panel {
+    padding: 4px 20px 22px;
+  }
+}
+
 /* Base da área de acompanhamento e do cabeçalho compartilhado. */
 .my-complaints-page {
   min-height: 100vh;
