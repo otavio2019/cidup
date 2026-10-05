@@ -547,7 +547,7 @@ a {
   }
 
   .dashboard-content {
-    padding: 30px 18px;
+    padding: 30px 18px 108px;
   }
 
   .welcome-section p {
@@ -683,7 +683,7 @@ a {
 
 @media (max-width: 680px) {
   .profile-content {
-    padding: 34px 18px 52px;
+    padding: 34px 18px 108px;
   }
 
   .profile-heading h2 {
@@ -908,7 +908,7 @@ a {
 /* Empilha os controles em telas estreitas. */
 @media (max-width: 680px) {
   .complaints-page-content {
-    padding: 34px 18px 52px;
+    padding: 34px 18px 108px;
   }
 
   .my-complaints-heading,
@@ -1721,7 +1721,7 @@ a {
 
   .complaint-shell {
     width: calc(100% - 28px);
-    padding: 30px 0 42px;
+    padding: 30px 0 108px;
   }
 
   .back-link {
@@ -1859,7 +1859,7 @@ a {
 @media (max-width: 600px) {
   .location-shell {
     width: calc(100% - 28px);
-    padding: 30px 0 42px;
+    padding: 30px 0 108px;
   }
 
   .location-card,
@@ -2003,6 +2003,10 @@ a {
     padding: 28px 20px;
   }
 
+  .confirmation-page {
+    padding-bottom: 108px;
+  }
+
   .confirmation-card h1 {
     font-size: 25px;
   }
@@ -2016,6 +2020,270 @@ a {
   .summary-item strong {
     max-width: 100%;
     text-align: left;
+  }
+}
+
+.review-page {
+  min-height: 100vh;
+  color: #263238;
+  background: #f5f8fb;
+}
+
+.review-shell {
+  width: min(760px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 42px 0 64px;
+}
+
+.review-shell .back-link {
+  margin-bottom: 24px;
+}
+
+.review-form {
+  display: grid;
+  gap: 16px;
+}
+
+.review-card {
+  padding: 24px 26px;
+  border: 1px solid #dfe8ef;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgb(13 43 69 / 5%);
+}
+
+.review-card h2 {
+  margin: 0 0 12px;
+  color: #0d2b45;
+  font-size: 18px;
+}
+
+.review-field {
+  padding: 13px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.review-field:last-child {
+  border-bottom: 0;
+}
+
+.review-field dt {
+  margin-bottom: 5px;
+  color: #718096;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.review-field dd {
+  margin: 0;
+  color: #263b50;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .review-shell {
+    width: calc(100% - 28px);
+    padding: 30px 0 108px;
+  }
+
+  .review-card {
+    padding: 21px 18px;
+    border-radius: 13px;
+  }
+}
+
+@media (max-width: 680px) {
+  .dashboard-page {
+    background: #e5efff;
+  }
+
+  .dashboard-header {
+    min-height: 76px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .dashboard-brand {
+    min-width: 0;
+  }
+
+  .dashboard-brand h1 {
+    font-size: 25px;
+    letter-spacing: 0;
+  }
+
+  .dashboard-brand p {
+    font-size: 10px;
+  }
+
+  .dashboard-nav {
+    display: none;
+  }
+
+  .profile-button {
+    flex: 0 0 auto;
+    padding: 10px 13px;
+    border: 1px solid #e1e8ef;
+    border-radius: 999px;
+    color: #263238;
+    background: #f8fafc;
+    font-size: 11px;
+  }
+
+  .profile-icon {
+    margin-right: 5px;
+    color: #10b981;
+    font-size: 13px;
+  }
+
+  .dashboard-content {
+    display: block;
+    padding: 20px 14px 110px;
+  }
+
+  .welcome-section {
+    margin-bottom: 18px;
+  }
+
+  .welcome-section h2 {
+    font-size: 28px;
+  }
+
+  .welcome-section p {
+    font-size: 14px;
+  }
+
+  .report-card {
+    min-height: 94px;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .report-card h3 {
+    font-size: 16px;
+  }
+
+  .report-card p {
+    font-size: 11px;
+  }
+
+  .report-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    font-size: 24px;
+  }
+
+  .ai-report-section {
+    margin: 16px 0;
+    padding: 19px;
+    border-color: transparent;
+    border-radius: 17px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgb(13 43 69 / 5%);
+  }
+
+  .ai-report-section h3 {
+    font-size: 16px;
+  }
+
+  .ai-description {
+    font-size: 12px;
+  }
+
+  .ai-textarea {
+    min-height: 88px;
+    border-radius: 13px;
+    font-size: 12px;
+  }
+
+  .ai-button {
+    padding: 11px 15px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 16px 0;
+  }
+
+  .summary-card {
+    min-height: 112px;
+    padding: 12px 10px;
+    border-left-width: 3px;
+    border-radius: 15px;
+  }
+
+  .summary-icon {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
+
+  .summary-card p {
+    font-size: 10px;
+  }
+
+  .summary-card strong {
+    font-size: 24px;
+  }
+
+  .summary-card > span:last-child {
+    font-size: 9px;
+  }
+
+  .complaints-section,
+  .city-card,
+  .sidebar-menu {
+    border-radius: 16px;
+  }
+
+  .complaints-section {
+    padding: 18px;
+  }
+
+  .complaints-section .section-heading h3 {
+    font-size: 15px;
+  }
+
+  .complaints-section > p {
+    padding: 18px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    color: #718096;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .dashboard-sidebar {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .city-card {
+    min-height: auto;
+    padding: 19px;
+  }
+
+  .city-card h3 {
+    font-size: 16px;
+  }
+
+  .city-card p {
+    font-size: 12px;
+  }
+
+  .sidebar-menu a {
+    padding: 14px;
   }
 }
 

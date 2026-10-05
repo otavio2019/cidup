@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 type Complaint = {
@@ -118,6 +119,7 @@ function MyComplaintsPage() {
 					</div>
 				)}
 			</section>
+			<CitizenMobileNav />
 		</main>
 	)
 }

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ComplaintConfirmationPage from './assets/pages/ComplaintConfirmationPage'
 import ComplaintDetailsPage from './assets/pages/ComplaintDetailsPage'
 import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
+import ComplaintReviewPage from './assets/pages/ComplaintReviewPage'
 import CreateComplaintPage from './assets/pages/CreateComplaintPage'
 import DashboardPage from './assets/pages/DashboardPage'
 import LoginPage from './assets/pages/LoginPage'
@@ -85,6 +86,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ComplaintConfirmationPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/denuncia/revisar"
+        element={
+          <ProtectedRoute>
+            <ComplaintReviewPage />
           </ProtectedRoute>
         }
       />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 // TODO: substituir os números e denúncias simulados pelos dados da API.
@@ -253,6 +254,7 @@ function DashboardPage() {
           </div>
         </aside>
       </section>
+      <CitizenMobileNav />
     </main>
   )
 }

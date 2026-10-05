@@ -1,0 +1,64 @@
+.citizen-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  .citizen-mobile-nav {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    min-height: calc(68px + env(safe-area-inset-bottom));
+    grid-template-columns: 1fr 1fr 1.1fr 1fr;
+    align-items: center;
+    padding: 4px 10px calc(4px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e6edf3;
+    background: rgb(255 255 255 / 97%);
+    box-shadow: 0 -5px 22px rgb(18 47 73 / 7%);
+  }
+
+  .citizen-mobile-link {
+    display: flex;
+    min-width: 0;
+    min-height: 50px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: #90a2b6;
+    font-size: 10px;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .citizen-mobile-link.is-active:not(.citizen-mobile-create) {
+    color: #1768d9;
+  }
+
+  .citizen-mobile-icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .citizen-mobile-create {
+    width: 58px;
+    height: 58px;
+    min-height: 58px;
+    justify-self: center;
+    margin-top: -21px;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    color: #ffffff;
+    background: #2162ed;
+    box-shadow: 0 4px 12px rgb(31 91 210 / 25%);
+    font-size: 38px;
+    font-weight: 350;
+    line-height: 1;
+  }
+
+  .citizen-mobile-create.is-active {
+    background: #075dbb;
+  }
+}

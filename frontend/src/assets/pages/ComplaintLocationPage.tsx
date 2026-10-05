@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintData = {
@@ -11,12 +12,6 @@ type ComplaintData = {
   neighborhood?: string
   complement?: string
   photoName?: string | null
-}
-
-type RegisteredComplaint = ComplaintData & {
-  protocol: string
-  registeredAt: string
-  status: string
 }
 
 function ComplaintLocationPage() {
@@ -39,8 +34,9 @@ function ComplaintLocationPage() {
   }, [routeLocation.state])
 
   const [address, setAddress] = useState(
-    complaint.address ? `${complaint.address}, ${complaint.number ?? 'S/N'}` : '',
+    complaint.address ?? '',
   )
+  const [number, setNumber] = useState(complaint.number ?? '')
   const [neighborhood, setNeighborhood] = useState(complaint.neighborhood ?? '')
   const [reference, setReference] = useState(complaint.complement ?? '')
 
@@ -52,6 +48,11 @@ function ComplaintLocationPage() {
       return
     }
 
+    if (!number.trim()) {
+      setError('Informe o número ou digite S/N.')
+      return
+    }
+
     if (!neighborhood.trim()) {
       setError('Informe o bairro da denúncia.')
       return
@@ -60,42 +61,12 @@ function ComplaintLocationPage() {
     const locationData = {
       ...complaint,
       address: address.trim(),
+      number: number.trim(),
       neighborhood: neighborhood.trim(),
       complement: reference.trim(),
-      latitude: null,
-      longitude: null,
     }
-
-    let existingComplaints: RegisteredComplaint[] = []
-    try {
-      const storedComplaints = JSON.parse(
-        localStorage.getItem('cidup-complaints') ?? '[]',
-      ) as RegisteredComplaint[]
-      if (Array.isArray(storedComplaints)) existingComplaints = storedComplaints
-    } catch {
-      existingComplaints = []
-    }
-
-    const nextNumber = existingComplaints.reduce((highest, item) => {
-      const number = Number(item.protocol?.replace('CIDUP-', ''))
-      return Number.isFinite(number) ? Math.max(highest, number) : highest
-    }, 0) + 1
-    const registeredComplaint: RegisteredComplaint = {
-      ...locationData,
-      protocol: `CIDUP-${String(nextNumber).padStart(6, '0')}`,
-      registeredAt: new Date().toISOString(),
-      status: 'Recebida',
-    }
-
-    localStorage.setItem(
-      'cidup-complaints',
-      JSON.stringify([...existingComplaints, registeredComplaint]),
-    )
-    sessionStorage.setItem('cidup-complaint-location', JSON.stringify(locationData))
-
-    navigate('/denuncia/confirmacao', {
-      state: registeredComplaint,
-    })
+    sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(locationData))
+    navigate('/denuncia/revisar', { state: locationData })
   }
 
   return (
@@ -105,15 +76,15 @@ function ComplaintLocationPage() {
           <span className="complaint-brand-mark" aria-hidden="true">C</span>
           <span>CidUp</span>
         </Link>
-        <span className="complaint-step">Etapa 2 de 3</span>
+        <span className="complaint-step">Etapa 2 de 4</span>
       </header>
 
       <section className="location-shell" aria-labelledby="location-title">
         <Link className="back-link" to="/registrar-denuncia">← Voltar para a denúncia</Link>
 
         <div className="location-heading">
-          <p className="complaint-kicker">LOCALIZAÇÃO</p>
-          <h1 id="location-title">Onde aconteceu?</h1>
+          <p className="complaint-kicker">CONFIRME A LOCALIZAÇÃO</p>
+          <h1 id="location-title">Confira onde aconteceu</h1>
           <p>
             Confirme o local do problema para que a equipe responsável consiga
             encontrar a ocorrência.
@@ -125,9 +96,23 @@ function ComplaintLocationPage() {
             <div className="form-section-title">
               <span>01</span>
               <div>
-                <h2>Confirme o endereço</h2>
-                <p>Revise os dados informados na etapa anterior.</p>
+                <h2>Revise o endereço</h2>
+                <p>Confira os dados para a equipe encontrar a ocorrência.</p>
               </div>
+            </div>
+
+            <div className="complaint-field">
+              <label htmlFor="location-number">Número <span>*</span></label>
+              <input
+                id="location-number"
+                type="text"
+                value={number}
+                onChange={(event) => {
+                  setNumber(event.target.value)
+                  setError('')
+                }}
+                placeholder="Ex.: 120 ou S/N"
+              />
             </div>
 
             <div className="complaint-field">
@@ -172,9 +157,9 @@ function ComplaintLocationPage() {
 
           <section className="map-placeholder" aria-label="Mapa da localização">
             <div className="map-placeholder-icon" aria-hidden="true">⌖</div>
-            <h2>Mapa da ocorrência</h2>
-            <p>O mapa será integrado depois para confirmar a latitude e a longitude do local.</p>
-            <span className="map-status">Localização manual confirmada</span>
+              <h2>Confira a denúncia</h2>
+              <p>Na próxima etapa você revisa o relato completo antes de enviar.</p>
+              <span className="map-status">Localização informada manualmente</span>
           </section>
 
           {error && <p className="form-message complaint-submit-error" role="alert">{error}</p>}
@@ -182,11 +167,12 @@ function ComplaintLocationPage() {
           <div className="complaint-actions">
             <Link className="secondary-action" to="/registrar-denuncia">Voltar</Link>
             <button className="primary-action" type="submit">
-              Confirmar localização <span aria-hidden="true">→</span>
+              Conferir denúncia <span aria-hidden="true">→</span>
             </button>
           </div>
         </form>
       </section>
+      <CitizenMobileNav />
     </main>
   )
 }

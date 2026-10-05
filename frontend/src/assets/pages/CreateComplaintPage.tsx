@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintFormData = {
@@ -39,7 +39,19 @@ const MAX_PHOTO_SIZE = 5 * 1024 * 1024
 
 function CreateComplaintPage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState(initialForm)
+  const routeLocation = useLocation()
+  const [form, setForm] = useState<ComplaintFormData>(() => {
+    const routeDraft = routeLocation.state as Partial<ComplaintFormData> | null
+    if (routeDraft) return { ...initialForm, ...routeDraft }
+    try {
+      const savedDraft = sessionStorage.getItem('cidup-complaint-draft')
+      return savedDraft
+        ? { ...initialForm, ...JSON.parse(savedDraft) as Partial<ComplaintFormData> }
+        : initialForm
+    } catch {
+      return initialForm
+    }
+  })
   const [photo, setPhoto] = useState<File | null>(null)
   const [errors, setErrors] = useState<ComplaintErrors>({})
   const [submitError, setSubmitError] = useState('')
@@ -125,7 +137,7 @@ function CreateComplaintPage() {
     return nextErrors
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors = validateForm()
 
@@ -145,16 +157,9 @@ function CreateComplaintPage() {
       photoName: photo?.name ?? null,
     }
 
-    try {
-      const data = await apiRequest<{ complaint: { protocol: string } }>('/api/complaints', {
-        method: 'POST',
-        body: JSON.stringify(complaintDraft),
-      })
-      setSubmitError('')
-      navigate('/dashboard', { state: { protocol: data.complaint.protocol } })
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Não foi possível registrar a denúncia.')
-    }
+    sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(complaintDraft))
+    setSubmitError('')
+    navigate('/registrar-denuncia/localizacao', { state: complaintDraft })
   }
 
   return (
@@ -164,7 +169,7 @@ function CreateComplaintPage() {
           <span className="complaint-brand-mark" aria-hidden="true">C</span>
           <span>CidUp</span>
         </Link>
-        <span className="complaint-step">Etapa 1 de 3</span>
+        <span className="complaint-step">Etapa 1 de 4</span>
       </header>
 
       <section className="complaint-shell" aria-labelledby="complaint-title">
@@ -336,6 +341,7 @@ function CreateComplaintPage() {
           </div>
         </form>
       </section>
+      <CitizenMobileNav />
     </main>
   )
 }

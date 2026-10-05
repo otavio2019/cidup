@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Cancelada'
@@ -75,6 +76,7 @@ function ComplaintDetailsPage() {
             <Link className="secondary-action" to="/minhas-denuncias">Ver minhas denúncias</Link>
           </div>
         </section>
+        <CitizenMobileNav />
       </main>
     )
   }
@@ -139,6 +141,7 @@ function ComplaintDetailsPage() {
           </dl>
         </article>
       </section>
+      <CitizenMobileNav />
     </main>
   )
 }

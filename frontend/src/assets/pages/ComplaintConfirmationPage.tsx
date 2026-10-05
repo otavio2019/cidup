@@ -1,17 +1,19 @@
 import { useMemo } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintData = {
   protocol?: string
   registeredAt?: string
   status?: string
-  type?: string
   description?: string
   address?: string
   neighborhood?: string
   complement?: string
   photoName?: string | null
+  number?: string
+  type?: string | { name: string }
 }
 
 function ComplaintConfirmationPage() {
@@ -21,17 +23,22 @@ function ComplaintConfirmationPage() {
     const stateData = location.state as ComplaintData | null
     if (stateData) return stateData
 
-    const savedData = sessionStorage.getItem('cidup-complaint-location')
-    if (!savedData) return {}
+    const savedData = sessionStorage.getItem('cidup-complaint-confirmation')
+    if (!savedData) return null
 
     try {
       return JSON.parse(savedData) as ComplaintData
     } catch {
-      return {}
+      return null
     }
   }, [location.state])
 
-  const protocol = complaint.protocol ?? 'CIDUP-000001'
+  if (!complaint?.protocol) return <Navigate to="/dashboard" replace />
+
+  const protocol = complaint.protocol
+  const complaintType = typeof complaint.type === 'string'
+    ? complaint.type
+    : complaint.type?.name ?? 'Não informado'
 
   return (
     <main className="confirmation-page">
@@ -52,7 +59,7 @@ function ComplaintConfirmationPage() {
           <h2>Resumo da denúncia</h2>
           <div className="summary-item">
             <span>Tipo</span>
-            <strong>{complaint.type || 'Não informado'}</strong>
+            <strong>{complaintType}</strong>
           </div>
           <div className="summary-item">
             <span>Descrição</span>
@@ -60,7 +67,7 @@ function ComplaintConfirmationPage() {
           </div>
           <div className="summary-item">
             <span>Local</span>
-            <strong>{complaint.address || 'Não informado'}</strong>
+            <strong>{[complaint.address, complaint.number].filter(Boolean).join(', ') || 'Não informado'}</strong>
           </div>
           <div className="summary-item">
             <span>Bairro</span>
@@ -83,6 +90,7 @@ function ComplaintConfirmationPage() {
           </Link>
         </div>
       </section>
+      <CitizenMobileNav />
     </main>
   )
 }

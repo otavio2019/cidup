@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
 type CitizenProfile = {
@@ -35,6 +36,8 @@ function ProfilePage() {
 
 	function handleLogout() {
 		localStorage.removeItem('cidup-authenticated')
+		localStorage.removeItem('cidup-role')
+		localStorage.removeItem('cidup-user-id')
 		navigate('/login', { replace: true })
 	}
 
@@ -89,6 +92,7 @@ function ProfilePage() {
 					</div>
 				</div>
 			</section>
+			<CitizenMobileNav />
 		</main>
 	)
 }
