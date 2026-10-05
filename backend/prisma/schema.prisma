@@ -15,6 +15,8 @@ model User {
   role         UserRole    @default(CITIZEN)
   createdAt    DateTime    @default(now())
   complaints   Complaint[]
+
+  @@map("usuarios")
 }
 
 enum UserRole {
@@ -27,6 +29,8 @@ model ComplaintType {
   name        String      @unique
   description String?
   complaints  Complaint[]
+
+  @@map("tipos_ocorrencia")
 }
 
 model Complaint {
@@ -48,6 +52,7 @@ model Complaint {
 
   @@index([userId])
   @@index([status])
+  @@map("denuncias")
 }
 
 enum ComplaintStatus {
