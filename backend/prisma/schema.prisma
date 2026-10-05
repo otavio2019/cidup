@@ -12,8 +12,14 @@ model User {
   name         String
   email        String      @unique
   passwordHash String
+  role         UserRole    @default(CITIZEN)
   createdAt    DateTime    @default(now())
   complaints   Complaint[]
+}
+
+enum UserRole {
+  CITIZEN
+  RESPONSIBLE
 }
 
 model ComplaintType {

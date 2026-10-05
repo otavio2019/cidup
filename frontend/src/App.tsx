@@ -9,6 +9,7 @@ import LoginPage from './assets/pages/LoginPage'
 import MyComplaintsPage from './assets/pages/MyComplaintsPage'
 import ProfilePage from './assets/pages/ProfilePage'
 import RegisterPage from './assets/pages/RegisterPage'
+import ResponsiblePanelPage from './assets/pages/ResponsiblePanelPage'
 
 // TODO: substituir a proteção local por validação real do token JWT.
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -22,12 +23,35 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return children
 }
 
+function ResponsibleRoute({ children }: { children: ReactNode }) {
+  const isAuthenticated =
+    localStorage.getItem('cidup-authenticated') === 'true'
+  const isResponsible = localStorage.getItem('cidup-role') === 'RESPONSIBLE'
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  if (!isResponsible) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+}
+
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<RegisterPage />} />
+      <Route
+        path="/responsavel/*"
+        element={
+          <ResponsibleRoute>
+            <ResponsiblePanelPage />
+          </ResponsibleRoute>
+        }
+      />
 
       <Route
         path="/registrar-denuncia"

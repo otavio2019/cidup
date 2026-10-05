@@ -162,3 +162,15 @@ O projeto utiliza comentários que podem ser encontrados pela extensão Todo Tre
 - use `.env.example` para documentar configurações necessárias;
 - não use `docker compose down -v` sem confirmar que os dados locais podem ser removidos;
 - valide os dados recebidos pela API antes de salvar no banco.
+
+## Acesso do responsável (ambiente local)
+
+Contas criadas pelo cadastro recebem o papel de cidadão. Para conceder acesso ao
+painel do responsável, promova uma conta existente pelo banco:
+
+```powershell
+docker compose exec db psql -U cidup -d cidup -c 'UPDATE "User" SET role = ''RESPONSIBLE'' WHERE email = ''ana.souza@prefeitura.gov.br'';'
+```
+
+Troque o e-mail pelo da conta cadastrada. Ao entrar novamente, essa conta será
+encaminhada para `/responsavel/dashboard`.

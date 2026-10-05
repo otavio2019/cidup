@@ -77,7 +77,7 @@ app.post('/api/auth/register', async (request, response) => {
   try {
     const user = await prisma.user.create({
       data: { name: name.trim(), email: email.trim().toLowerCase(), passwordHash: await hashPassword(password) },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, role: true },
     })
     response.status(201).json({ user })
   } catch (error) {
@@ -101,7 +101,7 @@ app.post('/api/auth/login', async (request, response) => {
     response.status(401).json({ error: 'E-mail ou senha inválidos.' })
     return
   }
-  response.json({ user: { id: user.id, name: user.name, email: user.email }, token: String(user.id) })
+  response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token: String(user.id) })
 })
 
 app.get('/api/complaints', async (request, response) => {
