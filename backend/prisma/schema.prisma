@@ -7,59 +7,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           Int         @id @default(autoincrement())
-  name         String
-  email        String      @unique
-  passwordHash String
-  role         UserRole    @default(CITIZEN)
-  createdAt    DateTime    @default(now())
-  complaints   Complaint[]
-
-  @@map("usuarios")
+model denuncia {
+  id_denuncia   Int         @id @default(autoincrement())
+  titulo        String      @db.VarChar(200)
+  descricao     String
+  tipo          String      @db.VarChar(100)
+  status        String      @db.VarChar(50)
+  data_registro DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  endereco      String
+  latitude      Float
+  longitude     Float
+  id_usuario    Int
+  id_orgao      Int
+  orgao         orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
+  usuario       usuario     @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  historico     historico[]
 }
 
-enum UserRole {
-  CITIZEN
-  RESPONSIBLE
+model historico {
+  id_historico Int      @id @default(autoincrement())
+  descricao    String
+  foto         String
+  observacao   String
+  id_usuario   Int
+  id_denuncia  Int
+  denuncia     denuncia @relation(fields: [id_denuncia], references: [id_denuncia], onDelete: NoAction, onUpdate: NoAction)
+  usuario      usuario  @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model ComplaintType {
-  id          Int         @id @default(autoincrement())
-  name        String      @unique
-  description String?
-  complaints  Complaint[]
-
-  @@map("tipos_ocorrencia")
+model orgao {
+  id_orgao  Int        @id @default(autoincrement())
+  nome      String     @db.VarChar(150)
+  email     String     @unique @db.VarChar(255)
+  telefone  String     @unique @db.VarChar(20)
+  descricao String
+  denuncia  denuncia[]
 }
 
-model Complaint {
-  id           Int            @id @default(autoincrement())
-  protocol     String         @unique
-  title        String
-  description  String
-  address      String
-  number       String
-  neighborhood String
-  complement   String?
-  status       ComplaintStatus @default(RECEIVED)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  userId       Int
-  typeId       Int
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         ComplaintType  @relation(fields: [typeId], references: [id])
-
-  @@index([userId])
-  @@index([status])
-  @@map("denuncias")
-}
-
-enum ComplaintStatus {
-  RECEIVED
-  IN_ANALYSIS
-  FORWARDED
-  IN_SERVICE
-  RESOLVED
-  NOT_SERVED
+model usuario {
+  id_usuario Int         @id @default(autoincrement())
+  nome       String      @db.VarChar(150)
+  email      String      @unique @db.VarChar(255)
+  telefone   String      @unique @db.VarChar(20)
+  senha      String      @db.VarChar(255)
+  denuncia   denuncia[]
+  historico  historico[]
 }
