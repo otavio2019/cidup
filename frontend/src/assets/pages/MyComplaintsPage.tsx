@@ -1,35 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
-type Complaint = {
-	protocol: string
-	type?: string
-	description?: string
-	address?: string
-	neighborhood?: string
-	registeredAt?: string
-	status?: string
-}
-
 const statusClasses: Record<string, string> = {
-	Recebida: 'status-received',
+	'Recebida': 'status-received',
 	'Em análise': 'status-analysis',
 	'Em atendimento': 'status-service',
-	Resolvida: 'status-solved',
-	Cancelada: 'status-canceled',
+	'Resolvida': 'status-solved',
+	'Não atendida': 'status-canceled',
+	'Cancelada': 'status-canceled',
 }
 
-function readComplaints(): Complaint[] {
-	try {
-		const complaints = JSON.parse(
-			localStorage.getItem('cidup-complaints') ?? '[]',
-		) as Complaint[]
-		return Array.isArray(complaints) ? complaints : []
-	} catch {
-		return []
-	}
+const statusLabels: Record<string, string> = {
+	RECEIVED: 'Recebida',
+	IN_ANALYSIS: 'Em análise',
+	FORWARDED: 'Em atendimento',
+	IN_SERVICE: 'Em atendimento',
+	RESOLVED: 'Resolvida',
+	NOT_SERVED: 'Não atendida',
 }
 
 function formatDate(value?: string) {
@@ -40,7 +30,24 @@ function formatDate(value?: string) {
 }
 
 function MyComplaintsPage() {
-	const [complaints] = useState(readComplaints)
+	const [complaints, setComplaints] = useState<Complaint[]>([])
+	const [loading, setLoading] = useState(true)
+	const [error, setError] = useState('')
+
+	useEffect(() => {
+		let active = true
+		apiRequest<{ complaints: Complaint[] }>('/api/complaints')
+			.then(({ complaints: records }) => {
+				if (active) setComplaints(records)
+			})
+			.catch((requestError: unknown) => {
+				if (active) setError(requestError instanceof Error ? requestError.message : 'Não foi possível carregar as denúncias.')
+			})
+			.finally(() => {
+				if (active) setLoading(false)
+			})
+		return () => { active = false }
+	}, [])
 
 	return (
 		<main className="my-complaints-page">
@@ -54,7 +61,7 @@ function MyComplaintsPage() {
 					<Link to="/registrar-denuncia">Registrar denúncia</Link>
 					<Link className="active" to="/minhas-denuncias">Minhas denúncias</Link>
 				</nav>
-				<Link className="profile-button" to="/dashboard">Meu perfil</Link>
+				<Link className="profile-button" to="/perfil">Meu perfil</Link>
 			</header>
 
 			<section className="complaints-page-content" aria-labelledby="my-complaints-title">
@@ -69,7 +76,11 @@ function MyComplaintsPage() {
 					</Link>
 				</div>
 
-				{complaints.length === 0 ? (
+				{loading ? (
+					<p aria-busy="true">Carregando denúncias...</p>
+				) : error ? (
+					<p className="form-message" role="alert">{error}</p>
+				) : complaints.length === 0 ? (
 					<div className="complaints-empty-state">
 						<span aria-hidden="true">▤</span>
 						<h3>Nenhuma denúncia registrada</h3>
@@ -81,22 +92,19 @@ function MyComplaintsPage() {
 				) : (
 					<div className="my-complaints-list">
 						{complaints.map((complaint) => {
-							const status = complaint.status ?? 'Recebida'
-							const address = [complaint.address, complaint.neighborhood]
-								.filter(Boolean)
-								.join(' — ')
+							const status = statusLabels[complaint.status] ?? complaint.status
 
 							return (
-								<article className="my-complaint-item" key={complaint.protocol}>
+								<article className="my-complaint-item" key={complaint.id}>
 									<div className="my-complaint-main">
 										<span className="complaint-protocol">{complaint.protocol}</span>
-										<h3>{complaint.type || 'Tipo não informado'}</h3>
+										<h3>{complaint.type.name || 'Tipo não informado'}</h3>
 										<p className="my-complaint-description">
 											{complaint.description || 'Sem descrição.'}
 										</p>
 										<p className="my-complaint-address">
 											<span aria-hidden="true">⌖</span>
-											{address || 'Endereço não informado'}
+											{complaint.address || 'Endereço não informado'}
 										</p>
 										<p className="my-complaint-date">
 											Registrada em {formatDate(complaint.registeredAt)}
@@ -108,7 +116,7 @@ function MyComplaintsPage() {
 										</span>
 										<Link
 											className="complaint-details-link"
-											to={`/denuncias/${encodeURIComponent(complaint.protocol)}`}
+											to={`/denuncias/${complaint.id}`}
 										>
 											Ver detalhes <span aria-hidden="true">→</span>
 										</Link>

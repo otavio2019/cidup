@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { apiRequest } from './api'
 import ComplaintConfirmationPage from './assets/pages/ComplaintConfirmationPage'
 import ComplaintDetailsPage from './assets/pages/ComplaintDetailsPage'
 import ComplaintLocationPage from './assets/pages/ComplaintLocationPage'
@@ -12,27 +14,53 @@ import ProfilePage from './assets/pages/ProfilePage'
 import RegisterPage from './assets/pages/RegisterPage'
 import ResponsiblePanelPage from './assets/pages/ResponsiblePanelPage'
 
-// TODO: substituir a proteção local por validação real do token JWT.
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const isAuthenticated =
-    localStorage.getItem('cidup-authenticated') === 'true'
+type SessionUser = {
+  role: 'CITIZEN' | 'RESPONSIBLE'
+}
 
-  if (!isAuthenticated) {
+function useSession() {
+  const [session, setSession] = useState<{ loading: boolean; user: SessionUser | null }>({
+    loading: true,
+    user: null,
+  })
+
+  useEffect(() => {
+    let active = true
+    apiRequest<{ user: SessionUser }>('/api/auth/session')
+      .then(({ user }) => {
+        if (active) setSession({ loading: false, user })
+      })
+      .catch(() => {
+        if (active) setSession({ loading: false, user: null })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return session
+}
+
+export function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { loading, user } = useSession()
+
+  if (loading) return <main aria-busy="true">Verificando sessão...</main>
+  if (!user) {
     return <Navigate to="/login" replace />
   }
 
   return children
 }
 
-function ResponsibleRoute({ children }: { children: ReactNode }) {
-  const isAuthenticated =
-    localStorage.getItem('cidup-authenticated') === 'true'
-  const isResponsible = localStorage.getItem('cidup-role') === 'RESPONSIBLE'
+export function ResponsibleRoute({ children }: { children: ReactNode }) {
+  const { loading, user } = useSession()
 
-  if (!isAuthenticated) {
+  if (loading) return <main aria-busy="true">Verificando sessão...</main>
+  if (!user) {
     return <Navigate to="/login" replace />
   }
-  if (!isResponsible) {
+  if (user.role !== 'RESPONSIBLE') {
     return <Navigate to="/dashboard" replace />
   }
 

@@ -27,18 +27,33 @@ cidup/
 
 ## Como executar
 
-Na raiz do projeto, execute:
-
-```bash
-docker compose up --build
-```
-
-O arquivo `.env` é opcional enquanto o assistente de IA não estiver sendo
-utilizado. Para criar uma configuração local, copie o modelo:
+Para iniciar o ambiente Docker, copie e preencha as variáveis de configuração
+antes de executar:
 
 ```bash
 cp .env.example .env
+docker compose up --build
 ```
+
+Substitua os placeholders de `POSTGRES_PASSWORD`, `DATABASE_URL` e
+`DOCKER_DATABASE_URL` por valores locais. `DATABASE_URL` é usada quando o
+backend roda no host; o Compose usa `DOCKER_DATABASE_URL` para acessar o
+serviço PostgreSQL pela rede Docker. Não reutilize senhas reais em arquivos
+versionados.
+
+Se estiver rodando a API diretamente em `backend/`, copie
+`backend/.env.example` para `backend/.env` e configure a URL PostgreSQL local.
+
+Configure `AUTH_TOKEN_SECRET` com um segredo aleatório de pelo menos 32 bytes.
+Gere-o localmente com `openssl rand -base64 32`; não o compartilhe nem o
+versione. `FRONTEND_ORIGINS` lista origens permitidas separadas por vírgula.
+`ADMIN_USER_IDS` recebe IDs de usuários autorizados para administrar órgãos e
+gerenciar denúncias. Em produção, configure somente origens HTTPS e publique a
+API atrás de HTTPS. As sessões são cookies `HttpOnly`, assinados e expiram em
+15 minutos; o navegador não recebe nem armazena o token. Se frontend e API
+forem publicados em origens diferentes, configure `VITE_API_URL` no ambiente
+do frontend com a URL HTTPS da API; sem essa variável, a aplicação usa a API
+na mesma origem em produção.
 
 Se o Docker apresentar `permission denied` ao acessar `/var/run/docker.sock`,
 adicione o usuário ao grupo do Docker e abra uma nova sessão:
@@ -122,7 +137,8 @@ AI_BASE_URL=https://api.openai.com/v1
 AI_MODEL=gpt-4o-mini
 ```
 
-Não faça commit do arquivo `.env` nem exponha a chave de API no frontend.
+Não faça commit do arquivo `.env` nem exponha a chave de API no frontend. A rota
+de rascunho exige uma sessão válida.
 
 ## Próximas etapas técnicas
 
@@ -133,7 +149,7 @@ Schema do Prisma e migrations
         ↓
 Rotas de cadastro e login
         ↓
-Autenticação com JWT
+Sessão JWT em cookie HttpOnly
         ↓
 Rotas de denúncias
         ↓
@@ -159,18 +175,17 @@ O projeto utiliza comentários que podem ser encontrados pela extensão Todo Tre
 
 - Nunca coloque senhas ou chaves reais no repositório;
 - mantenha variáveis sensíveis em arquivos `.env`;
+- não confie em `x-user-id`; a identidade da API vem da sessão assinada;
+- cadastros e consultas de perfil são restritos ao usuário autenticado;
+- leituras de órgãos mostram somente dados públicos; escrita administrativa
+  depende de `ADMIN_USER_IDS`;
 - use `.env.example` para documentar configurações necessárias;
 - não use `docker compose down -v` sem confirmar que os dados locais podem ser removidos;
 - valide os dados recebidos pela API antes de salvar no banco.
 
-## Acesso do responsável (ambiente local)
+## Acesso do responsável
 
-Contas criadas pelo cadastro recebem o papel de cidadão. Para conceder acesso ao
-painel do responsável, promova uma conta existente pelo banco:
-
-```powershell
-docker compose exec db psql -U cidup -d cidup -c 'UPDATE "User" SET role = ''RESPONSIBLE'' WHERE email = ''ana.souza@prefeitura.gov.br'';'
-```
-
-Troque o e-mail pelo da conta cadastrada. Ao entrar novamente, essa conta será
-encaminhada para `/responsavel/dashboard`.
+O schema atual não contém uma coluna de papel. Para um ambiente local, configure
+`ADMIN_USER_IDS` com os IDs dos usuários responsáveis, separados por vírgula.
+Não há `UPDATE` de uma coluna `role` nem acesso administrativo baseado em dados
+enviados pelo navegador.

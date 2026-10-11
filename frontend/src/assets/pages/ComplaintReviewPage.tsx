@@ -74,13 +74,6 @@ function ComplaintReviewPage() {
         id: data.complaint.id,
       }
       sessionStorage.setItem('cidup-complaint-confirmation', JSON.stringify(registeredComplaint))
-      try {
-        const storedComplaints = JSON.parse(localStorage.getItem('cidup-complaints') ?? '[]') as typeof registeredComplaint[]
-        const localComplaints = Array.isArray(storedComplaints) ? storedComplaints : []
-        localStorage.setItem('cidup-complaints', JSON.stringify([...localComplaints, registeredComplaint]))
-      } catch {
-        localStorage.setItem('cidup-complaints', JSON.stringify([registeredComplaint]))
-      }
       sessionStorage.removeItem('cidup-complaint-draft')
       navigate('/denuncia/confirmacao', { state: registeredComplaint })
     } catch (submitError) {

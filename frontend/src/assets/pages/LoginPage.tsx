@@ -19,13 +19,20 @@ function LoginPage() {
     }
 
     try {
-      const data = await apiRequest<{ user: { id: number; role: 'CITIZEN' | 'RESPONSIBLE' } }>('/api/auth/login', {
+      const data = await apiRequest<{
+        user: {
+          id: number
+          name: string
+          email: string
+          phone: string
+          role: 'CITIZEN' | 'RESPONSIBLE'
+        }
+      }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password: senha }),
       })
-      localStorage.setItem('cidup-authenticated', 'true')
-      localStorage.setItem('cidup-user-id', String(data.user.id))
-      localStorage.setItem('cidup-role', data.user.role)
+      localStorage.removeItem('cidup-complaints')
+      localStorage.setItem('cidup-profile', JSON.stringify(data.user))
       navigate(data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
     } catch (error) {
       setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')

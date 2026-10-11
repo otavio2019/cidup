@@ -1,4 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { apiRequest } from '../../api'
 import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
@@ -33,11 +35,22 @@ function formatRegistrationDate(value?: string) {
 function ProfilePage() {
 	const navigate = useNavigate()
 	const profile = readProfile()
+	const [logoutError, setLogoutError] = useState('')
 
-	function handleLogout() {
-		localStorage.removeItem('cidup-authenticated')
+	async function handleLogout() {
+		setLogoutError('')
+		try {
+			await apiRequest('/api/auth/logout', { method: 'POST' })
+		} catch (error) {
+			setLogoutError(error instanceof Error ? error.message : 'Não foi possível encerrar a sessão.')
+			return
+		}
 		localStorage.removeItem('cidup-role')
 		localStorage.removeItem('cidup-user-id')
+		localStorage.removeItem('cidup-complaints')
+		localStorage.removeItem('cidup-profile')
+		sessionStorage.removeItem('cidup-complaint-draft')
+		sessionStorage.removeItem('cidup-complaint-confirmation')
 		navigate('/login', { replace: true })
 	}
 
@@ -90,6 +103,7 @@ function ProfilePage() {
 							Sair
 						</button>
 					</div>
+					{logoutError && <p className="form-message" role="alert">{logoutError}</p>}
 				</div>
 			</section>
 			<CitizenMobileNav />

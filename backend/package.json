@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "prisma generate",
     "dev": "tsx watch src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test src/index.test.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,11 +14,15 @@
   "type": "module",
   "dependencies": {
     "@prisma/client": "^6.16.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
+    "jose": "^6.2.12"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",

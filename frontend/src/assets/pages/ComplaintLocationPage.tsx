@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { apiRequest } from '../../api'
 import CitizenMobileNav from './CitizenMobileNav'
 import '../../App.css'
 
@@ -12,7 +13,12 @@ type ComplaintData = {
   neighborhood?: string
   complement?: string
   photoName?: string | null
+  id_orgao?: number
+  latitude?: number
+  longitude?: number
 }
+
+type Organization = { id_orgao: number; nome: string }
 
 function ComplaintLocationPage() {
   const navigate = useNavigate()
@@ -39,6 +45,28 @@ function ComplaintLocationPage() {
   const [number, setNumber] = useState(complaint.number ?? '')
   const [neighborhood, setNeighborhood] = useState(complaint.neighborhood ?? '')
   const [reference, setReference] = useState(complaint.complement ?? '')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [organizationId, setOrganizationId] = useState(complaint.id_orgao?.toString() ?? '')
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
+    typeof complaint.latitude === 'number' && typeof complaint.longitude === 'number'
+      ? { latitude: complaint.latitude, longitude: complaint.longitude }
+      : null,
+  )
+
+  useEffect(() => {
+    let active = true
+    apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
+      .then(({ orgaos }) => {
+        if (active) setOrganizations(orgaos)
+      })
+      .catch((loadError: unknown) => {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os órgãos.')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -57,6 +85,14 @@ function ComplaintLocationPage() {
       setError('Informe o bairro da denúncia.')
       return
     }
+    if (!organizationId) {
+      setError('Selecione o órgão responsável.')
+      return
+    }
+    if (!coordinates) {
+      setError('Informe a localização pelo botão de geolocalização.')
+      return
+    }
 
     const locationData = {
       ...complaint,
@@ -64,6 +100,8 @@ function ComplaintLocationPage() {
       number: number.trim(),
       neighborhood: neighborhood.trim(),
       complement: reference.trim(),
+      id_orgao: Number(organizationId),
+      ...coordinates,
     }
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(locationData))
     navigate('/denuncia/revisar', { state: locationData })
@@ -152,6 +190,50 @@ function ComplaintLocationPage() {
                 onChange={(event) => setReference(event.target.value)}
                 placeholder="Ex.: Próximo à escola municipal"
               />
+            </div>
+
+            <div className="complaint-field">
+              <label htmlFor="location-organization">Órgão responsável <span>*</span></label>
+              <select
+                id="location-organization"
+                value={organizationId}
+                onChange={(event) => setOrganizationId(event.target.value)}
+              >
+                <option value="">Selecione um órgão</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id_orgao} value={organization.id_orgao}>
+                    {organization.nome}
+                  </option>
+                ))}
+              </select>
+              {organizations.length === 0 && <small>Nenhum órgão público disponível no momento.</small>}
+            </div>
+
+            <div className="complaint-field">
+              <label>Coordenadas <span>*</span></label>
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    setError('Este navegador não oferece geolocalização.')
+                    return
+                  }
+                  navigator.geolocation.getCurrentPosition(
+                    ({ coords }) => {
+                      setCoordinates({ latitude: coords.latitude, longitude: coords.longitude })
+                      setError('')
+                    },
+                    () => setError('Não foi possível obter sua localização. Autorize a geolocalização e tente novamente.'),
+                    { enableHighAccuracy: true, timeout: 10000 },
+                  )
+                }}
+              >
+                {coordinates ? 'Atualizar localização' : 'Obter localização atual'}
+              </button>
+              {coordinates && (
+                <small>Localização informada: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}</small>
+              )}
             </div>
           </section>
 

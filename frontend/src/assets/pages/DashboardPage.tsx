@@ -41,25 +41,15 @@ function DashboardPage() {
     setIsGenerating(true)
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/ai/complaint-draft`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description }),
-        },
-      )
-      const data = (await response.json()) as {
-        error?: string
+      const data = await apiRequest<{
         title?: string
         category?: string
         priority?: string
         summary?: string
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error ?? 'Não foi possível gerar o rascunho.')
-      }
+      }>('/api/ai/complaint-draft', {
+        method: 'POST',
+        body: JSON.stringify({ description }),
+      })
 
       setDraft({
         title: data.title ?? '',

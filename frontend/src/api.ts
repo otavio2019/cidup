@@ -1,16 +1,20 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3000')
+if (import.meta.env.PROD && API_URL && new URL(API_URL).protocol !== 'https:') {
+  throw new Error('VITE_API_URL must use HTTPS in production.')
+}
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}) {
-  const userId = localStorage.getItem('cidup-user-id')
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(userId ? { 'x-user-id': userId } : {}),
       ...options.headers,
     },
   })
-  const data = (await response.json().catch(() => ({}))) as T & { error?: string }
+  const data = response.status === 204
+    ? {} as T & { error?: string }
+    : await response.json().catch(() => ({})) as T & { error?: string }
   if (!response.ok) throw new Error(data.error ?? 'Não foi possível concluir a operação.')
   return data
 }
@@ -25,5 +29,6 @@ export type Complaint = {
   neighborhood: string
   status: string
   createdAt: string
+  registeredAt: string
   type: { name: string }
 }
