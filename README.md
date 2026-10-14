@@ -69,8 +69,41 @@ Como alternativa temporária, use `sudo docker compose up --build -d`.
 Endereços locais:
 
 - Frontend: <http://localhost:5173>
+- Adminer (interface web do banco): <http://localhost:8080>
 - Backend: <http://localhost:3000>
 - Health check: <http://localhost:3000/health>
+
+### Acessar o banco de dados
+
+Com os serviços iniciados pelo Docker Compose, abra o Adminer em
+<http://localhost:8080> e informe:
+
+- Sistema: PostgreSQL;
+- Servidor: `db`;
+- Usuário: `cidup`;
+- Senha: valor de `POSTGRES_PASSWORD` no arquivo `.env`;
+- Banco de dados: `cidup`.
+
+O arquivo `.env.example` é apenas um modelo; o Compose lê os valores do `.env`.
+Não abra `http://localhost:5433` no navegador: essa porta fala o protocolo do
+PostgreSQL, não HTTP. Para conectar por DBeaver ou outro cliente PostgreSQL,
+use host `localhost`, porta `5433`, banco `cidup`, usuário `cidup` e a mesma
+senha de `POSTGRES_PASSWORD`.
+
+Também é possível acessar o banco pelo terminal:
+
+```bash
+docker compose exec db psql -U cidup -d cidup
+```
+
+No prompt do `psql`, use `\dt` para listar as tabelas e `\q` para sair.
+Se a autenticação falhar após alterar `POSTGRES_PASSWORD`, lembre-se de que a
+variável só define a senha quando o volume do banco é inicializado. Em um volume
+existente, atualize a senha do usuário `cidup` dentro do PostgreSQL para que
+coincida com o valor atual do `.env` usando `ALTER ROLE cidup WITH PASSWORD
+'SENHA_DO_ENV';` e substituindo `SENHA_DO_ENV` pelo valor de
+`POSTGRES_PASSWORD`. Mantenha a mesma senha nas URLs `DATABASE_URL` e
+`DOCKER_DATABASE_URL`.
 
 Para parar os serviços:
 
