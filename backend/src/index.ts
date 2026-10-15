@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client'
 import type { PrismaClient } from '@prisma/client'
 import { AUTH_COOKIE_NAME, AUTH_TOKEN_TTL_SECONDS, createAuthToken, readAuthUserId, requireAuthentication } from './auth.js'
 import { prisma } from './lib/prisma.js'
+import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
 
 const scrypt = promisify(scryptCallback)
 const authenticationRateLimit = rateLimit({
@@ -172,6 +173,20 @@ async function verifyPassword(password: string, storedHash: string) {
 
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' })
+})
+
+app.get('/api/supabase/status', authenticate, async (_request, response) => {
+  if (!isSupabaseConfigured()) {
+    response.status(503).json({ error: 'Supabase não configurado.' })
+    return
+  }
+
+  try {
+    const result = await supabaseRequest('/')
+    response.status(result.ok ? 200 : 502).json({ connected: result.ok })
+  } catch {
+    response.status(502).json({ connected: false })
+  }
 })
 
 async function registerUser(request: express.Request, response: express.Response) {
