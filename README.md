@@ -27,19 +27,26 @@ cidup/
 
 ## Como executar
 
-Para iniciar o ambiente Docker, copie e preencha as variáveis de configuração
-antes de executar:
+Para iniciar o ambiente Docker, crie o arquivo `.env` a partir do modelo e
+execute:
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Substitua os placeholders de `POSTGRES_PASSWORD`, `DATABASE_URL` e
-`DOCKER_DATABASE_URL` por valores locais. `DATABASE_URL` é usada quando o
-backend roda no host; o Compose usa `DOCKER_DATABASE_URL` para acessar o
-serviço PostgreSQL pela rede Docker. Não reutilize senhas reais em arquivos
-versionados.
+No PowerShell, o equivalente é:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build -d
+```
+
+O modelo já contém valores para desenvolvimento local. Se você alterá-los,
+mantenha a mesma senha em `POSTGRES_PASSWORD`, `DATABASE_URL` e
+`DOCKER_DATABASE_URL`. `DATABASE_URL` é usada quando o backend roda no host;
+o Compose usa `DOCKER_DATABASE_URL` para acessar o serviço PostgreSQL pela
+rede Docker. Não reutilize senhas reais em arquivos versionados.
 
 Se estiver rodando a API diretamente em `backend/`, copie
 `backend/.env.example` para `backend/.env` e configure a URL PostgreSQL local.
@@ -69,14 +76,14 @@ Como alternativa temporária, use `sudo docker compose up --build -d`.
 Endereços locais:
 
 - Frontend: <http://localhost:5173>
-- Adminer (interface web do banco): <http://localhost:8080>
+- Adminer (interface web do banco): <http://localhost:8081>
 - Backend: <http://localhost:3000>
 - Health check: <http://localhost:3000/health>
 
 ### Acessar o banco de dados
 
 Com os serviços iniciados pelo Docker Compose, abra o Adminer em
-<http://localhost:8080> e informe:
+<http://localhost:8081> e informe:
 
 - Sistema: PostgreSQL;
 - Servidor: `db`;
