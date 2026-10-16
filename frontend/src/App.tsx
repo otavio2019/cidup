@@ -13,6 +13,7 @@ import MyComplaintsPage from './pages/usuario/MyComplaintsPage'
 import ProfilePage from './pages/usuario/ProfilePage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ResponsiblePanelPage from './pages/admin/ResponsiblePanelPage'
+import './citizen-redesign.css'
 
 type SessionUser = {
   role: 'CITIZEN' | 'RESPONSIBLE'

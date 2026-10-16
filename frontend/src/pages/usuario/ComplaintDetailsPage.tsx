@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Não atendida' | 'Cancelada'
@@ -32,20 +33,7 @@ function formatDate(value?: string) {
 }
 
 function Header() {
-	return (
-		<header className="dashboard-header">
-			<Link className="dashboard-brand complaints-brand" to="/dashboard">
-				<h1>CidUp</h1>
-				<p>Cidades melhores começam com você</p>
-			</Link>
-			<nav className="dashboard-nav" aria-label="Navegação principal">
-				<Link to="/dashboard">Início</Link>
-				<Link to="/registrar-denuncia">Registrar denúncia</Link>
-				<Link className="active" to="/minhas-denuncias">Minhas denúncias</Link>
-			</nav>
-			<Link className="profile-button" to="/perfil">Meu perfil</Link>
-		</header>
-	)
+	return <CitizenHeader active="complaints" />
 }
 
 function ComplaintDetailsPage() {

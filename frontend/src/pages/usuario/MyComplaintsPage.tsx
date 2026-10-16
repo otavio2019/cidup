@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 const statusClasses: Record<string, string> = {
@@ -51,19 +52,7 @@ function MyComplaintsPage() {
 
 	return (
 		<main className="my-complaints-page">
-			<header className="dashboard-header">
-				<Link className="dashboard-brand complaints-brand" to="/dashboard">
-					<h1>CidUp</h1>
-					<p>Cidades melhores começam com você</p>
-				</Link>
-				<nav className="dashboard-nav" aria-label="Navegação principal">
-					<Link to="/dashboard">Início</Link>
-					<Link to="/registrar-denuncia">Registrar denúncia</Link>
-					<Link className="active" to="/minhas-denuncias">Minhas denúncias</Link>
-				</nav>
-				<Link className="profile-button" to="/perfil">Meu perfil</Link>
-			</header>
-
+			<CitizenHeader active="complaints" />
 			<section className="complaints-page-content" aria-labelledby="my-complaints-title">
 				<div className="my-complaints-heading">
 					<div>

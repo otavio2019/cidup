@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 type ComplaintFormData = {
@@ -164,14 +165,7 @@ function CreateComplaintPage() {
 
   return (
     <main className="complaint-page">
-      <header className="complaint-header">
-        <Link className="complaint-brand" to="/dashboard" aria-label="Voltar ao painel">
-          <span className="complaint-brand-mark" aria-hidden="true">C</span>
-          <span>CidUp</span>
-        </Link>
-        <span className="complaint-step">Etapa 1 de 4</span>
-      </header>
-
+      <CitizenHeader active="create" />
       <section className="complaint-shell" aria-labelledby="complaint-title">
         <div className="complaint-heading">
           <Link className="back-link" to="/dashboard">← Voltar ao início</Link>

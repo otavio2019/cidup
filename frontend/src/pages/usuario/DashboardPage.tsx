@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 const complaintStatusLabels: Record<string, string> = {
@@ -81,27 +82,7 @@ function DashboardPage() {
 
   return (
     <main className="dashboard-page">
-      <header className="dashboard-header">
-        <div className="dashboard-brand">
-          <h1>CidUp</h1>
-          <p>Cidades melhores começam com você</p>
-        </div>
-
-        <nav className="dashboard-nav" aria-label="Navegação principal">
-          <a className="active" href="#inicio">
-            Início
-          </a>
-
-          <a href="#denuncia">Registrar denúncia</a>
-          <Link to="/minhas-denuncias">Minhas denúncias</Link>
-          <Link to="/perfil">Perfil</Link>
-        </nav>
-
-        <Link className="profile-button" to="/perfil">
-          <span className="profile-icon">●</span>
-          Meu perfil
-        </Link>
-      </header>
+      <CitizenHeader active="home" />
 
       <section className="dashboard-content">
         <div className="dashboard-main">
@@ -166,8 +147,15 @@ function DashboardPage() {
           </section>
 
           <div className="summary-grid">
-            <article className="summary-card blue-card">
-              <span className="summary-icon">▣</span>
+            <article className="summary-card progress-card">
+              <span className="summary-icon">●</span>
+              <p>Em progresso</p>
+              <strong>{complaints.filter((complaint) => complaint.status === 'IN_SERVICE').length}</strong>
+              <span>Soluções em andamento</span>
+            </article>
+
+            <article className="summary-card open-card">
+              <span className="summary-icon">◷</span>
               <p>Denúncias abertas</p>
               <strong>{complaints.filter((complaint) => complaint.status === 'RECEIVED' || complaint.status === 'IN_ANALYSIS').length}</strong>
               <span>Aguardando análise</span>
@@ -176,7 +164,7 @@ function DashboardPage() {
             <article className="summary-card yellow-card">
               <span className="summary-icon">◷</span>
               <p>Em atendimento</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE').length}</strong>
+              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED').length}</strong>
               <span>Em análise pelos órgãos</span>
             </article>
 

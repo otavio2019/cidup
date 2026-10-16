@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 type ComplaintDraft = {
@@ -85,13 +86,7 @@ function ComplaintReviewPage() {
 
   return (
     <main className="review-page">
-      <header className="complaint-header">
-        <Link className="complaint-brand" to="/dashboard" aria-label="Voltar ao painel">
-          <span className="complaint-brand-mark" aria-hidden="true">C</span>
-          <span>CidUp</span>
-        </Link>
-        <span className="complaint-step">Etapa 3 de 4</span>
-      </header>
+      <CitizenHeader active="create" />
 
       <section className="review-shell" aria-labelledby="review-title">
         <Link className="back-link" to="/registrar-denuncia/localizacao" state={draft}>← Voltar à localização</Link>

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 type ComplaintData = {
@@ -42,6 +43,7 @@ function ComplaintConfirmationPage() {
 
   return (
     <main className="confirmation-page">
+      <CitizenHeader active="complaints" />
       <section className="confirmation-card" aria-labelledby="confirmation-title">
         <div className="success-icon" aria-hidden="true">✓</div>
         <p className="confirmation-kicker">DENÚNCIA REGISTRADA</p>

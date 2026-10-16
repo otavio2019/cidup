@@ -1,7 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { apiRequest } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
+import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 type CitizenProfile = {
@@ -56,19 +57,7 @@ function ProfilePage() {
 
 	return (
 		<main className="profile-page">
-			<header className="dashboard-header">
-				<Link className="dashboard-brand complaints-brand" to="/dashboard">
-					<h1>CidUp</h1>
-					<p>Cidades melhores começam com você</p>
-				</Link>
-				<nav className="dashboard-nav" aria-label="Navegação principal">
-					<Link to="/dashboard">Início</Link>
-					<Link to="/registrar-denuncia">Registrar denúncia</Link>
-					<Link to="/minhas-denuncias">Minhas denúncias</Link>
-					<Link className="active" to="/perfil">Perfil</Link>
-				</nav>
-			</header>
-
+			<CitizenHeader active="profile" />
 			<section className="profile-content" aria-labelledby="profile-title">
 				<div className="profile-heading">
 					<p className="complaint-kicker">SUA CONTA</p>
