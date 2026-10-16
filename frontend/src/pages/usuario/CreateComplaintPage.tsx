@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
@@ -56,6 +56,90 @@ function CreateComplaintPage() {
   const [photo, setPhoto] = useState<File | null>(null)
   const [errors, setErrors] = useState<ComplaintErrors>({})
   const [submitError, setSubmitError] = useState('')
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(() => {
+    const draft = routeLocation.state as { latitude?: unknown; longitude?: unknown } | null
+    let source: { latitude?: unknown; longitude?: unknown } | null = draft
+    if (!source) {
+      try {
+        source = JSON.parse(sessionStorage.getItem('cidup-complaint-draft') ?? 'null')
+      } catch {
+        source = null
+      }
+    }
+    return typeof source?.latitude === 'number' && typeof source?.longitude === 'number'
+      ? { latitude: source.latitude, longitude: source.longitude }
+      : null
+  })
+  const [isLocating, setIsLocating] = useState(false)
+  const [locationMessage, setLocationMessage] = useState('')
+
+  async function fillAddressFromCoordinates(latitude: number, longitude: number) {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`,
+        { headers: { Accept: 'application/json' } },
+      )
+      if (!response.ok) throw new Error('reverse geocoding failed')
+
+      const data = await response.json() as {
+        display_name?: string
+        address?: {
+          road?: string
+          pedestrian?: string
+          residential?: string
+          house_number?: string
+          neighbourhood?: string
+          suburb?: string
+          city_district?: string
+        }
+      }
+      const found = data.address ?? {}
+      const street = found.road ?? found.pedestrian ?? found.residential ?? data.display_name
+      const neighborhood = found.neighbourhood ?? found.suburb ?? found.city_district
+
+      setForm((current) => ({
+        ...current,
+        address: street ?? current.address,
+        number: found.house_number ?? current.number,
+        neighborhood: neighborhood ?? current.neighborhood,
+      }))
+      setErrors((current) => ({ ...current, address: undefined, number: undefined, neighborhood: undefined }))
+      setLocationMessage(
+        street
+          ? `Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Endereço preenchido; confira e edite se precisar.`
+          : `Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Preencha o endereço manualmente.`,
+      )
+    } catch {
+      setLocationMessage('Localização obtida, mas não foi possível preencher o endereço automaticamente. Confira os campos.')
+    }
+  }
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      setLocationMessage('Este navegador não oferece geolocalização. Informe o endereço manualmente.')
+      return
+    }
+
+    setLocationMessage('')
+    setIsLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setCoordinates({ latitude: coords.latitude, longitude: coords.longitude })
+        setIsLocating(false)
+        void fillAddressFromCoordinates(coords.latitude, coords.longitude)
+      },
+      () => {
+        setIsLocating(false)
+        setLocationMessage('Não foi possível obter sua localização. Autorize o acesso ou informe o endereço manualmente.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    )
+  }
+
+  useEffect(() => {
+    if (!coordinates) requestLocation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -160,6 +244,7 @@ function CreateComplaintPage() {
       neighborhood: form.neighborhood.trim(),
       complement: form.complement.trim(),
       photoName: photo?.name ?? null,
+      ...(coordinates ?? {}),
     }
 
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(complaintDraft))
@@ -300,6 +385,19 @@ function CreateComplaintPage() {
                 onChange={handleChange}
                 placeholder="Ex.: Próximo à escola municipal"
               />
+            </div>
+
+            <div className="complaint-field">
+              <label>Coordenadas <span>*</span></label>
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={requestLocation}
+                disabled={isLocating}
+              >
+                {isLocating ? 'Obtendo localização...' : coordinates ? 'Atualizar localização' : 'Obter localização atual'}
+              </button>
+              {locationMessage && <small>{locationMessage}</small>}
             </div>
           </div>
 
