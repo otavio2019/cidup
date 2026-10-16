@@ -110,7 +110,7 @@ function ComplaintLocationPage() {
   return (
     <main className="location-page">
       <header className="complaint-header">
-        <Link className="complaint-brand" to="/dashboard" aria-label="Voltar ao Dashboard">
+        <Link className="complaint-brand" to="/dashboard" aria-label="Voltar ao painel">
           <span className="complaint-brand-mark" aria-hidden="true">C</span>
           <span>CidUp</span>
         </Link>

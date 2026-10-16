@@ -86,7 +86,7 @@ function ComplaintConfirmationPage() {
             Acompanhar minhas denúncias
           </Link>
           <Link className="secondary-action" to="/dashboard">
-            Voltar ao Dashboard
+            Voltar ao painel
           </Link>
         </div>
       </section>

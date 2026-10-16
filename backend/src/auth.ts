@@ -16,14 +16,14 @@ declare global {
 
 function secretKey(secret: string) {
   if (Buffer.byteLength(secret, 'utf8') < 32) {
-    throw new Error('AUTH_TOKEN_SECRET must contain at least 32 bytes.')
+    throw new Error('AUTH_TOKEN_SECRET deve conter pelo menos 32 bytes.')
   }
   return new TextEncoder().encode(secret)
 }
 
 export async function createAuthToken(userId: number, secret: string) {
   if (!Number.isInteger(userId) || userId <= 0) {
-    throw new Error('A valid user ID is required to create an authentication token.')
+    throw new Error('É necessário informar um ID de usuário válido para criar o token de autenticação.')
   }
 
   return new SignJWT({})

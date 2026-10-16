@@ -4,29 +4,29 @@ import { MemoryRouter } from 'react-router-dom'
 import { ProtectedRoute, ResponsibleRoute } from './App'
 
 vi.mock('./api', () => ({
-  apiRequest: vi.fn().mockRejectedValue(new Error('Unauthenticated')),
+  apiRequest: vi.fn().mockRejectedValue(new Error('Não autenticado')),
 }))
 
-describe('server-backed route guards', () => {
-  it('does not trust legacy localStorage authentication flags', () => {
+describe('proteção de rotas com sessão do servidor', () => {
+  it('não confia nas antigas sinalizações de autenticação do localStorage', () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter>
-        <ProtectedRoute><span>private</span></ProtectedRoute>
+        <ProtectedRoute><span>privado</span></ProtectedRoute>
       </MemoryRouter>,
     )
 
     expect(markup).toContain('Verificando sessão')
-    expect(markup).not.toContain('private')
+    expect(markup).not.toContain('privado')
   })
 
-  it('checks server session before rendering responsible content', () => {
+  it('verifica a sessão antes de exibir o conteúdo da área responsável', () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter>
-        <ResponsibleRoute><span>admin</span></ResponsibleRoute>
+        <ResponsibleRoute><span>administrador</span></ResponsibleRoute>
       </MemoryRouter>,
     )
 
     expect(markup).toContain('Verificando sessão')
-    expect(markup).not.toContain('admin')
+    expect(markup).not.toContain('administrador')
   })
 })

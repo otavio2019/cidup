@@ -43,7 +43,7 @@ function handlePrismaError(error: unknown, response: express.Response, operation
     }
   }
 
-  console.error(`Database operation failed: ${operation}`)
+  console.error(`Falha na operação do banco de dados: ${operation}`)
   response.status(500).json({ error: 'Não foi possível concluir a operação.' })
 }
 
@@ -93,7 +93,7 @@ export function createApp(
 ) {
 const secret = options.authTokenSecret ?? process.env.AUTH_TOKEN_SECRET
 if (!secret || Buffer.byteLength(secret, 'utf8') < 32) {
-  throw new Error('Set AUTH_TOKEN_SECRET to a value of at least 32 bytes.')
+  throw new Error('Defina AUTH_TOKEN_SECRET com um valor de pelo menos 32 bytes.')
 }
 const frontendOrigins = (options.frontendOrigins ?? process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173')
   .split(',')
@@ -108,7 +108,7 @@ const administratorIds = new Set(
 )
 const production = options.production ?? process.env.NODE_ENV === 'production'
 if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 'https:')) {
-  throw new Error('FRONTEND_ORIGINS must use HTTPS in production.')
+  throw new Error('FRONTEND_ORIGINS deve usar HTTPS em produção.')
 }
 const authenticate = requireAuthentication(secret)
 const app = express()
@@ -1023,7 +1023,7 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
     })
 
     if (!aiResponse.ok) {
-      throw new Error(`AI provider returned ${aiResponse.status}`)
+      throw new Error(`O provedor de IA retornou o status ${aiResponse.status}.`)
     }
 
     const completion = (await aiResponse.json()) as {
@@ -1044,7 +1044,7 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
       summary: draft.summary ?? '',
     })
   } catch (error) {
-    console.error('AI complaint draft failed')
+    console.error('Falha ao gerar rascunho de denúncia com IA.')
     response.status(502).json({
       error: 'Não foi possível gerar o rascunho agora. Tente novamente.',
     })
@@ -1056,7 +1056,7 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
     response.status(400).json({ error: 'Corpo da requisição inválido.' })
     return
   }
-  console.error('Unhandled request error')
+  console.error('Erro não tratado ao processar a solicitação.')
   response.status(500).json({ error: 'Não foi possível concluir a operação.' })
 })
 
@@ -1070,6 +1070,6 @@ if (isMainModule) {
   const app = createApp()
   const port = Number(process.env.PORT ?? 3000)
   app.listen(port, () => {
-    console.log(`Backend listening on port ${port}`)
+    console.log(`Servidor da API em execução na porta ${port}.`)
   })
 }

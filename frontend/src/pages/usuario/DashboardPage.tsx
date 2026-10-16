@@ -4,6 +4,17 @@ import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import '../../App.css'
 
+const complaintStatusLabels: Record<string, string> = {
+  RECEIVED: 'Recebida',
+  IN_ANALYSIS: 'Em análise',
+  FORWARDED: 'Em atendimento',
+  IN_SERVICE: 'Em atendimento',
+  RESOLVED: 'Resolvida',
+  NOT_SERVED: 'Não atendida',
+  CANCELLED: 'Cancelada',
+  CANCELED: 'Cancelada',
+}
+
 // TODO: substituir os números e denúncias simulados pelos dados da API.
 // TODO: conectar os links às telas de registrar denúncia e detalhes.
 function DashboardPage() {
@@ -192,7 +203,7 @@ function DashboardPage() {
                   <p>{complaint.title}</p>
                   <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
                 </div>
-                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : 'status-analysis'}`}>{complaint.status}</span>
+                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
                 <button type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
               </article>
             ))}

@@ -1,6 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3000')
 if (import.meta.env.PROD && API_URL && new URL(API_URL).protocol !== 'https:') {
-  throw new Error('VITE_API_URL must use HTTPS in production.')
+  throw new Error('VITE_API_URL deve usar HTTPS em produção.')
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}) {

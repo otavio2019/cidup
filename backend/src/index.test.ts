@@ -84,7 +84,7 @@ function installDatabaseMocks(database: PrismaClient) {
       remember('usuario', 'create', args)
       const data = record(args.data)
       if ([...users.values()].some((user) => user.email === data.email)) {
-        throw new Error('unique constraint detail must not be exposed')
+        throw new Error('detalhes da restrição de unicidade não devem ser expostos')
       }
       const user: StoredUser = {
         id_usuario: nextUserId++,
@@ -99,7 +99,7 @@ function installDatabaseMocks(database: PrismaClient) {
     async findUnique(args) {
       remember('usuario', 'findUnique', args)
       if (process.env.TEST_PRISMA_ERROR === '1') {
-        throw new Error('sensitive database connection details')
+        throw new Error('detalhes confidenciais da conexão com o banco de dados')
       }
       const where = record(args.where)
       const user = [...users.values()].find((candidate) =>
@@ -308,13 +308,13 @@ after(async () => {
   await client.$disconnect()
 })
 
-test('health endpoint is public and responds successfully', async () => {
+test('o endpoint de saúde é público e responde com sucesso', async () => {
   const response = await callApi('/health')
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), { status: 'ok' })
 })
 
-test('registration accepts valid input and does not return the password hash', async () => {
+test('o cadastro aceita dados válidos sem retornar o hash da senha', async () => {
   const response = await callApi('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify({
@@ -332,7 +332,7 @@ test('registration accepts valid input and does not return the password hash', a
   assert.notEqual(users.get(3)?.senha, 'senha-segura')
 })
 
-test('registration rejects invalid input without creating a user', async () => {
+test('o cadastro rejeita dados inválidos sem criar um usuário', async () => {
   const beforeCount = users.size
   const response = await callApi('/api/auth/register', {
     method: 'POST',
@@ -342,7 +342,7 @@ test('registration rejects invalid input without creating a user', async () => {
   assert.equal(users.size, beforeCount)
 })
 
-test('login verifies the password and issues an HttpOnly session cookie', async () => {
+test('o login verifica a senha e emite um cookie de sessão HttpOnly', async () => {
   const response = await callApi('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email: 'um@example.test', password: 'secret-password' }),
@@ -357,7 +357,7 @@ test('login verifies the password and issues an HttpOnly session cookie', async 
   assert.equal(setCookie.includes('Secure'), false)
 })
 
-test('login rejects an incorrect password', async () => {
+test('o login rejeita uma senha incorreta', async () => {
   const response = await callApi('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email: 'um@example.test', password: 'wrong-password' }),
@@ -366,14 +366,14 @@ test('login rejects an incorrect password', async () => {
   assert.equal(response.headers.get('set-cookie'), null)
 })
 
-test('protected API rejects requests without a cookie, regardless of x-user-id', async () => {
+test('a API protegida rejeita solicitações sem cookie, independentemente de x-user-id', async () => {
   const response = await callApi('/api/complaints', {
     headers: { 'x-user-id': '1' },
   })
   assert.equal(response.status, 401)
 })
 
-test('protected API rejects invalid and expired cookies', async () => {
+test('a API protegida rejeita cookies inválidos ou expirados', async () => {
   const invalid = await callApi('/api/complaints', {
     headers: { Cookie: `${AUTH_COOKIE_NAME}=not-a-jwt` },
   })
@@ -392,7 +392,7 @@ test('protected API rejects invalid and expired cookies', async () => {
   assert.equal(expired.status, 401)
 })
 
-test('x-user-id cannot override the user identity in the signed cookie', async () => {
+test('x-user-id não substitui a identidade do usuário no cookie assinado', async () => {
   calls.length = 0
   const response = await callApi('/api/complaints', {
     headers: {
@@ -408,7 +408,7 @@ test('x-user-id cannot override the user identity in the signed cookie', async (
   assert.equal(record(calls.find((call) => call.model === 'denuncia' && call.method === 'findMany')?.args.where).id_usuario, 1)
 })
 
-test('users cannot read, update, or delete another user complaint', async () => {
+test('usuários não podem consultar, atualizar ou excluir denúncias de outras pessoas', async () => {
   const cookie = await cookieFor(1)
   const read = await callApi('/api/complaints/202', { headers: { Cookie: cookie, 'x-user-id': '2' } })
   calls.length = 0
@@ -428,7 +428,7 @@ test('users cannot read, update, or delete another user complaint', async () => 
   assert.equal(complaints.get(202)?.descricao, 'Relato privado do cidadão dois')
 })
 
-test('authenticated user can update and delete only their own user record', async () => {
+test('o usuário autenticado só pode atualizar e excluir o próprio cadastro', async () => {
   const cookie = await cookieFor(1)
   const otherUser = await callApi('/api/users/2', {
     method: 'PATCH',
@@ -441,7 +441,7 @@ test('authenticated user can update and delete only their own user record', asyn
   assert.equal(users.get(2)?.nome, 'Pessoa Dois')
 })
 
-test('Prisma failures return a generic message without sensitive details', async () => {
+test('falhas do Prisma retornam uma mensagem genérica sem detalhes confidenciais', async () => {
   process.env.TEST_PRISMA_ERROR = '1'
   const originalError = console.error
   const logged: unknown[][] = []
@@ -453,15 +453,15 @@ test('Prisma failures return a generic message without sensitive details', async
     })
     const body = await response.text()
     assert.equal(response.status, 500)
-    assert.equal(body.includes('sensitive database connection details'), false)
-    assert.equal(logged.some((args) => args.join(' ').includes('sensitive database connection details')), false)
+    assert.equal(body.includes('detalhes confidenciais da conexão com o banco de dados'), false)
+    assert.equal(logged.some((args) => args.join(' ').includes('detalhes confidenciais da conexão com o banco de dados')), false)
   } finally {
     delete process.env.TEST_PRISMA_ERROR
     console.error = originalError
   }
 })
 
-test('organization reads expose only public fields; writes require configured admin', async () => {
+test('consultas de órgãos expõem apenas campos públicos e alterações exigem administrador autorizado', async () => {
   const publicResponse = await callApi('/api/orgaos')
   const publicBody = await publicResponse.json() as RecordValue
   const organization = (publicBody.orgaos as RecordValue[])[0]
@@ -483,7 +483,7 @@ test('organization reads expose only public fields; writes require configured ad
   assert.equal(citizenWrite.status, 403)
 })
 
-test('histories are private and scoped to the authenticated user', async () => {
+test('os históricos são privados e limitados ao usuário autenticado', async () => {
   const unauthorized = await callApi('/api/historicos')
   assert.equal(unauthorized.status, 401)
   calls.length = 0
@@ -493,7 +493,7 @@ test('histories are private and scoped to the authenticated user', async () => {
   assert.equal(record(query?.args.where).denuncia !== undefined, true)
 })
 
-test('AI endpoint requires authentication and Prisma-backed errors never leak secrets', async () => {
+test('o endpoint de IA exige autenticação e falhas do Prisma não expõem segredos', async () => {
   const response = await callApi('/api/ai/complaint-draft', {
     method: 'POST',
     body: JSON.stringify({ description: 'Relato suficientemente detalhado.' }),
@@ -501,9 +501,9 @@ test('AI endpoint requires authentication and Prisma-backed errors never leak se
   assert.equal(response.status, 401)
 })
 
-test('login rejects malformed and too-short token secrets at app construction', () => {
+test('o login rejeita segredos de token malformados ou curtos demais ao iniciar a aplicação', () => {
   assert.throws(
     () => createApp(client, { authTokenSecret: 'short-secret' }),
-    /at least 32 bytes/i,
+    /pelo menos 32 bytes/i,
   )
 })

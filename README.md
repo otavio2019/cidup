@@ -78,7 +78,7 @@ Endereços locais:
 - Frontend: <http://localhost:5173>
 - Adminer (interface web do banco): <http://localhost:8081>
 - Backend: <http://localhost:3000>
-- Health check: <http://localhost:3000/health>
+- Verificação de saúde da API: <http://localhost:3000/health>
 
 ### Acessar o banco de dados
 
@@ -153,9 +153,9 @@ O desenvolvimento deve priorizar o fluxo principal antes de funcionalidades adic
 
 Já estão disponíveis:
 
-- tela de login com navegação para o Dashboard;
+- tela de acesso com navegação para o painel;
 - tela de cadastro;
-- Dashboard inicial do cidadão;
+- painel inicial do cidadão;
 - rotas básicas do frontend;
 - backend Express com a rota `/health`;
 - estrutura inicial para integração com a API;

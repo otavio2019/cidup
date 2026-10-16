@@ -1,19 +1,19 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Esta base oferece uma configuração mínima para usar React com Vite, atualização instantânea (HMR) e algumas regras do Oxlint.
 
-Currently, two official plugins are available:
+Atualmente, há dois plugins oficiais disponíveis:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) usa [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) usa [SWC](https://swc.rs/)
 
-## React Compiler
+## Compilador do React
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O compilador do React não está ativado nesta base porque pode afetar o desempenho durante o desenvolvimento e a compilação. Para ativá-lo, consulte [a documentação de instalação](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the Oxlint configuration
+## Ampliar a configuração do Oxlint
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Para preparar a aplicação para produção, recomendamos ativar regras de análise estática que consideram os tipos. Instale `oxlint-tsgolint` e edite `.oxlintrc.json`:
 
 ```json
 {
@@ -29,4 +29,4 @@ If you are developing a production application, we recommend enabling type-aware
 }
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Consulte a [documentação das regras do Oxlint](https://oxc.rs/docs/guide/usage/linter/rules) para ver a lista completa de regras e categorias.

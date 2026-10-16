@@ -101,7 +101,7 @@ const initialTypes: OccurrenceType[] = [
 
 const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Em atendimento', 'Resolvida']
 const navigation = [
-  { path: '/responsavel/dashboard', label: 'Dashboard' },
+  { path: '/responsavel/dashboard', label: 'Painel' },
   { path: '/responsavel/denuncias', label: 'Denúncias' },
   { path: '/responsavel/tipos', label: 'Tipos de ocorrência' },
   { path: '/responsavel/relatorios', label: 'Relatórios' },
@@ -143,7 +143,7 @@ function ResponsiblePanelPage() {
 
   const heading = selectedComplaint && section === 'denuncias'
     ? 'Detalhes da denúncia'
-    : navigation.find((item) => item.path.endsWith(section))?.label ?? 'Dashboard'
+    : navigation.find((item) => item.path.endsWith(section))?.label ?? 'Painel'
 
   function openTypeDialog(type?: OccurrenceType) {
     setEditingType(type ?? null)
