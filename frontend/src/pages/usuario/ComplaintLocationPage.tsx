@@ -48,6 +48,8 @@ function ComplaintLocationPage() {
   const [reference, setReference] = useState(complaint.complement ?? '')
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationId, setOrganizationId] = useState(complaint.id_orgao?.toString() ?? '')
+  const [isLocating, setIsLocating] = useState(false)
+  const savedOrganizationId = complaint.id_orgao
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
     typeof complaint.latitude === 'number' && typeof complaint.longitude === 'number'
       ? { latitude: complaint.latitude, longitude: complaint.longitude }
@@ -58,7 +60,11 @@ function ComplaintLocationPage() {
     let active = true
     apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
       .then(({ orgaos }) => {
-        if (active) setOrganizations(orgaos)
+        if (!active) return
+        setOrganizations(orgaos)
+        if (!savedOrganizationId && orgaos.length > 0) {
+          setOrganizationId(String(orgaos[0].id_orgao))
+        }
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os órgãos.')
@@ -67,7 +73,36 @@ function ComplaintLocationPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [savedOrganizationId])
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      setError('Este navegador não oferece geolocalização. Informe a localização manualmente.')
+      return
+    }
+
+    setError('')
+    setIsLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setCoordinates({ latitude: coords.latitude, longitude: coords.longitude })
+        setIsLocating(false)
+      },
+      () => {
+        setIsLocating(false)
+        setError('Não foi possível obter sua localização. Autorize o acesso ou tente novamente.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    )
+  }
+
+  useEffect(() => {
+    if (coordinates) return
+    const timer = window.setTimeout(() => {
+      requestLocation()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [coordinates])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -209,22 +244,10 @@ function ComplaintLocationPage() {
               <button
                 className="secondary-action"
                 type="button"
-                onClick={() => {
-                  if (!navigator.geolocation) {
-                    setError('Este navegador não oferece geolocalização.')
-                    return
-                  }
-                  navigator.geolocation.getCurrentPosition(
-                    ({ coords }) => {
-                      setCoordinates({ latitude: coords.latitude, longitude: coords.longitude })
-                      setError('')
-                    },
-                    () => setError('Não foi possível obter sua localização. Autorize a geolocalização e tente novamente.'),
-                    { enableHighAccuracy: true, timeout: 10000 },
-                  )
-                }}
+                onClick={requestLocation}
+                disabled={isLocating}
               >
-                {coordinates ? 'Atualizar localização' : 'Obter localização atual'}
+                {isLocating ? 'Obtendo localização...' : coordinates ? 'Atualizar localização' : 'Obter localização atual'}
               </button>
               {coordinates && (
                 <small>Localização informada: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}</small>
