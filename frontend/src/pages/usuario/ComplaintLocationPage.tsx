@@ -15,6 +15,7 @@ type ComplaintData = {
   complement?: string
   photoName?: string | null
   id_orgao?: number
+  ids_orgaos?: number[]
   latitude?: number
   longitude?: number
 }
@@ -72,10 +73,12 @@ function ComplaintLocationPage() {
   const [neighborhood, setNeighborhood] = useState(complaint.neighborhood ?? '')
   const [reference, setReference] = useState(complaint.complement ?? '')
   const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [organizationId, setOrganizationId] = useState(complaint.id_orgao?.toString() ?? '')
+  const [organizationIds, setOrganizationIds] = useState<string[]>(
+    complaint.ids_orgaos?.map(String) ?? (complaint.id_orgao ? [String(complaint.id_orgao)] : []),
+  )
   const [isLocating, setIsLocating] = useState(false)
   const [isAddressLoading, setIsAddressLoading] = useState(false)
-  const savedOrganizationId = complaint.id_orgao
+  const hadSavedOrganizations = organizationIds.length > 0
   const complaintType = complaint.type
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
     typeof complaint.latitude === 'number' && typeof complaint.longitude === 'number'
@@ -89,9 +92,9 @@ function ComplaintLocationPage() {
       .then(({ orgaos }) => {
         if (!active) return
         setOrganizations(orgaos)
-        if (!savedOrganizationId) {
+        if (!hadSavedOrganizations) {
           const responsibleOrganization = findResponsibleOrganization(complaintType, orgaos)
-          if (responsibleOrganization) setOrganizationId(String(responsibleOrganization.id_orgao))
+          if (responsibleOrganization) setOrganizationIds([String(responsibleOrganization.id_orgao)])
         }
       })
       .catch((loadError: unknown) => {
@@ -101,7 +104,7 @@ function ComplaintLocationPage() {
     return () => {
       active = false
     }
-  }, [complaintType, savedOrganizationId])
+  }, [complaintType, hadSavedOrganizations])
 
   function requestLocation() {
     if (!navigator.geolocation) {
@@ -187,8 +190,8 @@ function ComplaintLocationPage() {
       setError('Informe o bairro da denúncia.')
       return
     }
-    if (!organizationId) {
-      setError('Selecione o órgão responsável.')
+    if (organizationIds.length === 0) {
+      setError('Selecione pelo menos um órgão responsável.')
       return
     }
     if (!coordinates) {
@@ -202,7 +205,8 @@ function ComplaintLocationPage() {
       number: number.trim(),
       neighborhood: neighborhood.trim(),
       complement: reference.trim(),
-      id_orgao: Number(organizationId),
+      id_orgao: Number(organizationIds[0]),
+      ids_orgaos: organizationIds.map(Number),
       ...coordinates,
     }
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(locationData))
@@ -288,28 +292,29 @@ function ComplaintLocationPage() {
               />
             </div>
 
-            <div className="complaint-field">
-              <label htmlFor="location-organization">Órgão responsável <span>*</span></label>
-              <select
-                id="location-organization"
-                value={organizationId}
-                onChange={(event) => setOrganizationId(event.target.value)}
-                disabled={Boolean(organizationId)}
-              >
-                <option value="">Selecione um órgão</option>
-                {organizations.map((organization) => (
-                  <option key={organization.id_orgao} value={organization.id_orgao}>
+            <fieldset className="complaint-field">
+              <legend>Órgãos responsáveis <span>*</span></legend>
+              {organizations.map((organization) => {
+                const value = String(organization.id_orgao)
+                return (
+                  <label key={organization.id_orgao} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 400 }}>
+                    <input
+                      type="checkbox"
+                      checked={organizationIds.includes(value)}
+                      onChange={(event) => {
+                        setError('')
+                        setOrganizationIds((current) => event.target.checked
+                          ? [...current, value]
+                          : current.filter((id) => id !== value))
+                      }}
+                    />
                     {organization.nome}
-                  </option>
-                ))}
-              </select>
-              {organizationId && (
-                <small>
-                  Encaminhamento automático para {organizations.find((organization) => String(organization.id_orgao) === organizationId)?.nome ?? 'o órgão responsável'}.
-                </small>
-              )}
+                  </label>
+                )
+              })}
+              <small>Você pode marcar mais de um órgão. O sugerido para o tipo do problema já vem marcado.</small>
               {organizations.length === 0 && <small>Nenhum órgão público disponível no momento.</small>}
-            </div>
+            </fieldset>
 
             <div className="complaint-field">
               <label>Coordenadas <span>*</span></label>
