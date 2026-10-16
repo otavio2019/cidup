@@ -455,6 +455,7 @@ test('falhas do Prisma retornam uma mensagem genérica sem detalhes confidenciai
     assert.equal(response.status, 500)
     assert.equal(body.includes('detalhes confidenciais da conexão com o banco de dados'), false)
     assert.equal(logged.some((args) => args.join(' ').includes('detalhes confidenciais da conexão com o banco de dados')), false)
+    assert.equal(logged.some((args) => JSON.stringify(args).includes('"name":"Error"')), true)
   } finally {
     delete process.env.TEST_PRISMA_ERROR
     console.error = originalError

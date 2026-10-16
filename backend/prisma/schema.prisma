@@ -48,7 +48,7 @@ model usuario {
   id_usuario Int         @id @default(autoincrement())
   nome       String      @db.VarChar(150)
   email      String      @unique @db.VarChar(255)
-  telefone   String      @unique @db.VarChar(20)
+  telefone   String?     @unique @db.VarChar(20)
   senha      String      @db.VarChar(255)
   denuncia   denuncia[]
   historico  historico[]

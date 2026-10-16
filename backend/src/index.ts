@@ -43,7 +43,10 @@ function handlePrismaError(error: unknown, response: express.Response, operation
     }
   }
 
-  console.error(`Falha na operação do banco de dados: ${operation}`)
+  console.error(`Falha na operação do banco de dados: ${operation}`, {
+    name: error instanceof Error ? error.name : typeof error,
+    code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined,
+  })
   response.status(500).json({ error: 'Não foi possível concluir a operação.' })
 }
 
@@ -1056,7 +1059,10 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
     response.status(400).json({ error: 'Corpo da requisição inválido.' })
     return
   }
-  console.error('Erro não tratado ao processar a solicitação.')
+  console.error('Erro não tratado ao processar a solicitação.', {
+    name: error instanceof Error ? error.name : typeof error,
+    code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined,
+  })
   response.status(500).json({ error: 'Não foi possível concluir a operação.' })
 })
 
