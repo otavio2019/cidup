@@ -855,23 +855,81 @@
     grid-template-columns: 1fr;
   }
 
+  .login-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
   .login-story {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 28px clamp(22px, 8vw, 64px) 30px;
+    border-radius: 0 0 36px 36px;
+    box-shadow: 0 14px 30px rgb(6 65 124 / 22%);
+  }
+
+  .login-story-content {
+    max-width: none;
+  }
+
+  .login-story h1 {
+    font-size: clamp(28px, 8vw, 40px);
+  }
+
+  .story-copy {
+    max-width: none;
+    font-size: 14px;
+  }
+
+  .login-story-footer {
+    border-radius: 999px;
+    font-size: 12px;
   }
 
   .login-panel {
-    min-height: 100vh;
-    padding: 36px clamp(22px, 8vw, 64px);
+    flex: 1;
+    min-height: 0;
+    justify-content: flex-start;
+    padding: 28px clamp(22px, 8vw, 64px) 40px;
   }
 
   .mobile-brand {
-    display: flex;
-    margin-bottom: 36px;
-    color: var(--citizen-blue);
+    display: none;
   }
 
-  .mobile-brand .brand-mark {
-    color: var(--citizen-blue);
+  .login-panel-header h2 {
+    font-size: 28px;
+  }
+
+  .login-panel-header > p:last-child,
+  .form-group label,
+  .label-row label {
+    font-size: 14px;
+  }
+
+  .input-wrap {
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  .input-wrap input {
+    font-size: 16px;
+  }
+
+  .login-button {
+    min-height: 50px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+
+  .remember-option,
+  .register-link {
+    font-size: 13px;
+  }
+
+  .login-privacy {
+    font-size: 11px;
   }
 }
 

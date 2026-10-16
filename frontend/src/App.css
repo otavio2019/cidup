@@ -1305,16 +1305,12 @@ a {
     max-width: 540px;
   }
 
-  .login-story {
-    display: none;
-  }
-
   .login-panel {
     padding: 38px clamp(24px, 7vw, 52px) 34px;
   }
 
   .mobile-brand {
-    display: flex;
+    display: none;
   }
 }
 
@@ -1334,12 +1330,9 @@ a {
   }
 
   .login-panel {
-    min-height: 100vh;
-    padding: 32px 22px 26px;
-  }
-
-  .mobile-brand {
-    margin-bottom: 58px;
+    min-height: 0;
+    justify-content: flex-start;
+    padding: 28px 22px 32px;
   }
 
   .login-panel-header {
