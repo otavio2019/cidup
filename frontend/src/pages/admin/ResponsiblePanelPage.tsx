@@ -123,6 +123,7 @@ function ResponsiblePanelPage() {
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [period, setPeriod] = useState('Outubro 2026')
   const [sector, setSector] = useState('Secretaria de Obras')
+  const [status, setStatus] = useState<ComplaintStatus>('Recebida')
   const [observation, setObservation] = useState('')
   const [savedUpdate, setSavedUpdate] = useState(false)
   const [categoryDialog, setCategoryDialog] = useState(false)
@@ -174,6 +175,7 @@ function ResponsiblePanelPage() {
     setComplaints((current) => current.map((complaint) => complaint.protocol === selectedComplaint.protocol
       ? { ...complaint, status: nextStatus, sector }
       : complaint))
+    setStatus(nextStatus)
     setSavedUpdate(true)
   }
 
@@ -255,7 +257,7 @@ function ResponsiblePanelPage() {
             </section>
             <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
               <h2>Atualizar atendimento</h2>
-              <label>Status atual<select name="status" defaultValue={selectedComplaint.status} onChange={() => setSavedUpdate(false)}>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
+              <label>Status atual<select name="status" value={status} onChange={(event) => { setStatus(event.target.value as ComplaintStatus); setSavedUpdate(false) }}>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
               <label>Setor responsável<select value={sector} onChange={(event) => { setSector(event.target.value); setSavedUpdate(false) }}><option>Secretaria de Obras</option><option>Secretaria de Serviços</option><option>Secretaria de Saneamento</option><option>Secretaria de Meio Ambiente</option></select></label>
               <label>Observação<textarea value={observation} onChange={(event) => { setObservation(event.target.value); setSavedUpdate(false) }} placeholder="Inclua uma atualização para o cidadão acompanhar." rows={3} /></label>
               {savedUpdate && <p className="rp-success-message" role="status">Atualização salva nesta demonstração.</p>}
@@ -279,7 +281,7 @@ function ResponsiblePanelPage() {
         </section>
         <section className="rp-panel rp-table-panel">
           <div className="rp-table-scroll"><table className="rp-table"><thead><tr><th>Protocolo</th><th>Descrição</th><th>Bairro</th><th>Data</th><th>Status</th><th>Ação</th></tr></thead>
-            <tbody>{visibleComplaints.map((complaint) => <tr key={complaint.protocol}><td className="rp-protocol">{complaint.protocol}</td><td><strong>{complaint.title}</strong><small>{complaint.category}</small></td><td>{complaint.neighborhood}</td><td>{complaint.date}</td><td><StatusBadge status={complaint.status} /></td><td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setSector(complaint.sector); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
+              <tbody>{visibleComplaints.map((complaint) => <tr key={complaint.protocol}><td className="rp-protocol">{complaint.protocol}</td><td><strong>{complaint.title}</strong><small>{complaint.category}</small></td><td>{complaint.neighborhood}</td><td>{complaint.date}</td><td><StatusBadge status={complaint.status} /></td><td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sector); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
           </table></div>
           {visibleComplaints.length === 0 && <p className="rp-empty-state">Nenhuma denúncia encontrada com esses filtros.</p>}
           <div className="rp-table-footer"><span>1–{visibleComplaints.length} de {complaints.length} denúncias</span><span className="rp-pagination">‹ <b>1</b> 2 3 ›</span></div>

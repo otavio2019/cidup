@@ -158,7 +158,7 @@ function ComplaintLocationPage() {
                   setAddress(event.target.value)
                   setError('')
                 }}
-                placeholder="Ex.: Rua das Flores, 120"
+                placeholder="Ex.: Rua das Flores"
               />
             </div>
 

@@ -36,32 +36,29 @@ function Header() {
 	return <CitizenHeader active="complaints" />
 }
 
-function ComplaintDetailsPage() {
-	const { protocol } = useParams()
-	const [complaint, setComplaint] = useState<Complaint | null>(null)
-	const [loading, setLoading] = useState(true)
-	const [error, setError] = useState('')
+	function ComplaintDetailsPage() {
+		const { protocol } = useParams()
+		const [complaint, setComplaint] = useState<Complaint | null>(null)
+		const [loading, setLoading] = useState(true)
+		const [error, setError] = useState('')
+		const complaintId = Number(protocol)
+		const hasValidProtocol = Number.isSafeInteger(complaintId) && complaintId > 0
 
-	useEffect(() => {
-		let active = true
-		const id = Number(protocol)
-		if (!Number.isSafeInteger(id) || id <= 0) {
-			setError('Denúncia não encontrada.')
-			setLoading(false)
-			return
-		}
-		apiRequest<{ complaint: Complaint }>(`/api/complaints/${id}`)
-			.then(({ complaint: record }) => {
-				if (active) setComplaint(record)
-			})
-			.catch((requestError: unknown) => {
-				if (active) setError(requestError instanceof Error ? requestError.message : 'Não foi possível carregar a denúncia.')
-			})
-			.finally(() => {
-				if (active) setLoading(false)
-			})
-		return () => { active = false }
-	}, [protocol])
+		useEffect(() => {
+			let active = true
+			if (!hasValidProtocol) return () => { active = false }
+			apiRequest<{ complaint: Complaint }>(`/api/complaints/${complaintId}`)
+				.then(({ complaint: record }) => {
+					if (active) setComplaint(record)
+				})
+				.catch((requestError: unknown) => {
+					if (active) setError(requestError instanceof Error ? requestError.message : 'Não foi possível carregar a denúncia.')
+				})
+				.finally(() => {
+					if (active) setLoading(false)
+				})
+			return () => { active = false }
+		}, [complaintId, hasValidProtocol])
 
 	const status = complaint
 		? statusLabels[complaint.status] ?? complaint.status as ComplaintStatus
@@ -75,9 +72,9 @@ function ComplaintDetailsPage() {
 			<Header />
 			<section className="complaints-page-content" aria-labelledby="complaint-details-title">
 				<Link className="complaints-back-link" to="/minhas-denuncias">← Voltar para minhas denúncias</Link>
-				{loading ? (
+					{loading && hasValidProtocol ? (
 					<p aria-busy="true">Carregando denúncia...</p>
-				) : error || !complaint ? (
+					) : !hasValidProtocol || error || !complaint ? (
 					<div className="complaints-empty-state">
 						<h2>Denúncia não encontrada</h2>
 						<p>{error || 'Esta denúncia não está disponível para sua conta.'}</p>

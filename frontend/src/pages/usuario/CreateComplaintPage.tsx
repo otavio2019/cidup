@@ -111,6 +111,10 @@ function CreateComplaintPage() {
     const nextErrors: ComplaintErrors = {}
     const trimmedDescription = form.description.trim()
 
+    if (errors.photo) {
+      nextErrors.photo = errors.photo
+    }
+
     if (!form.type) {
       nextErrors.type = 'Selecione o tipo do problema.'
     }
@@ -142,7 +146,7 @@ function CreateComplaintPage() {
     event.preventDefault()
     const nextErrors = validateForm()
 
-    if (Object.keys(nextErrors).length > 0 || errors.photo) {
+    if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
       return
     }

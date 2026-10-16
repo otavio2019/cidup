@@ -150,7 +150,7 @@ function DashboardPage() {
             <article className="summary-card progress-card">
               <span className="summary-icon">●</span>
               <p>Em progresso</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'IN_SERVICE').length}</strong>
+              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE').length}</strong>
               <span>Soluções em andamento</span>
             </article>
 
@@ -164,7 +164,7 @@ function DashboardPage() {
             <article className="summary-card yellow-card">
               <span className="summary-icon">◷</span>
               <p>Em atendimento</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED').length}</strong>
+              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE').length}</strong>
               <span>Em análise pelos órgãos</span>
             </article>
 
