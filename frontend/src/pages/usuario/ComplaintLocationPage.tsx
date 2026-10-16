@@ -74,6 +74,7 @@ function ComplaintLocationPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationId, setOrganizationId] = useState(complaint.id_orgao?.toString() ?? '')
   const [isLocating, setIsLocating] = useState(false)
+  const [isAddressLoading, setIsAddressLoading] = useState(false)
   const savedOrganizationId = complaint.id_orgao
   const complaintType = complaint.type
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
@@ -112,8 +113,10 @@ function ComplaintLocationPage() {
     setIsLocating(true)
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setCoordinates({ latitude: coords.latitude, longitude: coords.longitude })
+        const nextCoordinates = { latitude: coords.latitude, longitude: coords.longitude }
+        setCoordinates(nextCoordinates)
         setIsLocating(false)
+        fillAddressFromCoordinates(nextCoordinates.latitude, nextCoordinates.longitude)
       },
       () => {
         setIsLocating(false)
@@ -121,6 +124,42 @@ function ComplaintLocationPage() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
     )
+  }
+
+  async function fillAddressFromCoordinates(latitude: number, longitude: number) {
+    setIsAddressLoading(true)
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`,
+        { headers: { Accept: 'application/json' } },
+      )
+      if (!response.ok) throw new Error('Não foi possível converter a localização em endereço.')
+
+      const data = await response.json() as {
+        display_name?: string
+        address?: {
+          road?: string
+          pedestrian?: string
+          residential?: string
+          house_number?: string
+          neighbourhood?: string
+          suburb?: string
+          city_district?: string
+        }
+      }
+      const reverseAddress = data.address ?? {}
+      const street = reverseAddress.road ?? reverseAddress.pedestrian ?? reverseAddress.residential
+      const neighborhoodName = reverseAddress.neighbourhood ?? reverseAddress.suburb ?? reverseAddress.city_district
+      if (street) setAddress(street)
+      if (reverseAddress.house_number) setNumber(reverseAddress.house_number)
+      if (neighborhoodName) setNeighborhood(neighborhoodName)
+      if (!street && data.display_name) setAddress(data.display_name)
+      if (!street && !data.display_name) setError('Localização obtida, mas não foi possível preencher o endereço automaticamente.')
+    } catch {
+      setError('Localização obtida. Não foi possível preencher o endereço automaticamente; confira os campos.')
+    } finally {
+      setIsAddressLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -282,8 +321,9 @@ function ComplaintLocationPage() {
               >
                 {isLocating ? 'Obtendo localização...' : coordinates ? 'Atualizar localização' : 'Obter localização atual'}
               </button>
+              {isAddressLoading && <small>Preenchendo o endereço automaticamente...</small>}
               {coordinates && (
-                <small>Localização informada: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}</small>
+                <small>Localização obtida automaticamente: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}. Você pode editar os campos acima.</small>
               )}
             </div>
           </section>
