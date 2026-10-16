@@ -50,6 +50,8 @@ rede Docker. Não reutilize senhas reais em arquivos versionados.
 
 Se estiver rodando a API diretamente em `backend/`, copie
 `backend/.env.example` para `backend/.env` e configure a URL PostgreSQL local.
+Ao iniciar a API com `npm run dev`, as migrations pendentes são aplicadas
+automaticamente antes de gerar o Prisma Client.
 
 Configure `AUTH_TOKEN_SECRET` com um segredo aleatório de pelo menos 32 bytes.
 Gere-o localmente com `openssl rand -base64 32`; não o compartilhe nem o
