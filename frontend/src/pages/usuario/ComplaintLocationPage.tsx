@@ -21,6 +21,31 @@ type ComplaintData = {
 
 type Organization = { id_orgao: number; nome: string }
 
+const organizationRules = [
+  { types: ['buraco', 'calcada', 'sinalizacao'], organizations: ['obra', 'infraestrutura', 'via'] },
+  { types: ['iluminacao'], organizations: ['iluminacao', 'servico'] },
+  { types: ['lixo', 'descarte'], organizations: ['limpeza', 'servico'] },
+  { types: ['arvore', 'area verde'], organizations: ['meio ambiente', 'ambiental', 'verde'] },
+  { types: ['alagamento', 'drenagem'], organizations: ['saneamento', 'drenagem', 'obra'] },
+]
+
+function normalizeText(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+}
+
+function findResponsibleOrganization(type: string | undefined, availableOrganizations: Organization[]) {
+  const normalizedType = normalizeText(type ?? '')
+  const rule = organizationRules.find(({ types }) => types.some((keyword) => normalizedType.includes(keyword)))
+  const matchingOrganization = rule
+    ? availableOrganizations.find((organization) => {
+      const normalizedName = normalizeText(organization.nome)
+      return rule.organizations.some((keyword) => normalizedName.includes(keyword))
+    })
+    : undefined
+
+  return matchingOrganization ?? (availableOrganizations.length === 1 ? availableOrganizations[0] : undefined)
+}
+
 function ComplaintLocationPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
@@ -50,6 +75,7 @@ function ComplaintLocationPage() {
   const [organizationId, setOrganizationId] = useState(complaint.id_orgao?.toString() ?? '')
   const [isLocating, setIsLocating] = useState(false)
   const savedOrganizationId = complaint.id_orgao
+  const complaintType = complaint.type
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
     typeof complaint.latitude === 'number' && typeof complaint.longitude === 'number'
       ? { latitude: complaint.latitude, longitude: complaint.longitude }
@@ -62,8 +88,9 @@ function ComplaintLocationPage() {
       .then(({ orgaos }) => {
         if (!active) return
         setOrganizations(orgaos)
-        if (!savedOrganizationId && orgaos.length > 0) {
-          setOrganizationId(String(orgaos[0].id_orgao))
+        if (!savedOrganizationId) {
+          const responsibleOrganization = findResponsibleOrganization(complaintType, orgaos)
+          if (responsibleOrganization) setOrganizationId(String(responsibleOrganization.id_orgao))
         }
       })
       .catch((loadError: unknown) => {
@@ -73,7 +100,7 @@ function ComplaintLocationPage() {
     return () => {
       active = false
     }
-  }, [savedOrganizationId])
+  }, [complaintType, savedOrganizationId])
 
   function requestLocation() {
     if (!navigator.geolocation) {
@@ -228,6 +255,7 @@ function ComplaintLocationPage() {
                 id="location-organization"
                 value={organizationId}
                 onChange={(event) => setOrganizationId(event.target.value)}
+                disabled={Boolean(organizationId)}
               >
                 <option value="">Selecione um órgão</option>
                 {organizations.map((organization) => (
@@ -236,6 +264,11 @@ function ComplaintLocationPage() {
                   </option>
                 ))}
               </select>
+              {organizationId && (
+                <small>
+                  Encaminhamento automático para {organizations.find((organization) => String(organization.id_orgao) === organizationId)?.nome ?? 'o órgão responsável'}.
+                </small>
+              )}
               {organizations.length === 0 && <small>Nenhum órgão público disponível no momento.</small>}
             </div>
 
