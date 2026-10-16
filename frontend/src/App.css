@@ -1018,6 +1018,12 @@ a {
   object-fit: contain;
 }
 
+.mobile-brand .auth-logo {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #0d2b45;
+}
+
 .brand-mark {
   display: inline-grid;
   width: 34px;
