@@ -611,6 +611,10 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   const descricaoValue = body.descricao ?? body.description
   const enderecoValue = body.endereco ?? body.address
   const id_orgao = readPositiveInt(body.id_orgao ?? body.orgaoId)
+  const extraOrgaoIds = Array.isArray(body.ids_orgaos)
+    ? [...new Set(body.ids_orgaos.map(readPositiveInt).filter((id): id is number => id !== null && id !== undefined))]
+    : []
+  const primaryOrgaoId = extraOrgaoIds[0] ?? id_orgao
   const latitude = body.latitude
   const longitude = body.longitude
 
@@ -621,7 +625,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   if (typeof tipoValue !== 'string' || !tipoValue.trim() || tipoValue.trim().length > 100 ||
       typeof tituloValue !== 'string' || !tituloValue.trim() || tituloValue.trim().length > 200 ||
       typeof descricaoValue !== 'string' || !descricaoValue.trim() ||
-      !id_orgao || typeof latitude !== 'number' || !Number.isFinite(latitude) ||
+      !primaryOrgaoId || typeof latitude !== 'number' || !Number.isFinite(latitude) ||
       latitude < -90 || latitude > 90 ||
       typeof longitude !== 'number' || !Number.isFinite(longitude) ||
       longitude < -180 || longitude > 180) {
@@ -653,9 +657,12 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
         latitude,
         longitude,
         usuario: { connect: { id_usuario } },
-        orgao: { connect: { id_orgao } },
+        orgao: { connect: { id_orgao: primaryOrgaoId } },
+        ...(extraOrgaoIds.length > 1
+          ? { orgaos_extras: { connect: extraOrgaoIds.slice(1).map((id) => ({ id_orgao: id })) } }
+          : {}),
       },
-      include: { orgao: { select: { id_orgao: true, nome: true } } },
+      include: { orgao: { select: { id_orgao: true, nome: true } }, orgaos_extras: { select: { id_orgao: true, nome: true } } },
     })
     response.status(201).json({ denuncia, complaint: complaintResponse(denuncia) })
   } catch (error) {

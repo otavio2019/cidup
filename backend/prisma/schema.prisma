@@ -20,7 +20,8 @@ model denuncia {
   id_usuario    Int
   id_orgao      Int
   orgao         orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
-  usuario       usuario     @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  orgaos_extras orgao[]     @relation("DenunciaOrgaosExtras")
+  usuario        usuario     @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
   historico     historico[]
 }
 
@@ -42,6 +43,7 @@ model orgao {
   telefone  String     @unique @db.VarChar(20)
   descricao String
   denuncia  denuncia[]
+  denuncias_extras denuncia[] @relation("DenunciaOrgaosExtras")
 }
 
 model usuario {
