@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
-import CitizenMobileNav from './CitizenMobileNav'
+import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintDraft = {

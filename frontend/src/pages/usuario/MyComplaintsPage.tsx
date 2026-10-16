@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
-import CitizenMobileNav from './CitizenMobileNav'
+import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import '../../App.css'
 
 const statusClasses: Record<string, string> = {

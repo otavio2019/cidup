@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import CitizenMobileNav from './CitizenMobileNav'
+import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintData = {

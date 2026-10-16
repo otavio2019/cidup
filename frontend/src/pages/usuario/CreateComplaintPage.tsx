@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import CitizenMobileNav from './CitizenMobileNav'
+import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import '../../App.css'
 
 type ComplaintFormData = {
