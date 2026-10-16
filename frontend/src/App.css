@@ -1011,6 +1011,13 @@ a {
   letter-spacing: -0.8px;
 }
 
+.auth-logo {
+  display: block;
+  width: 128px;
+  height: 48px;
+  object-fit: contain;
+}
+
 .brand-mark {
   display: inline-grid;
   width: 34px;

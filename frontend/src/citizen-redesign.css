@@ -34,17 +34,15 @@
   color: var(--citizen-ink);
 }
 
-.citizen-brand-mark {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  place-items: center;
-  border: 3px solid var(--citizen-blue);
-  border-radius: 50%;
-  color: var(--citizen-blue);
-  font-size: 21px;
-  font-weight: 900;
+.citizen-brand-logo {
+  display: block;
+  width: 106px;
+  height: 40px;
+  flex: 0 0 106px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: var(--citizen-ink);
+  object-fit: contain;
 }
 
 .citizen-brand-copy strong,
@@ -53,6 +51,7 @@
 }
 
 .citizen-brand-copy strong {
+  display: none;
   font-size: 21px;
   line-height: 1;
 }
