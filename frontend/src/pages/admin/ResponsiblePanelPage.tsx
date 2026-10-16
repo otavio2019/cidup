@@ -337,7 +337,7 @@ function ResponsiblePanelPage() {
   return (
     <div className="rp-shell">
       <aside className="rp-sidebar">
-        <NavLink className="rp-brand" to="/responsavel/dashboard"><span className="rp-brand-mark">C</span><span><strong>CidUp</strong><small>Painel do responsável</small></span></NavLink>
+        <NavLink className="rp-brand" to="/responsavel/dashboard"><img className="rp-brand-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" /><span><small>Painel do responsável</small></span></NavLink>
         <nav className="rp-navigation" aria-label="Navegação do responsável">{navigation.map((item) => <NavLink key={item.path} to={item.path} className={({ isActive }) => `rp-nav-link${isActive && (item.path.endsWith('/' + section) || section === '' && item.path.endsWith('dashboard')) ? ' is-active' : ''}`} onClick={() => setSelectedProtocol(null)}>{item.label}</NavLink>)}</nav>
         <div className="rp-sidebar-footer"><strong>◉ Responsável</strong><span>Prefeitura Municipal</span></div>
       </aside>

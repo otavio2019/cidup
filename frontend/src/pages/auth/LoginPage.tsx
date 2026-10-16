@@ -44,8 +44,7 @@ function LoginPage() {
       <div className="login-shell">
         <aside className="login-story" aria-label="Sobre o CidUp">
           <div className="login-story-topline">
-            <span className="brand-mark" aria-hidden="true">C</span>
-            <span>CidUp</span>
+            <img className="auth-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" />
           </div>
 
           <div className="login-story-content">
@@ -65,8 +64,7 @@ function LoginPage() {
 
         <section className="login-panel" aria-labelledby="login-title">
           <div className="mobile-brand" aria-label="CidUp">
-            <span className="brand-mark" aria-hidden="true">C</span>
-            <span>CidUp</span>
+            <img className="auth-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" />
           </div>
 
           <div className="login-panel-header">

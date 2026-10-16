@@ -6,9 +6,8 @@ function CitizenHeader({ active }: { active: CitizenSection }) {
   return (
     <header className="dashboard-header citizen-header">
       <Link className="dashboard-brand complaints-brand" to="/dashboard" aria-label="CidUp, início">
-        <span className="citizen-brand-mark" aria-hidden="true">C</span>
+        <img className="citizen-brand-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" />
         <span className="citizen-brand-copy">
-          <strong>CidUp</strong>
           <small>Cidades melhores começam com você</small>
         </span>
       </Link>

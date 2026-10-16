@@ -48,6 +48,16 @@
   line-height: 1;
 }
 
+.rp-brand-logo {
+  display: block;
+  width: 102px;
+  height: 40px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #0a2338;
+  object-fit: contain;
+}
+
 .rp-brand strong,
 .rp-brand small {
   display: block;
