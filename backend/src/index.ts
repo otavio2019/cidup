@@ -14,6 +14,7 @@ import { prisma } from './lib/prisma.js'
 import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
 
 const scrypt = promisify(scryptCallback)
+// Limita tentativas de login e cadastro para dificultar abuso dos endpoints de autenticação.
 const authenticationRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -22,15 +23,18 @@ const authenticationRateLimit = rateLimit({
   message: { error: 'Muitas tentativas. Aguarde antes de tentar novamente.' },
 })
 
+// Converte um valor numérico em ID positivo ou retorna null quando ele for inválido.
 function readPositiveInt(value: unknown) {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
 }
 
+// Garante que um dado desconhecido seja um objeto simples antes de ler suas propriedades.
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+// Traduz erros conhecidos do Prisma e oculta detalhes internos nos demais casos.
 function handlePrismaError(error: unknown, response: express.Response, operation: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2025') {
@@ -50,10 +54,12 @@ function handlePrismaError(error: unknown, response: express.Response, operation
   response.status(500).json({ error: 'Não foi possível concluir a operação.' })
 }
 
+// Verifica se o usuário consta na lista de IDs administrativos configurada.
 function isAdministrator(userId: number, administratorIds: ReadonlySet<number>) {
   return administratorIds.has(userId)
 }
 
+// Adapta os campos do banco ao formato de denúncia consumido pelo frontend.
 function complaintResponse(complaint: {
   id_denuncia: number
   titulo: string
@@ -85,6 +91,7 @@ function complaintResponse(complaint: {
   }
 }
 
+// Monta a API com banco e opções injetáveis, validando as configurações antes de expor rotas.
 export function createApp(
   database: PrismaClient = prisma,
   options: {
@@ -119,6 +126,7 @@ const app = express()
 app.disable('x-powered-by')
 app.set('trust proxy', production ? 1 : false)
 if (production) {
+  // Recusa conexões sem TLS quando a API está configurada para produção.
   app.use((request, response, next) => {
     if (!request.secure) {
       response.status(400).json({ error: 'A API exige HTTPS.' })
@@ -127,18 +135,22 @@ if (production) {
     next()
   })
 }
+// Permite credenciais somente para origens explicitamente configuradas.
 app.use(cors({
   origin(origin, callback) {
     callback(null, !origin || allowedOrigins.has(origin) ? origin ?? false : false)
   },
   credentials: true,
 }))
+// Define limites e middlewares necessários para interpretar JSON e cookies de sessão.
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
+// Impede que respostas com dados de API sejam reutilizadas por caches intermediários.
 app.use('/api', (_request, response, next) => {
   response.setHeader('Cache-Control', 'no-store')
   next()
 })
+// Bloqueia chamadas de origens não permitidas, inclusive em rotas sem autenticação.
 app.use('/api', (request, response, next) => {
   const origin = request.get('origin')
   if (origin && !allowedOrigins.has(origin)) {
@@ -147,6 +159,7 @@ app.use('/api', (request, response, next) => {
   }
   next()
 })
+// Restringe operações administrativas a usuários autenticados presentes na lista autorizada.
 function requireAdministrator(request: express.Request, response: express.Response, next: express.NextFunction) {
   const userId = readAuthUserId(request)
   if (!userId) {
@@ -159,12 +172,14 @@ function requireAdministrator(request: express.Request, response: express.Respon
   }
   next()
 }
+// Armazena a senha como salt aleatório e derivação scrypt, nunca em texto puro.
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex')
   const derivedKey = (await scrypt(password, salt, 64)) as Buffer
   return `${salt}:${derivedKey.toString('hex')}`
 }
 
+// Recalcula o hash e compara os bytes em tempo constante para validar uma senha.
 async function verifyPassword(password: string, storedHash: string) {
   const [salt, key] = storedHash.split(':')
   if (!salt || !/^[a-f0-9]{32}$/i.test(salt) || !key || !/^[a-f0-9]{128}$/i.test(key)) return false
@@ -174,10 +189,12 @@ async function verifyPassword(password: string, storedHash: string) {
   return storedKey.length === derivedKey.length && timingSafeEqual(storedKey, derivedKey)
 }
 
+// Disponibiliza uma verificação simples de disponibilidade sem exigir sessão.
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' })
 })
 
+// Verifica a configuração e a conectividade do serviço Supabase.
 app.get('/api/supabase/status', authenticate, async (_request, response) => {
   if (!isSupabaseConfigured()) {
     response.status(503).json({ error: 'Supabase não configurado.' })
@@ -192,6 +209,7 @@ app.get('/api/supabase/status', authenticate, async (_request, response) => {
   }
 })
 
+// Valida os campos do cadastro e cria um usuário sem expor a senha armazenada.
 async function registerUser(request: express.Request, response: express.Response) {
   const body = isRecord(request.body) ? request.body : {}
   const name = typeof body.name === 'string' ? body.name.trim() : ''
@@ -218,6 +236,7 @@ async function registerUser(request: express.Request, response: express.Response
 
 app.post(['/api/auth/register', '/api/users', '/api/usuarios'], authenticationRateLimit, registerUser)
 
+// Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
 app.post('/api/auth/login', authenticationRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -255,6 +274,7 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
   }
 })
 
+// Encerra a sessão removendo o cookie com os mesmos atributos de segurança.
 app.post('/api/auth/logout', (_request, response) => {
   response.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
@@ -265,6 +285,7 @@ app.post('/api/auth/logout', (_request, response) => {
   response.status(204).send()
 })
 
+// Confirma a sessão atual consultando o usuário associado ao token.
 app.get('/api/auth/session', authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -294,6 +315,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
   }
 })
 
+// Retorna somente o perfil do usuário autenticado.
 app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -315,6 +337,7 @@ app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response)
   }
 })
 
+// Consulta o perfil apenas quando o ID solicitado pertence à própria sessão.
 app.get(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
@@ -346,6 +369,7 @@ app.get(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, r
   }
 })
 
+// Valida e atualiza campos permitidos exclusivamente no perfil do usuário autenticado.
 app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
@@ -412,6 +436,7 @@ app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request,
   }
 })
 
+// Exclui o próprio usuário somente quando não há denúncias ou históricos vinculados.
 app.delete(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
@@ -444,6 +469,7 @@ app.delete(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request
   }
 })
 
+// Lista apenas os campos públicos dos órgãos responsáveis.
 app.get(['/api/orgaos', '/api/organs'], async (_request, response) => {
   try {
     const orgaos = await database.orgao.findMany({
@@ -456,6 +482,7 @@ app.get(['/api/orgaos', '/api/organs'], async (_request, response) => {
   }
 })
 
+// Busca um órgão por ID sem retornar seus dados de contato privados.
 app.get(['/api/orgaos/:id', '/api/organs/:id'], async (request, response) => {
   const id_orgao = readPositiveInt(request.params.id)
   if (!id_orgao) {
@@ -478,6 +505,7 @@ app.get(['/api/orgaos/:id', '/api/organs/:id'], async (request, response) => {
   }
 })
 
+// Cria um órgão depois de validar os campos e autorizar o responsável.
 app.post(['/api/orgaos', '/api/organs'], authenticate, requireAdministrator, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const nome = typeof body.nome === 'string' ? body.nome.trim() : ''
@@ -499,6 +527,7 @@ app.post(['/api/orgaos', '/api/organs'], authenticate, requireAdministrator, asy
   }
 })
 
+// Atualiza somente campos válidos de um órgão para administradores autorizados.
 app.patch(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdministrator, async (request, response) => {
   const id_orgao = readPositiveInt(request.params.id)
   const body = isRecord(request.body) ? request.body : {}
@@ -536,6 +565,7 @@ app.patch(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdministr
   }
 })
 
+// Remove um órgão apenas quando não existem denúncias relacionadas a ele.
 app.delete(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdministrator, async (request, response) => {
   const id_orgao = readPositiveInt(request.params.id)
   if (!id_orgao) {
@@ -554,6 +584,7 @@ app.delete(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdminist
   }
 })
 
+// Lista as denúncias próprias; administradores autorizados podem consultar todas.
 app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -574,6 +605,7 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
   }
 })
 
+// Consulta uma denúncia somente se ela pertencer ao usuário ou se houver acesso administrativo.
 app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -603,6 +635,7 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
   }
 })
 
+// Valida e registra a denúncia, vinculando-a ao usuário autenticado e aos órgãos selecionados.
 app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const id_usuario = readAuthUserId(request)
@@ -670,6 +703,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   }
 })
 
+// Atualiza uma denúncia própria, reservando mudanças de status e encaminhamento aos responsáveis.
 app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -748,6 +782,7 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
   }
 })
 
+// Exclui uma denúncia própria ou administrativa somente se não houver histórico associado.
 app.delete(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -782,6 +817,7 @@ app.delete(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (r
   }
 })
 
+// Lista históricos das denúncias próprias, liberando todos os registros a administradores.
 app.get(['/api/historicos', '/api/histories'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -803,6 +839,7 @@ app.get(['/api/historicos', '/api/histories'], authenticate, async (request, res
   }
 })
 
+// Consulta um histórico apenas se estiver ligado a uma denúncia acessível ao usuário.
 app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
   const id_usuario = readAuthUserId(request)
@@ -834,6 +871,7 @@ app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (requ
   }
 })
 
+// Registra um histórico e valida a permissão do usuário sobre a denúncia referenciada.
 app.post(['/api/historicos', '/api/histories'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const body = isRecord(request.body) ? request.body : {}
@@ -879,6 +917,7 @@ app.post(['/api/historicos', '/api/histories'], authenticate, async (request, re
   }
 })
 
+// Atualiza dados do histórico e impede vínculos com denúncias de outros usuários.
 app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
   const authenticatedUserId = readAuthUserId(request)
@@ -952,6 +991,7 @@ app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (re
   }
 })
 
+// Remove um histórico somente quando o registro pode ser acessado pela sessão atual.
 app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
   const id_usuario = readAuthUserId(request)
@@ -982,6 +1022,7 @@ app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (r
   }
 })
 
+// Solicita à IA um rascunho estruturado, sem criar ou enviar a denúncia automaticamente.
 app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
   const description =
     typeof request.body?.description === 'string'
@@ -1061,6 +1102,7 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
   }
 })
 
+// Converte erros inesperados e JSON malformado em respostas seguras para o cliente.
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   if (error instanceof SyntaxError) {
     response.status(400).json({ error: 'Corpo da requisição inválido.' })
@@ -1076,6 +1118,7 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
 return app
 }
 
+// Inicia o servidor apenas quando este arquivo é executado diretamente.
 const isMainModule = process.argv[1] !== undefined &&
   pathToFileURL(resolve(process.argv[1])).href === import.meta.url
 

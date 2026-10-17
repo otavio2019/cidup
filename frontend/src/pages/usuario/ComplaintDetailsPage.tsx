@@ -25,6 +25,7 @@ const statusLabels: Record<string, ComplaintStatus> = {
 	NOT_SERVED: 'Não atendida',
 }
 
+// Apresenta uma data localizada ou um texto alternativo para valores ausentes/inválidos.
 function formatDate(value?: string) {
 	if (!value) return 'Data não informada'
 	const date = new Date(value)
@@ -32,10 +33,12 @@ function formatDate(value?: string) {
 	return new Intl.DateTimeFormat('pt-BR').format(date)
 }
 
+// Reutiliza o cabeçalho da área de acompanhamento.
 function Header() {
 	return <CitizenHeader active="complaints" />
 }
 
+	// Carrega uma denúncia do protocolo informado e monta sua linha do tempo de status.
 	function ComplaintDetailsPage() {
 		const { protocol } = useParams()
 		const [complaint, setComplaint] = useState<Complaint | null>(null)
@@ -44,6 +47,7 @@ function Header() {
 		const complaintId = Number(protocol)
 		const hasValidProtocol = Number.isSafeInteger(complaintId) && complaintId > 0
 
+		// Busca o registro somente para protocolos válidos e ignora respostas obsoletas.
 		useEffect(() => {
 			let active = true
 			if (!hasValidProtocol) return () => { active = false }

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+// Apresenta o cadastro e controla os campos, a confirmação de senha e o feedback.
 function RegisterPage() {
   const navigate = useNavigate()
   const [nome, setNome] = useState('')
@@ -12,6 +13,7 @@ function RegisterPage() {
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
 
+  // Valida os dados, cria a conta e encaminha o usuário para a tela de login.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 

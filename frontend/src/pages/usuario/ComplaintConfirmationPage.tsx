@@ -17,9 +17,11 @@ type ComplaintData = {
   type?: string | { name: string }
 }
 
+// Apresenta o protocolo criado pela API e o resumo da denúncia registrada.
 function ComplaintConfirmationPage() {
   const location = useLocation()
 
+  // Prefere dados de navegação e recorre à sessão; dados ausentes retornam ao painel.
   const complaint = useMemo(() => {
     const stateData = location.state as ComplaintData | null
     if (stateData) return stateData

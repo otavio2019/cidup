@@ -14,12 +14,14 @@ const scrypt = promisify(scryptCallback)
 type RecordValue = Record<string, unknown>
 type Handler = (args: RecordValue) => unknown | Promise<unknown>
 
+// Converte valores desconhecidos em objetos seguros para consultar nos mocks.
 function record(value: unknown): RecordValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as RecordValue
     : {}
 }
 
+// Substitui um delegate do Prisma por handlers controlados pelo teste.
 function installDelegate(client: PrismaClient, name: string, handlers: Record<string, Handler>) {
   const delegate = new Proxy<Record<string, unknown>>({}, {
     get(_target, property) {
@@ -64,10 +66,12 @@ let client: PrismaClient
 let baseUrl: string
 let server: ReturnType<ReturnType<typeof createApp>['listen']>
 
+// Registra as consultas simuladas para permitir verificar filtros e permissões.
 function remember(model: string, method: string, args: RecordValue) {
   calls.push({ model, method, args })
 }
 
+// Simula a projeção select do Prisma sobre o usuário armazenado no teste.
 function selectedUser(user: StoredUser, args: RecordValue) {
   const select = record(args.select)
   if (Object.keys(select).length === 0) return { ...user }
@@ -78,6 +82,7 @@ function selectedUser(user: StoredUser, args: RecordValue) {
   )
 }
 
+// Instala delegates em memória para testar a API sem depender do banco real.
 function installDatabaseMocks(database: PrismaClient) {
   installDelegate(database, 'usuario', {
     async create(args) {
@@ -241,10 +246,12 @@ function installDatabaseMocks(database: PrismaClient) {
   })
 }
 
+// Cria um cookie assinado para chamadas autenticadas dos testes.
 async function cookieFor(userId: number) {
   return `${AUTH_COOKIE_NAME}=${await createAuthToken(userId, secret)}`
 }
 
+// Envia uma requisição HTTP para a instância da API iniciada pelo conjunto de testes.
 async function callApi(path: string, init: RequestInit = {}) {
   return fetch(`${baseUrl}${path}`, {
     ...init,
@@ -255,6 +262,7 @@ async function callApi(path: string, init: RequestInit = {}) {
   })
 }
 
+// Prepara banco simulado, usuários e servidor HTTP antes dos casos de teste.
 before(async () => {
   client = new PrismaClient({ datasourceUrl: 'postgresql://127.0.0.1:5432/cidup_test?schema=public' })
   installDatabaseMocks(client)
@@ -301,6 +309,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`
 })
 
+// Encerra o servidor de teste e desconecta o cliente Prisma ao final.
 after(async () => {
   await new Promise<void>((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve())

@@ -18,6 +18,7 @@ const complaintStatusLabels: Record<string, string> = {
 
 // TODO: substituir os números e denúncias simulados pelos dados da API.
 // TODO: conectar os links às telas de registrar denúncia e detalhes.
+// Carrega o resumo das denúncias e reúne atalhos e recursos do painel cidadão.
 function DashboardPage() {
   const [complaints, setComplaints] = useState<Complaint[]>([])
   const [complaintMessage, setComplaintMessage] = useState('')
@@ -31,12 +32,14 @@ function DashboardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
 
+  // Busca as denúncias da sessão para preencher os indicadores e a lista recente.
   useEffect(() => {
     apiRequest<{ complaints: Complaint[] }>('/api/complaints')
       .then((data) => setComplaints(data.complaints))
       .catch((error: unknown) => setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível carregar as denúncias.'))
   }, [])
 
+  // Pede confirmação antes de excluir e remove da tela apenas após sucesso na API.
   async function removeComplaint(id: number) {
     if (!window.confirm('Excluir esta denúncia?')) return
     try {
@@ -47,6 +50,7 @@ function DashboardPage() {
     }
   }
 
+  // Solicita um rascunho à IA e apresenta falhas sem perder o controle de carregamento.
   async function generateDraft() {
     setAiMessage('')
     setDraft(null)

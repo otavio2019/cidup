@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+// Apresenta o formulário de acesso e mantém o estado dos campos e mensagens.
 function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -10,6 +11,7 @@ function LoginPage() {
   const [mensagem, setMensagem] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
+  // Valida os campos, autentica o cidadão e redireciona conforme o perfil retornado.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 

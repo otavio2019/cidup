@@ -1,3 +1,4 @@
+/* Tokens de cor e layout base compartilhados pela experiência do cidadão. */
 :root {
   --citizen-ink: #13314c;
   --citizen-blue: #1564c0;
@@ -18,6 +19,7 @@
   background: var(--citizen-canvas);
 }
 
+/* Cabeçalho, navegação e identidade visual das páginas do cidadão. */
 .citizen-header {
   min-height: 108px;
   gap: 34px;
@@ -626,6 +628,7 @@
   font-size: 12px;
 }
 
+/* Resumo do protocolo após o envio da denúncia. */
 .confirmation-page {
   display: block;
   padding: 0 20px 50px;
@@ -703,6 +706,7 @@
   width: auto;
 }
 
+/* Apresentação responsiva das telas de autenticação. */
 .login-page {
   display: block;
   min-height: 100vh;

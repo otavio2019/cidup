@@ -1,3 +1,4 @@
+/* Estrutura principal e navegação lateral do painel administrativo. */
 .rp-shell {
   --rp-ink: #102f49;
   --rp-muted: #718397;
@@ -160,6 +161,7 @@
   padding: 20px 30px 38px;
 }
 
+/* Cabeçalhos, indicadores e cartões do painel e dos relatórios. */
 .rp-page-heading,
 .rp-detail-heading {
   display: flex;
@@ -542,6 +544,7 @@
   font-weight: 650;
 }
 
+/* Busca, filtros e tabela de resultados das denúncias. */
 .rp-heading-with-action {
   align-items: center;
 }
@@ -667,6 +670,7 @@
   text-align: center;
 }
 
+/* Gerenciamento de categorias, gráficos e preferências administrativas. */
 .rp-add-button {
   min-width: 162px;
 }
@@ -895,6 +899,7 @@
   margin-top: 3px;
 }
 
+/* Ajustes do painel para tablets e telas menores. */
 @media (max-width: 1000px) {
   .rp-content {
     padding-right: 22px;

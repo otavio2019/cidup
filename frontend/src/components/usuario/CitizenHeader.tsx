@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 
 type CitizenSection = 'home' | 'create' | 'complaints' | 'profile'
 
+// Renderiza a navegação principal do cidadão e destaca a seção em que ele está.
 function CitizenHeader({ active }: { active: CitizenSection }) {
   return (
     <header className="dashboard-header citizen-header">
