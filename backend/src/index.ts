@@ -14,6 +14,7 @@ import { prisma } from './lib/prisma.js'
 import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
 
 const scrypt = promisify(scryptCallback)
+// Limita tentativas de login e cadastro para dificultar abuso dos endpoints de autenticação.
 const authenticationRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -125,6 +126,7 @@ const app = express()
 app.disable('x-powered-by')
 app.set('trust proxy', production ? 1 : false)
 if (production) {
+  // Recusa conexões sem TLS quando a API está configurada para produção.
   app.use((request, response, next) => {
     if (!request.secure) {
       response.status(400).json({ error: 'A API exige HTTPS.' })
@@ -133,12 +135,14 @@ if (production) {
     next()
   })
 }
+// Permite credenciais somente para origens explicitamente configuradas.
 app.use(cors({
   origin(origin, callback) {
     callback(null, !origin || allowedOrigins.has(origin) ? origin ?? false : false)
   },
   credentials: true,
 }))
+// Define limites e middlewares necessários para interpretar JSON e cookies de sessão.
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 // Impede que respostas com dados de API sejam reutilizadas por caches intermediários.

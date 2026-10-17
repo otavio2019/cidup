@@ -7,6 +7,7 @@ vi.mock('./api', () => ({
   apiRequest: vi.fn().mockRejectedValue(new Error('Não autenticado')),
 }))
 
+// Confirma que páginas privadas aguardam a validação da sessão remota.
 describe('proteção de rotas com sessão do servidor', () => {
   it('não confia nas antigas sinalizações de autenticação do localStorage', () => {
     const markup = renderToStaticMarkup(

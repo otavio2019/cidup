@@ -108,11 +108,13 @@ const navigation = [
   { path: '/responsavel/configuracoes', label: 'Configurações' },
 ]
 
+// Converte o status em uma classe CSS e exibe o rótulo correspondente.
 function StatusBadge({ status }: { status: ComplaintStatus }) {
   const className = status.toLocaleLowerCase('pt-BR').replaceAll(' ', '-')
   return <span className={`rp-status rp-status-${className}`}>{status}</span>
 }
 
+// Reúne o painel administrativo e mantém em estado local os filtros e dados demonstrativos.
 function ResponsiblePanelPage() {
   const location = useLocation()
   const section = location.pathname.split('/')[2] || 'dashboard'
@@ -133,6 +135,7 @@ function ResponsiblePanelPage() {
   const [configSaved, setConfigSaved] = useState(false)
 
   const selectedComplaint = complaints.find((complaint) => complaint.protocol === selectedProtocol)
+  // Filtra denúncias pelo texto de busca e pelo status selecionado.
   const visibleComplaints = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR')
     return complaints.filter((complaint) => {
@@ -146,6 +149,7 @@ function ResponsiblePanelPage() {
     ? 'Detalhes da denúncia'
     : navigation.find((item) => item.path.endsWith(section))?.label ?? 'Painel'
 
+  // Preenche o modal para criar uma categoria ou editar uma existente.
   function openTypeDialog(type?: OccurrenceType) {
     setEditingType(type ?? null)
     setTypeName(type?.name ?? '')
@@ -153,6 +157,7 @@ function ResponsiblePanelPage() {
     setCategoryDialog(true)
   }
 
+  // Salva a categoria no estado local e atualiza suas referências em denúncias.
   function saveType(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const name = typeName.trim()
@@ -167,6 +172,7 @@ function ResponsiblePanelPage() {
     setCategoryDialog(false)
   }
 
+  // Aplica o novo status e setor à denúncia selecionada no painel demonstrativo.
   function saveComplaintUpdate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedComplaint) return
@@ -179,6 +185,7 @@ function ResponsiblePanelPage() {
     setSavedUpdate(true)
   }
 
+  // Gera um arquivo CSV com os dados atualmente disponíveis na lista.
   function exportReport() {
     const rows = [
       ['Protocolo', 'Denúncia', 'Bairro', 'Data', 'Status', 'Categoria'],
@@ -194,6 +201,7 @@ function ResponsiblePanelPage() {
     URL.revokeObjectURL(url)
   }
 
+  // Monta o resumo visual com métricas e atividade recente do painel.
   function renderDashboard() {
     return (
       <>
@@ -238,6 +246,7 @@ function ResponsiblePanelPage() {
     )
   }
 
+  // Exibe a listagem filtrável ou os detalhes e controles da denúncia selecionada.
   function renderComplaints() {
     if (selectedComplaint) {
       return (
@@ -290,6 +299,7 @@ function ResponsiblePanelPage() {
     )
   }
 
+  // Exibe as categorias existentes com ações de cadastro, edição e exclusão.
   function renderTypes() {
     return (
       <>
@@ -302,6 +312,7 @@ function ResponsiblePanelPage() {
     )
   }
 
+  // Apresenta indicadores e gráficos demonstrativos para o período escolhido.
   function renderReports() {
     return (
       <>
@@ -316,6 +327,7 @@ function ResponsiblePanelPage() {
     )
   }
 
+  // Mostra as preferências de perfil e notificações do responsável.
   function renderSettings() {
     return (
       <>
@@ -350,10 +362,12 @@ function ResponsiblePanelPage() {
   )
 }
 
+// Apresenta uma métrica com sua descrição e variação visual de cor.
 function Metric({ label, value, note, color }: { label: string; value: string; note: string; color: string }) {
   return <article className={`rp-metric rp-metric-${color}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
 }
 
+// Exibe um par de rótulo e valor nas informações de uma denúncia.
 function Info({ label, value }: { label: string; value: string }) {
   return <div className="rp-info-row"><dt>{label}</dt><dd>{value}</dd></div>
 }
