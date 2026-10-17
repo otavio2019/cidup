@@ -16,6 +16,7 @@ type ComplaintDraft = {
   photoName?: string | null
 }
 
+// Recupera o rascunho da navegação ou do armazenamento temporário da sessão.
 function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   if (state) return state
   try {
@@ -26,6 +27,7 @@ function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   }
 }
 
+// Revisa a denúncia e só a envia à API após o cidadão confirmar os dados.
 function ComplaintReviewPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -40,6 +42,7 @@ function ComplaintReviewPage() {
     return <Navigate to="/registrar-denuncia" replace />
   }
 
+  // Registra a denúncia, converte os dados recebidos e abre a tela de confirmação.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -126,6 +129,7 @@ function ComplaintReviewPage() {
   )
 }
 
+// Exibe um rótulo e seu valor como uma linha reutilizável da revisão.
 function ReviewField({ label, value }: { label: string; value: string }) {
   return <div className="review-field"><dt>{label}</dt><dd>{value}</dd></div>
 }

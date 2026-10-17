@@ -19,6 +19,7 @@ type SessionUser = {
   role: 'CITIZEN' | 'RESPONSIBLE'
 }
 
+// Consulta a sessão do servidor uma vez e ignora respostas após a desmontagem do componente.
 function useSession() {
   const [session, setSession] = useState<{ loading: boolean; user: SessionUser | null }>({
     loading: true,
@@ -43,6 +44,7 @@ function useSession() {
   return session
 }
 
+// Exibe as páginas protegidas somente depois de confirmar uma sessão válida.
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { loading, user } = useSession()
 
@@ -54,6 +56,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   return children
 }
 
+// Além da autenticação, exige o papel de responsável para liberar a área administrativa.
 export function ResponsibleRoute({ children }: { children: ReactNode }) {
   const { loading, user } = useSession()
 
@@ -68,6 +71,7 @@ export function ResponsibleRoute({ children }: { children: ReactNode }) {
   return children
 }
 
+// Declara os caminhos da aplicação e aplica os bloqueios apropriados a cada área.
 function App() {
   return (
     <Routes>

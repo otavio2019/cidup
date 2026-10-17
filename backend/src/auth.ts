@@ -14,6 +14,7 @@ declare global {
   }
 }
 
+// Valida o tamanho mínimo do segredo e o converte para o formato usado pelo JWT.
 function secretKey(secret: string) {
   if (Buffer.byteLength(secret, 'utf8') < 32) {
     throw new Error('AUTH_TOKEN_SECRET deve conter pelo menos 32 bytes.')
@@ -21,6 +22,7 @@ function secretKey(secret: string) {
   return new TextEncoder().encode(secret)
 }
 
+// Cria um token assinado com identidade, emissor, público e prazo de expiração definidos.
 export async function createAuthToken(userId: number, secret: string) {
   if (!Number.isInteger(userId) || userId <= 0) {
     throw new Error('É necessário informar um ID de usuário válido para criar o token de autenticação.')
@@ -36,6 +38,7 @@ export async function createAuthToken(userId: number, secret: string) {
     .sign(secretKey(secret))
 }
 
+// Gera o middleware que valida o cookie e associa o usuário autenticado à requisição.
 export function requireAuthentication(secret: string) {
   const key = secretKey(secret)
 
@@ -65,6 +68,7 @@ export function requireAuthentication(secret: string) {
   }
 }
 
+// Recupera somente IDs positivos e seguros previamente definidos pelo middleware.
 export function readAuthUserId(request: Request) {
   const userId = request.authUserId
   return Number.isSafeInteger(userId) && userId && userId > 0 ? userId : null

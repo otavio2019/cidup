@@ -12,6 +12,7 @@ type CitizenProfile = {
 	registeredAt?: string
 }
 
+// Lê o perfil armazenado no navegador e retorna um objeto vazio se os dados não forem válidos.
 function readProfile(): CitizenProfile {
 	try {
 		const storedProfile = localStorage.getItem('cidup-profile')
@@ -26,6 +27,7 @@ function readProfile(): CitizenProfile {
 	}
 }
 
+// Formata a data de cadastro em português ou indica que ela não está disponível.
 function formatRegistrationDate(value?: string) {
 	if (!value) return 'Não informada'
 	const date = new Date(value)
@@ -33,11 +35,13 @@ function formatRegistrationDate(value?: string) {
 	return new Intl.DateTimeFormat('pt-BR').format(date)
 }
 
+// Exibe os dados do perfil e permite encerrar a sessão autenticada.
 function ProfilePage() {
 	const navigate = useNavigate()
 	const profile = readProfile()
 	const [logoutError, setLogoutError] = useState('')
 
+	// Encerra a sessão na API e remove dados locais antes de voltar ao login.
 	async function handleLogout() {
 		setLogoutError('')
 		try {

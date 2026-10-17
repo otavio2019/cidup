@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import './CitizenMobileNav.css'
 
+// Exibe atalhos móveis e mantém o botão de nova denúncia ativo durante o fluxo.
 function CitizenMobileNav() {
   const location = useLocation()
   const isNewComplaint = location.pathname.startsWith('/registrar-denuncia')

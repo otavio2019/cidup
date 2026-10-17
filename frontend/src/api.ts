@@ -1,8 +1,10 @@
 const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3000')
+// Evita configurar uma API sem HTTPS em produção.
 if (import.meta.env.PROD && API_URL && new URL(API_URL).protocol !== 'https:') {
   throw new Error('VITE_API_URL deve usar HTTPS em produção.')
 }
 
+// Centraliza chamadas com cookie de sessão, leitura de respostas e tratamento de erros HTTP.
 export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,

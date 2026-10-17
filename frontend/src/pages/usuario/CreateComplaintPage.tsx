@@ -38,6 +38,7 @@ const complaintTypes = [
 
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024
 
+// Coleta os dados iniciais da ocorrência e preserva rascunho e localização entre etapas.
 function CreateComplaintPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
@@ -73,6 +74,7 @@ function CreateComplaintPage() {
   const [isLocating, setIsLocating] = useState(false)
   const [locationMessage, setLocationMessage] = useState('')
 
+  // Usa coordenadas para sugerir endereço e bairro, sem impedir ajustes manuais.
   async function fillAddressFromCoordinates(latitude: number, longitude: number) {
     try {
       const response = await fetch(
@@ -114,6 +116,7 @@ function CreateComplaintPage() {
     }
   }
 
+  // Solicita permissão de geolocalização e converte falhas em instruções ao cidadão.
   function requestLocation() {
     if (!navigator.geolocation) {
       setLocationMessage('Este navegador não oferece geolocalização. Informe o endereço manualmente.')
@@ -136,11 +139,13 @@ function CreateComplaintPage() {
     )
   }
 
+  // Tenta preencher a localização ao abrir a página quando ainda não há coordenadas.
   useEffect(() => {
     if (!coordinates) requestLocation()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Atualiza o campo alterado e limpa a validação antiga daquele campo.
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) {
@@ -158,6 +163,7 @@ function CreateComplaintPage() {
     setSubmitError('')
   }
 
+  // Aceita somente imagens dentro do limite de tamanho definido para anexos.
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedPhoto = event.target.files?.[0]
 
@@ -191,6 +197,7 @@ function CreateComplaintPage() {
     }))
   }
 
+  // Verifica os campos obrigatórios e os limites da descrição antes do avanço.
   function validateForm(): ComplaintErrors {
     const nextErrors: ComplaintErrors = {}
     const trimmedDescription = form.description.trim()
@@ -226,6 +233,7 @@ function CreateComplaintPage() {
     return nextErrors
   }
 
+  // Persiste o rascunho validado e encaminha o cidadão à confirmação da localização.
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors = validateForm()

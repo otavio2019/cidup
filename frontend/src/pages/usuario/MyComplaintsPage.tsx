@@ -23,6 +23,7 @@ const statusLabels: Record<string, string> = {
 	NOT_SERVED: 'Não atendida',
 }
 
+// Formata datas para exibição local e oferece uma mensagem para valores inválidos.
 function formatDate(value?: string) {
 	if (!value) return 'Data não informada'
 	const date = new Date(value)
@@ -30,11 +31,13 @@ function formatDate(value?: string) {
 	return new Intl.DateTimeFormat('pt-BR').format(date)
 }
 
+// Busca as denúncias do cidadão e apresenta estados de carregamento, erro e resultados.
 function MyComplaintsPage() {
 	const [complaints, setComplaints] = useState<Complaint[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
+	// Carrega a lista da API e impede atualizações de estado após sair da página.
 	useEffect(() => {
 		let active = true
 		apiRequest<{ complaints: Complaint[] }>('/api/complaints')

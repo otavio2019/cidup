@@ -30,10 +30,12 @@ const organizationRules = [
   { types: ['alagamento', 'drenagem'], organizations: ['saneamento', 'drenagem', 'obra'] },
 ]
 
+// Remove acentos e padroniza o texto para comparar categorias e órgãos.
 function normalizeText(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
 }
 
+// Sugere o órgão compatível com a categoria, mantendo uma opção única como alternativa.
 function findResponsibleOrganization(type: string | undefined, availableOrganizations: Organization[]) {
   const normalizedType = normalizeText(type ?? '')
   const rule = organizationRules.find(({ types }) => types.some((keyword) => normalizedType.includes(keyword)))
@@ -47,11 +49,13 @@ function findResponsibleOrganization(type: string | undefined, availableOrganiza
   return matchingOrganization ?? (availableOrganizations.length === 1 ? availableOrganizations[0] : undefined)
 }
 
+// Confirma endereço, coordenadas e órgãos responsáveis para compor o rascunho da denúncia.
 function ComplaintLocationPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
   const [error, setError] = useState('')
 
+  // Recupera o rascunho da navegação ou da sessão e usa dados vazios se estiver inválido.
   const complaint = useMemo(() => {
     const stateData = routeLocation.state as ComplaintData | null
     if (stateData) return stateData
@@ -86,6 +90,7 @@ function ComplaintLocationPage() {
       : null,
   )
 
+  // Carrega órgãos públicos e sugere um responsável com base no tipo informado.
   useEffect(() => {
     let active = true
     apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
@@ -106,6 +111,7 @@ function ComplaintLocationPage() {
     }
   }, [complaintType, hadSavedOrganizations])
 
+  // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
   function requestLocation() {
     if (!navigator.geolocation) {
       setError('Este navegador não oferece geolocalização. Informe a localização manualmente.')
@@ -129,6 +135,7 @@ function ComplaintLocationPage() {
     )
   }
 
+  // Consulta o serviço de geocodificação reversa para sugerir campos do endereço.
   async function fillAddressFromCoordinates(latitude: number, longitude: number) {
     setIsAddressLoading(true)
     try {
@@ -165,6 +172,7 @@ function ComplaintLocationPage() {
     }
   }
 
+  // Solicita localização automaticamente quando a etapa ainda não tem coordenadas.
   useEffect(() => {
     if (coordinates) return
     const timer = window.setTimeout(() => {
@@ -173,6 +181,7 @@ function ComplaintLocationPage() {
     return () => window.clearTimeout(timer)
   }, [coordinates])
 
+  // Valida os dados da localização e guarda a etapa seguinte no rascunho da sessão.
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
