@@ -301,27 +301,30 @@ function ComplaintLocationPage() {
               />
             </div>
 
-            <fieldset className="complaint-field">
+            <fieldset className="organization-fieldset">
               <legend>Órgãos responsáveis <span>*</span></legend>
-              {organizations.map((organization) => {
-                const value = String(organization.id_orgao)
-                return (
-                  <label key={organization.id_orgao} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 400 }}>
-                    <input
-                      type="checkbox"
-                      checked={organizationIds.includes(value)}
-                      onChange={(event) => {
-                        setError('')
-                        setOrganizationIds((current) => event.target.checked
-                          ? [...current, value]
-                          : current.filter((id) => id !== value))
-                      }}
-                    />
-                    {organization.nome}
-                  </label>
-                )
-              })}
-              <small>Você pode marcar mais de um órgão. O sugerido para o tipo do problema já vem marcado.</small>
+              <p className="organization-help">Você pode marcar mais de um órgão. O sugerido para o tipo do problema já vem marcado.</p>
+              <div className="organization-options">
+                {organizations.map((organization) => {
+                  const value = String(organization.id_orgao)
+                  const isSelected = organizationIds.includes(value)
+                  return (
+                    <label className={`organization-option${isSelected ? ' is-selected' : ''}`} key={organization.id_orgao}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(event) => {
+                          setError('')
+                          setOrganizationIds((current) => event.target.checked
+                            ? [...current, value]
+                            : current.filter((id) => id !== value))
+                        }}
+                      />
+                      <span>{organization.nome}</span>
+                    </label>
+                  )
+                })}
+              </div>
               {organizations.length === 0 && <small>Nenhum órgão público disponível no momento.</small>}
             </fieldset>
 
