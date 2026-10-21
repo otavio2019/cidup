@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
@@ -20,8 +20,10 @@ const complaintStatusLabels: Record<string, string> = {
 // TODO: conectar os links às telas de registrar denúncia e detalhes.
 // Carrega o resumo das denúncias e reúne atalhos e recursos do painel cidadão.
 function DashboardPage() {
+  const navigate = useNavigate()
   const [complaints, setComplaints] = useState<Complaint[]>([])
   const [complaintMessage, setComplaintMessage] = useState('')
+  const [logoutError, setLogoutError] = useState('')
   const [description, setDescription] = useState('')
   const [draft, setDraft] = useState<{
     title: string
@@ -38,6 +40,23 @@ function DashboardPage() {
       .then((data) => setComplaints(data.complaints))
       .catch((error: unknown) => setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível carregar as denúncias.'))
   }, [])
+
+  async function handleLogout() {
+    setLogoutError('')
+    try {
+      await apiRequest('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : 'Não foi possível encerrar a sessão.')
+      return
+    }
+    localStorage.removeItem('cidup-role')
+    localStorage.removeItem('cidup-user-id')
+    localStorage.removeItem('cidup-complaints')
+    localStorage.removeItem('cidup-profile')
+    sessionStorage.removeItem('cidup-complaint-draft')
+    sessionStorage.removeItem('cidup-complaint-confirmation')
+    navigate('/login', { replace: true })
+  }
 
   // Pede confirmação antes de excluir e remove da tela apenas após sucesso na API.
   async function removeComplaint(id: number) {
@@ -237,13 +256,20 @@ function DashboardPage() {
               <b>›</b>
             </a>
 
-            <a href="#sair">
+            <a
+              href="#sair"
+              onClick={(event) => {
+                event.preventDefault()
+                void handleLogout()
+              }}
+            >
               <span>↪</span>
               <div>
                 <strong>Sair</strong>
               </div>
               <b>›</b>
             </a>
+            {logoutError && <p className="form-message" role="alert">{logoutError}</p>}
           </div>
         </aside>
       </section>
