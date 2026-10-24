@@ -11,7 +11,7 @@
   min-height: 100vh;
   color: var(--rp-ink);
   background: #f3f7fa;
-  font-family: "Aptos", "Segoe UI", sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .rp-shell * {
@@ -90,7 +90,7 @@
   padding: 0 18px;
   border-radius: 6px;
   color: #c6d8e5;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   transition: background-color 150ms ease, color 150ms ease;
 }
@@ -107,7 +107,7 @@
   margin: auto 10px 0;
   padding: 25px 8px 0;
   border-top: 1px solid #31516a;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .rp-sidebar-footer strong {
@@ -145,7 +145,7 @@
   color: var(--rp-ink);
   background: transparent;
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -406,15 +406,17 @@
 .rp-status {
   display: inline-flex;
   min-width: 82px;
-  min-height: 24px;
+  min-height: 30px;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   background: #e9f3fb;
   color: #1768c5;
-  font-size: 9px;
+  font: inherit;
+  font-size: 12px;
   font-weight: 750;
+  line-height: 1;
   white-space: nowrap;
 }
 

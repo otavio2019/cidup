@@ -406,10 +406,15 @@ a {
 }
 
 .status {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
   padding: 8px 12px;
   border-radius: 999px;
+  font: inherit;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 
