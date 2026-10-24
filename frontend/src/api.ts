@@ -33,4 +33,11 @@ export type Complaint = {
   createdAt: string
   registeredAt: string
   type: { name: string }
+  history: ComplaintHistory[]
+}
+
+export type ComplaintHistory = {
+  id: number
+  description: string
+  observation: string
 }

@@ -117,6 +117,11 @@ function complaintResponse(complaint: {
     type: { name: complaint.tipo },
     citizen: complaint.usuario?.nome ?? '',
     citizenEmail: complaint.usuario?.email ?? '',
+    history: (complaint.historico ?? []).map((item) => ({
+      id: item.id_historico,
+      description: item.descricao,
+      observation: item.observacao,
+    })),
   }
 }
 
@@ -677,6 +682,10 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true } },
+        historico: {
+          orderBy: { id_historico: 'desc' },
+          select: { id_historico: true, descricao: true, observacao: true },
+        },
       },
       orderBy: { data_registro: 'desc' },
     })
@@ -708,6 +717,10 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true } },
+        historico: {
+          orderBy: { id_historico: 'desc' },
+          select: { id_historico: true, descricao: true, observacao: true },
+        },
       },
     })
     if (!denuncia) {
@@ -863,6 +876,10 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true } },
+        historico: {
+          orderBy: { id_historico: 'desc' },
+          select: { id_historico: true, descricao: true, observacao: true },
+        },
       },
     })
     response.json({ denuncia, complaint: complaintResponse(denuncia) })

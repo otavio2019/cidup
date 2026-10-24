@@ -441,6 +441,41 @@
   gap: 20px;
 }
 
+.rp-history-panel {
+  margin-top: 20px;
+}
+
+.rp-history-panel h2 {
+  margin: 0 0 14px;
+  color: var(--rp-ink);
+  font-size: 15px;
+}
+
+.rp-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.rp-history-item {
+  padding: 12px 14px;
+  border: 1px solid #dce8ee;
+  border-left: 3px solid var(--rp-blue);
+  border-radius: 8px;
+  background: #f8fbfd;
+}
+
+.rp-history-item strong {
+  color: var(--rp-ink);
+  font-size: 12px;
+}
+
+.rp-history-item p {
+  margin: 6px 0 0;
+  color: var(--rp-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .rp-information-panel {
   min-height: 398px;
   padding: 18px 21px;

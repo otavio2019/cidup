@@ -942,6 +942,48 @@ a {
   white-space: pre-wrap;
 }
 
+.complaint-observations {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8e5;
+}
+
+.complaint-observations h3 {
+  margin: 0 0 14px;
+  color: #183b35;
+  font-size: 18px;
+}
+
+.complaint-observations > p {
+  margin: 0;
+  color: #647482;
+  line-height: 1.5;
+}
+
+.complaint-observation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.complaint-observation {
+  padding: 14px 16px;
+  border: 1px solid #dce9e3;
+  border-left: 3px solid #347663;
+  border-radius: 10px;
+  background: #f7fbf9;
+}
+
+.complaint-observation strong {
+  color: #183b35;
+  font-size: 13px;
+}
+
+.complaint-observation p {
+  margin: 6px 0 0;
+  color: #52645f;
+  line-height: 1.5;
+}
+
 /* Empilha os controles em telas estreitas. */
 @media (max-width: 680px) {
   .complaints-page-content {

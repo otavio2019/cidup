@@ -20,6 +20,13 @@ type AdminComplaint = {
   email: string
   sector: string
   sectorId?: number
+  history: ComplaintHistory[]
+}
+
+type ComplaintHistory = {
+  id: number
+  description: string
+  observation: string
 }
 
 type ApiComplaint = {
@@ -34,6 +41,7 @@ type ApiComplaint = {
   orgao?: { id_orgao: number; nome: string } | null
   citizen?: string
   citizenEmail?: string
+  history?: ComplaintHistory[]
 }
 
 type Organization = { id_orgao: number; nome: string; descricao: string }
@@ -123,6 +131,7 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
     email: complaint.citizenEmail || 'E-mail não informado',
     sector: complaint.orgao?.nome ?? 'Não encaminhada',
     sectorId: complaint.orgao?.id_orgao,
+    history: complaint.history ?? [],
   }
 }
 
@@ -221,9 +230,8 @@ function ResponsiblePanelPage() {
           }),
         })
       }
-      setComplaints((current) => current.map((complaint) => complaint.protocol === selectedComplaint.protocol
-        ? { ...complaint, status: nextStatus, sector, sectorId: selectedOrganization?.id_orgao ?? complaint.sectorId }
-        : complaint))
+      const refreshed = await apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints')
+      setComplaints(refreshed.complaints.map(mapApiComplaint))
       setStatus(nextStatus)
       setObservation('')
       setSavedUpdate(true)
@@ -326,6 +334,21 @@ function ResponsiblePanelPage() {
               <button className="rp-primary-button" type="submit">Salvar atualização</button>
             </form>
           </div>
+          <section className="rp-panel rp-history-panel" aria-labelledby="responsible-history-title">
+            <h2 id="responsible-history-title">Observações e histórico</h2>
+            {selectedComplaint.history.length === 0 ? (
+              <p className="rp-empty-state">Nenhuma observação registrada para esta denúncia.</p>
+            ) : (
+              <div className="rp-history-list">
+                {selectedComplaint.history.map((item) => (
+                  <article className="rp-history-item" key={item.id}>
+                    <strong>{item.description}</strong>
+                    <p>{item.observation}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </>
       )
     }

@@ -126,12 +126,27 @@ function Header() {
 							)}
 						</section>
 
-						<dl className="complaint-detail-list">
-							<div><dt>Descrição</dt><dd>{complaint.description || 'Não informada'}</dd></div>
-							<div><dt>Endereço</dt><dd>{complaint.address || 'Não informado'}</dd></div>
-							<div><dt>Data de registro</dt><dd>{formatDate(complaint.registeredAt)}</dd></div>
-						</dl>
-					</article>
+							<dl className="complaint-detail-list">
+								<div><dt>Descrição</dt><dd>{complaint.description || 'Não informada'}</dd></div>
+								<div><dt>Endereço</dt><dd>{complaint.address || 'Não informado'}</dd></div>
+								<div><dt>Data de registro</dt><dd>{formatDate(complaint.registeredAt)}</dd></div>
+							</dl>
+							<section className="complaint-observations" aria-labelledby="observations-title">
+								<h3 id="observations-title">Atualizações da prefeitura</h3>
+								{complaint.history.length === 0 ? (
+									<p>Nenhuma observação foi registrada ainda.</p>
+								) : (
+									<div className="complaint-observation-list">
+										{complaint.history.map((item) => (
+											<article className="complaint-observation" key={item.id}>
+												<strong>{item.description}</strong>
+												<p>{item.observation}</p>
+											</article>
+										))}
+									</div>
+								)}
+							</section>
+						</article>
 				)}
 			</section>
 			<CitizenMobileNav />
