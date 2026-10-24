@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "predev": "prisma migrate deploy && prisma generate",
+    "predev": "prisma generate",
     "dev": "tsx watch src/index.ts",
     "test": "tsx --test src/index.test.ts"
   },

@@ -50,8 +50,9 @@ rede Docker. Não reutilize senhas reais em arquivos versionados.
 
 Se estiver rodando a API diretamente em `backend/`, copie
 `backend/.env.example` para `backend/.env` e configure a URL PostgreSQL local.
-Ao iniciar a API com `npm run dev`, as migrations pendentes são aplicadas
-automaticamente antes de gerar o Prisma Client.
+Ao iniciar a API com `npm run dev`, o Prisma Client é gerado. Migrações não são
+aplicadas automaticamente: revise-as e execute os comandos do Prisma
+explicitamente para evitar alterações inesperadas no banco.
 
 Configure `AUTH_TOKEN_SECRET` com um segredo aleatório de pelo menos 32 bytes.
 Gere-o localmente com `openssl rand -base64 32`; não o compartilhe nem o
@@ -113,6 +114,71 @@ coincida com o valor atual do `.env` usando `ALTER ROLE cidup WITH PASSWORD
 'SENHA_DO_ENV';` e substituindo `SENHA_DO_ENV` pelo valor de
 `POSTGRES_PASSWORD`. Mantenha a mesma senha nas URLs `DATABASE_URL` e
 `DOCKER_DATABASE_URL`.
+
+### Supabase com Prisma
+
+O backend usa Prisma ORM 6.16.2 e o PostgreSQL padrão do Prisma Client; não
+precisa instalar adaptador PostgreSQL. `DATABASE_URL` é a conexão usada em
+tempo de execução e `DIRECT_URL` é usada pelo Prisma Migrate para migrações.
+No Prisma 6, essa separação é declarada por `directUrl` no `schema.prisma`.
+
+Obtenha as strings no painel do projeto Supabase: **Connect** → selecione o
+método de conexão → copie a connection string. Use a conexão direta para
+`DIRECT_URL` quando a rede do backend suportar IPv6 (ou o adicional IPv4 do
+Supabase). Se a rede for somente IPv4, escolha **Session pooler** para o
+backend e para a CLI, conforme a disponibilidade de rede. O Supabase recomenda
+a conexão direta para migrações; não use o transaction pooler para migrações.
+Consulte também a documentação oficial do [Supabase para conexões PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres)
+e do [Prisma ORM 6 com Supabase](https://www.prisma.io/docs/orm/v6/overview/databases/supabase).
+Substitua `[YOUR-PASSWORD]` no seu arquivo local `.env`/`backend/.env` e faça
+percent-encoding de caracteres reservados na senha. Nunca cole a senha no chat
+nem a versione.
+
+- Backend executado no host: configure `DATABASE_URL` e `DIRECT_URL` em
+  `backend/.env`.
+- Backend executado pelo Compose: configure `DOCKER_DATABASE_URL` com a URL de
+  runtime e `DIRECT_URL` no `.env` da raiz. O Compose mantém a conexão no
+  backend; nenhuma URL de banco é enviada ao frontend.
+
+Antes de sincronizar o Prisma com um projeto Supabase existente, confira no
+painel ou no SQL Editor quais tabelas e dados existem. Uma consulta somente de
+leitura para listar tabelas públicas é:
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+ORDER BY table_name;
+```
+
+Se o Supabase já tiver estrutura, `npx prisma db pull` faz introspecção:
+consulta o banco e atualiza o schema local, sem alterar tabelas nem dados. Esse
+comando usa `DATABASE_URL`; para executá-lo, configure-a temporariamente com
+uma conexão direta ou Session pooler e depois restaure a URL de runtime. Faça
+uma cópia de `prisma/schema.prisma` antes se quiser preservar a versão atual.
+Depois, `npx prisma generate` gera o Prisma Client a partir do schema local;
+não acessa nem modifica os dados do banco. Migrações são diferentes: `migrate
+dev` cria e aplica migrações em um banco de desenvolvimento e `migrate deploy`
+aplica migrações pendentes no banco configurado. Revise as migrações e confirme
+o destino antes de executar qualquer um desses comandos no Supabase.
+
+Com as variáveis configuradas, estes comandos validam e geram o cliente sem
+aplicar migrações:
+
+```bash
+cd backend
+npx prisma validate
+npx prisma generate
+```
+
+Para testar a conexão com uma leitura sem alterar dados:
+
+```bash
+npx tsx -e 'import "dotenv/config"; import { prisma } from "./src/lib/prisma.ts"; void (async () => { try { console.log(await prisma.$queryRaw`SELECT 1`); } finally { await prisma.$disconnect(); } })()'
+```
+
+O cliente reutilizável já está em `src/lib/prisma.ts` e deve ser importado
+somente pelo backend. Exemplo: `await prisma.usuario.findMany({ take: 10 })`.
 
 Para parar os serviços:
 
