@@ -41,6 +41,16 @@ type StoredUser = {
   senha: string
 }
 
+type StoredResponsible = {
+  id_responsavel: number
+  nome: string
+  email: string
+  telefone: string
+  senha: string
+  id_orgao: number
+  orgao: { id_orgao: number; nome: string }
+}
+
 type StoredComplaint = {
   id_denuncia: number
   id_usuario: number
@@ -57,6 +67,7 @@ type StoredComplaint = {
 }
 
 const users = new Map<number, StoredUser>()
+const responsibleAccounts = new Map<number, StoredResponsible>()
 const complaints = new Map<number, StoredComplaint>()
 const histories = new Map<number, RecordValue>()
 const calls: Array<{ model: string; method: string; args: RecordValue }> = []
@@ -70,6 +81,14 @@ let server: ReturnType<ReturnType<typeof createApp>['listen']>
 function remember(model: string, method: string, args: RecordValue) {
   calls.push({ model, method, args })
 }
+
+const routingOrganizations = [
+  { id_orgao: 1, nome: 'Secretaria de Infraestrutura', descricao: 'Vias e calçadas' },
+  { id_orgao: 2, nome: 'Secretaria de Iluminação Pública', descricao: 'Iluminação urbana' },
+  { id_orgao: 3, nome: 'Secretaria de Limpeza Urbana', descricao: 'Limpeza e descarte' },
+  { id_orgao: 4, nome: 'Secretaria de Meio Ambiente', descricao: 'Árvores e áreas verdes' },
+  { id_orgao: 5, nome: 'Secretaria de Saneamento', descricao: 'Drenagem e esgoto' },
+]
 
 // Simula a projeção select do Prisma sobre o usuário armazenado no teste.
 function selectedUser(user: StoredUser, args: RecordValue) {
@@ -132,18 +151,19 @@ function installDatabaseMocks(database: PrismaClient) {
   installDelegate(database, 'orgao', {
     async findMany(args) {
       remember('orgao', 'findMany', args)
-      return [{
-        id_orgao: 1,
-        nome: 'Órgão de teste',
-        descricao: 'Descrição pública',
-      }]
+      return routingOrganizations
     },
   })
 
   installDelegate(database, 'responsavel', {
     async findUnique(args) {
       remember('responsavel', 'findUnique', args)
-      return null
+      const where = record(args.where)
+      const responsible = [...responsibleAccounts.values()].find((candidate) =>
+        ('id_responsavel' in where && candidate.id_responsavel === where.id_responsavel) ||
+        ('email' in where && candidate.email === where.email),
+      )
+      return responsible ? { ...responsible } : null
     },
   })
 
@@ -189,7 +209,7 @@ function installDatabaseMocks(database: PrismaClient) {
         endereco: String(data.endereco),
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
-        orgao: { id_orgao: Number(orgConnect.id_orgao), nome: 'Órgão de teste' },
+        orgao: routingOrganizations.find((organization) => organization.id_orgao === Number(orgConnect.id_orgao)) ?? routingOrganizations[0],
       }
       complaints.set(id_denuncia, complaint)
       return complaint
@@ -258,6 +278,10 @@ async function cookieFor(userId: number) {
   return `${AUTH_COOKIE_NAME}=${await createAuthToken(userId, secret)}`
 }
 
+async function responsibleCookieFor(responsibleId: number) {
+  return `${AUTH_COOKIE_NAME}=${await createAuthToken(responsibleId, secret, 'RESPONSIBLE')}`
+}
+
 // Envia uma requisição HTTP para a instância da API iniciada pelo conjunto de testes.
 async function callApi(path: string, init: RequestInit = {}) {
   return fetch(`${baseUrl}${path}`, {
@@ -276,6 +300,15 @@ before(async () => {
   const passwordHash = `${'a'.repeat(32)}:${(await scrypt('secret-password', 'a'.repeat(32), 64) as Buffer).toString('hex')}`
   users.set(1, { id_usuario: 1, nome: 'Pessoa Um', email: 'um@example.test', telefone: '1111111111', senha: passwordHash })
   users.set(2, { id_usuario: 2, nome: 'Pessoa Dois', email: 'dois@example.test', telefone: '2222222222', senha: passwordHash })
+  responsibleAccounts.set(99, {
+    id_responsavel: 99,
+    nome: 'Responsável Teste',
+    email: 'responsavel@example.test',
+    telefone: '9999999999',
+    senha: passwordHash,
+    id_orgao: 1,
+    orgao: { id_orgao: 1, nome: 'Secretaria de Infraestrutura' },
+  })
   complaints.set(101, {
     id_denuncia: 101,
     id_usuario: 1,
@@ -288,7 +321,7 @@ before(async () => {
     endereco: 'Rua de teste',
     latitude: -23,
     longitude: -46,
-    orgao: { id_orgao: 1, nome: 'Órgão de teste' },
+    orgao: { id_orgao: 1, nome: 'Secretaria de Infraestrutura' },
   })
   complaints.set(202, {
     ...complaints.get(101)!,
@@ -308,7 +341,6 @@ before(async () => {
   const app = createApp(client, {
     authTokenSecret: secret,
     frontendOrigins: 'http://localhost:5173',
-    administratorIds: '99',
   })
   server = app.listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -382,6 +414,48 @@ test('o login rejeita uma senha incorreta', async () => {
   assert.equal(response.headers.get('set-cookie'), null)
 })
 
+test('o login do responsável usa a conta própria e retorna o papel RESPONSIBLE', async () => {
+  const response = await callApi('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'responsavel@example.test', password: 'secret-password' }),
+  })
+  const body = await response.json() as RecordValue
+  assert.equal(response.status, 200)
+  assert.equal(record(body.user).role, 'RESPONSIBLE')
+  assert.equal(record(body.user).email, 'responsavel@example.test')
+})
+
+test('encaminha denúncias automaticamente para o órgão compatível com a categoria', async () => {
+  const routingCases = [
+    ['Buraco ou problema na via', 1, 'Secretaria de Infraestrutura'],
+    ['Iluminação pública', 2, 'Secretaria de Iluminação Pública'],
+    ['Lixo ou descarte irregular', 3, 'Secretaria de Limpeza Urbana'],
+    ['Árvore ou área verde', 4, 'Secretaria de Meio Ambiente'],
+    ['Alagamento ou drenagem', 5, 'Secretaria de Saneamento'],
+  ] as const
+
+  for (const [type, organizationId, organizationName] of routingCases) {
+    const response = await callApi('/api/complaints', {
+      method: 'POST',
+      headers: { Cookie: await cookieFor(1) },
+      body: JSON.stringify({
+        type,
+        title: type,
+        description: `Relato de teste para ${type}.`,
+        address: 'Rua de teste, 10, Centro',
+        latitude: -23,
+        longitude: -46,
+      }),
+    })
+    const body = await response.json() as RecordValue
+    const complaint = record(body.complaint)
+    const organization = record(complaint.orgao)
+    assert.equal(response.status, 201, type)
+    assert.equal(complaint.id_orgao, organizationId, type)
+    assert.equal(organization.nome, organizationName, type)
+  }
+})
+
 test('a API protegida rejeita solicitações sem cookie, independentemente de x-user-id', async () => {
   const response = await callApi('/api/complaints', {
     headers: { 'x-user-id': '1' },
@@ -419,7 +493,8 @@ test('x-user-id não substitui a identidade do usuário no cookie assinado', asy
   const body = await response.json() as RecordValue
   const listed = body.complaints as RecordValue[]
   assert.equal(response.status, 200)
-  assert.deepEqual(listed.map((complaint) => complaint.id), [101])
+  assert.equal(listed.some((complaint) => complaint.id === 202), false)
+  assert.equal(listed.every((complaint) => complaint.id_usuario === 1), true)
   assert.equal(calls.find((call) => call.model === 'denuncia' && call.method === 'findMany')?.args.where instanceof Object, true)
   assert.equal(record(calls.find((call) => call.model === 'denuncia' && call.method === 'findMany')?.args.where).id_usuario, 1)
 })

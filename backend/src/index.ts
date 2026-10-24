@@ -80,13 +80,9 @@ function handlePrismaError(error: unknown, response: express.Response, operation
   response.status(500).json({ error: 'Não foi possível concluir a operação.' })
 }
 
-// Verifica se o usuário consta na lista de IDs administrativos configurada.
-function isAdministrator(userId: number, administratorIds: ReadonlySet<number>) {
-  return administratorIds.has(userId)
-}
-
-function isAdministratorRequest(request: express.Request, userId: number, administratorIds: ReadonlySet<number>) {
-  return readAuthPrincipalType(request) === 'RESPONSIBLE' || isAdministrator(userId, administratorIds)
+// Verifica se a sessão pertence à conta única de responsável autenticada.
+function isResponsibleRequest(request: express.Request) {
+  return readAuthPrincipalType(request) === 'RESPONSIBLE'
 }
 
 // Adapta os campos do banco ao formato de denúncia consumido pelo frontend.
@@ -130,7 +126,6 @@ export function createApp(
   options: {
     authTokenSecret?: string
     frontendOrigins?: string
-    administratorIds?: string
     production?: boolean
   } = {},
 ) {
@@ -143,12 +138,6 @@ const frontendOrigins = (options.frontendOrigins ?? process.env.FRONTEND_ORIGINS
   .map((origin) => origin.trim())
   .filter(Boolean)
 const allowedOrigins = new Set(frontendOrigins)
-const administratorIds = new Set(
-  (options.administratorIds ?? process.env.ADMIN_USER_IDS ?? '')
-    .split(',')
-    .map((value) => readPositiveInt(value))
-    .filter((value): value is number => value !== null),
-)
 const production = options.production ?? process.env.NODE_ENV === 'production'
 if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 'https:')) {
   throw new Error('FRONTEND_ORIGINS deve usar HTTPS em produção.')
@@ -199,7 +188,7 @@ function requireAdministrator(request: express.Request, response: express.Respon
     response.status(401).json({ error: 'Autenticação necessária.' })
     return
   }
-  if (!isAdministratorRequest(request, userId, administratorIds)) {
+  if (!isResponsibleRequest(request)) {
     response.status(403).json({ error: 'Operação restrita a responsáveis autorizados.' })
     return
   }
@@ -328,7 +317,7 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
         name: user.nome,
         email: user.email,
         phone: user.telefone,
-        role: isAdministrator(user.id_usuario, administratorIds) ? 'RESPONSIBLE' : 'CITIZEN',
+        role: 'CITIZEN',
       },
     })
   } catch (error) {
@@ -397,7 +386,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
         name: user.nome,
         email: user.email,
         phone: user.telefone,
-        role: isAdministrator(user.id_usuario, administratorIds) ? 'RESPONSIBLE' : 'CITIZEN',
+        role: 'CITIZEN',
       },
     })
   } catch (error) {
@@ -681,10 +670,10 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
     response.status(401).json({ error: 'Autenticação necessária.' })
     return
   }
-  const administrator = isAdministratorRequest(request, id_usuario, administratorIds)
+  const responsibleUser = isResponsibleRequest(request)
   try {
     const denuncias = await database.denuncia.findMany({
-      where: administrator ? {} : { id_usuario },
+      where: responsibleUser ? {} : { id_usuario },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true } },
@@ -714,7 +703,7 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
     const denuncia = await database.denuncia.findFirst({
       where: {
         id_denuncia,
-        ...(isAdministratorRequest(request, id_usuario, administratorIds) ? {} : { id_usuario }),
+        ...(isResponsibleRequest(request) ? {} : { id_usuario }),
       },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
@@ -813,10 +802,10 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
     response.status(400).json({ error: 'Identificação inválida.' })
     return
   }
-  const administrator = isAdministratorRequest(request, id_usuario, administratorIds)
+  const responsibleUser = isResponsibleRequest(request)
 
   const data: Prisma.denunciaUpdateInput = {}
-  if (!administrator && ('status' in body || 'id_orgao' in body || 'orgaoId' in body)) {
+  if (!responsibleUser && ('status' in body || 'id_orgao' in body || 'orgaoId' in body)) {
     response.status(403).json({ error: 'Somente responsáveis podem alterar status ou encaminhar denúncias.' })
     return
   }
@@ -861,7 +850,7 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
     const existing = await database.denuncia.findFirst({
       where: {
         id_denuncia,
-        ...(administrator ? {} : { id_usuario }),
+        ...(responsibleUser ? {} : { id_usuario }),
       },
     })
     if (!existing) {
@@ -898,7 +887,7 @@ app.delete(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (r
     const existing = await database.denuncia.findFirst({
       where: {
         id_denuncia,
-        ...(isAdministratorRequest(request, id_usuario, administratorIds) ? {} : { id_usuario }),
+        ...(isResponsibleRequest(request) ? {} : { id_usuario }),
       },
       select: { id_denuncia: true },
     })
@@ -924,10 +913,10 @@ app.get(['/api/historicos', '/api/histories'], authenticate, async (request, res
     response.status(401).json({ error: 'Autenticação necessária.' })
     return
   }
-  const administrator = isAdministratorRequest(request, id_usuario, administratorIds)
+  const responsibleUser = isResponsibleRequest(request)
   try {
     const historicos = await database.historico.findMany({
-      where: administrator ? {} : { denuncia: { id_usuario } },
+      where: responsibleUser ? {} : { denuncia: { id_usuario } },
       include: {
         denuncia: { select: { id_denuncia: true, titulo: true, tipo: true, status: true, id_usuario: true } },
       },
@@ -955,7 +944,7 @@ app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (requ
     const historico = await database.historico.findFirst({
       where: {
         id_historico,
-        ...(isAdministratorRequest(request, id_usuario, administratorIds) ? {} : { denuncia: { id_usuario } }),
+        ...(isResponsibleRequest(request) ? {} : { denuncia: { id_usuario } }),
       },
       include: {
         denuncia: { select: { id_denuncia: true, titulo: true, tipo: true, status: true, id_usuario: true } },
@@ -979,23 +968,23 @@ app.post(['/api/historicos', '/api/histories'], authenticate, async (request, re
     response.status(401).json({ error: 'Autenticação necessária.' })
     return
   }
-  const administrator = isAdministratorRequest(request, authenticatedUserId, administratorIds)
+  const responsibleUser = isResponsibleRequest(request)
   const responsible = readAuthPrincipalType(request) === 'RESPONSIBLE'
   const id_usuario = responsible
     ? readPositiveInt(body.id_usuario)
-    : administrator
+    : responsibleUser
       ? readPositiveInt(body.id_usuario) ?? authenticatedUserId
       : authenticatedUserId
   const id_denuncia = readPositiveInt(body.id_denuncia)
   if (typeof body.descricao !== 'string' || !body.descricao.trim() ||
       typeof body.foto !== 'string' || !body.foto.trim() ||
       typeof body.observacao !== 'string' || !body.observacao.trim() ||
-      !id_denuncia || (administrator && !responsible && 'id_usuario' in body && !readPositiveInt(body.id_usuario))) {
+      !id_denuncia || (responsibleUser && !responsible && 'id_usuario' in body && !readPositiveInt(body.id_usuario))) {
     response.status(400).json({ error: 'Informe descrição, foto, observação, usuário e denúncia válidos.' })
     return
   }
   try {
-    if (!administrator) {
+    if (!responsibleUser) {
       const ownComplaint = await database.denuncia.findFirst({
         where: { id_denuncia, id_usuario: authenticatedUserId },
         select: { id_denuncia: true },
@@ -1036,7 +1025,7 @@ app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (re
     return
   }
 
-  const administrator = isAdministratorRequest(request, authenticatedUserId, administratorIds)
+  const responsibleUser = isResponsibleRequest(request)
   const data: Prisma.historicoUpdateInput = {}
   for (const field of ['descricao', 'foto', 'observacao'] as const) {
     if (!(field in body)) continue
@@ -1046,7 +1035,7 @@ app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (re
     }
     data[field] = body[field].trim()
   }
-  if (administrator && 'id_usuario' in body) {
+  if (responsibleUser && 'id_usuario' in body) {
     const id_usuario = readPositiveInt(body.id_usuario)
     if (!id_usuario) {
       response.status(400).json({ error: 'Identificação do usuário inválida.' })
@@ -1060,7 +1049,7 @@ app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (re
       response.status(400).json({ error: 'Identificação da denúncia inválida.' })
       return
     }
-    if (!administrator) {
+    if (!responsibleUser) {
       const ownComplaint = await database.denuncia.findFirst({
         where: { id_denuncia, id_usuario: authenticatedUserId },
         select: { id_denuncia: true },
@@ -1081,7 +1070,7 @@ app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (re
     const existing = await database.historico.findFirst({
       where: {
         id_historico,
-        ...(administrator ? {} : { id_usuario: authenticatedUserId, denuncia: { id_usuario: authenticatedUserId } }),
+        ...(responsibleUser ? {} : { id_usuario: authenticatedUserId, denuncia: { id_usuario: authenticatedUserId } }),
       },
       select: { id_historico: true },
     })
@@ -1112,7 +1101,7 @@ app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (r
     const existing = await database.historico.findFirst({
       where: {
         id_historico,
-        ...(isAdministratorRequest(request, id_usuario, administratorIds) ? {} : { id_usuario, denuncia: { id_usuario } }),
+        ...(isResponsibleRequest(request) ? {} : { id_usuario, denuncia: { id_usuario } }),
       },
       select: { id_historico: true },
     })

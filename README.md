@@ -57,7 +57,7 @@ explicitamente para evitar alterações inesperadas no banco.
 Configure `AUTH_TOKEN_SECRET` com um segredo aleatório de pelo menos 32 bytes.
 Gere-o localmente com `openssl rand -base64 32`; não o compartilhe nem o
 versione. `FRONTEND_ORIGINS` lista origens permitidas separadas por vírgula.
-`ADMIN_USER_IDS` recebe IDs de usuários autorizados para administrar órgãos e
+Responsáveis autenticados pela tabela `responsavel` podem administrar órgãos e
 gerenciar denúncias. Em produção, configure somente origens HTTPS e publique a
 API atrás de HTTPS. As sessões são cookies `HttpOnly`, assinados e expiram em
 15 minutos; o navegador não recebe nem armazena o token. Se frontend e API
@@ -300,14 +300,15 @@ O projeto utiliza comentários que podem ser encontrados pela extensão Todo Tre
 - não confie em `x-user-id`; a identidade da API vem da sessão assinada;
 - cadastros e consultas de perfil são restritos ao usuário autenticado;
 - leituras de órgãos mostram somente dados públicos; escrita administrativa
-  depende de `ADMIN_USER_IDS`;
+  depende de uma sessão autenticada de responsável;
 - use `.env.example` para documentar configurações necessárias;
 - não use `docker compose down -v` sem confirmar que os dados locais podem ser removidos;
 - valide os dados recebidos pela API antes de salvar no banco.
 
 ## Acesso do responsável
 
-O schema atual não contém uma coluna de papel. Para um ambiente local, configure
-`ADMIN_USER_IDS` com os IDs dos usuários responsáveis, separados por vírgula.
-Não há `UPDATE` de uma coluna `role` nem acesso administrativo baseado em dados
-enviados pelo navegador.
+O acesso administrativo usa a tabela `responsavel`, vinculada a um órgão, e não
+aceita IDs administrativos configurados manualmente. Crie ou atualize a conta
+única com `npm run seed:responsavel` e use o e-mail e a senha configurados para
+entrar pelo mesmo endpoint de login dos cidadãos. A sessão assinada retorna
+`role: RESPONSIBLE`; o navegador não pode escolher esse papel.
