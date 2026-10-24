@@ -73,6 +73,7 @@ function complaintResponse(complaint: {
   id_usuario: number
   id_orgao: number
   orgao?: { id_orgao: number; nome: string } | null
+  usuario?: { id_usuario: number; nome: string; email: string } | null
   historico?: Array<{ id_historico: number; descricao: string; observacao: string }>
 }) {
   return {
@@ -88,6 +89,8 @@ function complaintResponse(complaint: {
     createdAt: complaint.data_registro.toISOString(),
     registeredAt: complaint.data_registro.toISOString(),
     type: { name: complaint.tipo },
+    citizen: complaint.usuario?.nome ?? '',
+    citizenEmail: complaint.usuario?.email ?? '',
   }
 }
 
@@ -595,7 +598,10 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
   try {
     const denuncias = await database.denuncia.findMany({
       where: administrator ? {} : { id_usuario },
-      include: { orgao: { select: { id_orgao: true, nome: true } } },
+      include: {
+        orgao: { select: { id_orgao: true, nome: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true } },
+      },
       orderBy: { data_registro: 'desc' },
     })
     const complaints = denuncias.map(complaintResponse)
@@ -623,7 +629,10 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
         id_denuncia,
         ...(isAdministrator(id_usuario, administratorIds) ? {} : { id_usuario }),
       },
-      include: { orgao: { select: { id_orgao: true, nome: true } } },
+      include: {
+        orgao: { select: { id_orgao: true, nome: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true } },
+      },
     })
     if (!denuncia) {
       response.status(404).json({ error: 'Denúncia não encontrada.' })
@@ -774,7 +783,10 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
     const denuncia = await database.denuncia.update({
       where: { id_denuncia },
       data,
-      include: { orgao: { select: { id_orgao: true, nome: true } } },
+      include: {
+        orgao: { select: { id_orgao: true, nome: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true } },
+      },
     })
     response.json({ denuncia, complaint: complaintResponse(denuncia) })
   } catch (error) {

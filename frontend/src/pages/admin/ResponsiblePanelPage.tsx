@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { apiRequest } from '../../api'
 import './ResponsiblePanelPage.css'
 
-type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida'
+type ComplaintStatus = 'Recebida' | 'Em análise' | 'Encaminhada' | 'Em atendimento' | 'Resolvida' | 'Não atendida'
 
 type AdminComplaint = {
+  id?: number
   protocol: string
   title: string
   description: string
@@ -16,81 +18,30 @@ type AdminComplaint = {
   citizen: string
   email: string
   sector: string
+  sectorId?: number
 }
+
+type ApiComplaint = {
+  id: number
+  protocol: string
+  title: string
+  description: string
+  address: string
+  status: string
+  createdAt: string
+  type: { name: string }
+  orgao?: { id_orgao: number; nome: string } | null
+  citizen?: string
+  citizenEmail?: string
+}
+
+type Organization = { id_orgao: number; nome: string; descricao: string }
 
 type OccurrenceType = {
   id: number
   name: string
   description: string
 }
-
-const initialComplaints: AdminComplaint[] = [
-  {
-    protocol: 'CIDUP-000031',
-    title: 'Buraco na via',
-    description: 'Buraco grande próximo à faixa de pedestres.',
-    neighborhood: 'Centro',
-    date: '05/10/2026',
-    status: 'Recebida',
-    category: 'Infraestrutura urbana',
-    address: 'Rua das Flores, 120 — Centro',
-    citizen: 'João da Silva',
-    email: 'joao@email.com',
-    sector: 'Secretaria de Obras',
-  },
-  {
-    protocol: 'CIDUP-000029',
-    title: 'Lâmpada queimada',
-    description: 'Poste sem iluminação há três noites.',
-    neighborhood: 'Jardins',
-    date: '04/10/2026',
-    status: 'Em análise',
-    category: 'Iluminação pública',
-    address: 'Av. das Palmeiras, 84 — Jardins',
-    citizen: 'Mariana Costa',
-    email: 'mariana@email.com',
-    sector: 'Secretaria de Serviços',
-  },
-  {
-    protocol: 'CIDUP-000024',
-    title: 'Lixo acumulado',
-    description: 'Descarte irregular de resíduos na praça.',
-    neighborhood: 'São José',
-    date: '03/10/2026',
-    status: 'Em atendimento',
-    category: 'Limpeza urbana',
-    address: 'Praça São José, s/n — São José',
-    citizen: 'Pedro Almeida',
-    email: 'pedro@email.com',
-    sector: 'Secretaria de Serviços',
-  },
-  {
-    protocol: 'CIDUP-000018',
-    title: 'Vazamento de água',
-    description: 'Água escorrendo pela calçada desde ontem.',
-    neighborhood: 'Centro',
-    date: '01/10/2026',
-    status: 'Resolvida',
-    category: 'Saneamento',
-    address: 'Rua do Comércio, 42 — Centro',
-    citizen: 'Ana Oliveira',
-    email: 'ana@email.com',
-    sector: 'Secretaria de Saneamento',
-  },
-  {
-    protocol: 'CIDUP-000016',
-    title: 'Calçada danificada',
-    description: 'Piso solto dificulta a passagem de pedestres.',
-    neighborhood: 'Vila Nova',
-    date: '30/09/2026',
-    status: 'Em atendimento',
-    category: 'Infraestrutura urbana',
-    address: 'Rua Aurora, 212 — Vila Nova',
-    citizen: 'Lucas Martins',
-    email: 'lucas@email.com',
-    sector: 'Secretaria de Obras',
-  },
-]
 
 const initialTypes: OccurrenceType[] = [
   { id: 1, name: 'Infraestrutura urbana', description: 'Buracos, calçadas e vias públicas' },
@@ -99,7 +50,7 @@ const initialTypes: OccurrenceType[] = [
   { id: 4, name: 'Saneamento', description: 'Vazamentos e esgoto' },
 ]
 
-const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Em atendimento', 'Resolvida']
+const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhada', 'Em atendimento', 'Resolvida', 'Não atendida']
 const navigation = [
   { path: '/responsavel/dashboard', label: 'Painel' },
   { path: '/responsavel/denuncias', label: 'Denúncias' },
@@ -114,11 +65,54 @@ function StatusBadge({ status }: { status: ComplaintStatus }) {
   return <span className={`rp-status rp-status-${className}`}>{status}</span>
 }
 
+function apiStatusToLabel(status: string): ComplaintStatus {
+  return ({
+    RECEIVED: 'Recebida',
+    IN_ANALYSIS: 'Em análise',
+    FORWARDED: 'Encaminhada',
+    IN_SERVICE: 'Em atendimento',
+    RESOLVED: 'Resolvida',
+    NOT_SERVED: 'Não atendida',
+  } as Record<string, ComplaintStatus>)[status] ?? 'Recebida'
+}
+
+function labelToApiStatus(status: ComplaintStatus) {
+  return ({
+    Recebida: 'RECEIVED',
+    'Em análise': 'IN_ANALYSIS',
+    Encaminhada: 'FORWARDED',
+    'Em atendimento': 'IN_SERVICE',
+    Resolvida: 'RESOLVED',
+    'Não atendida': 'NOT_SERVED',
+  } as Record<ComplaintStatus, string>)[status]
+}
+
+function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
+  return {
+    id: complaint.id,
+    protocol: complaint.protocol,
+    title: complaint.title,
+    description: complaint.description,
+    neighborhood: '',
+    date: new Date(complaint.createdAt).toLocaleDateString('pt-BR'),
+    status: apiStatusToLabel(complaint.status),
+    category: complaint.type.name,
+    address: complaint.address,
+    citizen: complaint.citizen || 'Cidadão não informado',
+    email: complaint.citizenEmail || 'E-mail não informado',
+    sector: complaint.orgao?.nome ?? 'Não encaminhada',
+    sectorId: complaint.orgao?.id_orgao,
+  }
+}
+
 // Reúne o painel administrativo e mantém em estado local os filtros e dados demonstrativos.
 function ResponsiblePanelPage() {
   const location = useLocation()
   const section = location.pathname.split('/')[2] || 'dashboard'
-  const [complaints, setComplaints] = useState(initialComplaints)
+  const [complaints, setComplaints] = useState<AdminComplaint[]>([])
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [types, setTypes] = useState(initialTypes)
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -133,6 +127,27 @@ function ResponsiblePanelPage() {
   const [typeName, setTypeName] = useState('')
   const [typeDescription, setTypeDescription] = useState('')
   const [configSaved, setConfigSaved] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
+      apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
+    ])
+      .then(([complaintData, organizationData]) => {
+        if (!active) return
+        setComplaints(complaintData.complaints.map(mapApiComplaint))
+        setOrganizations(organizationData.orgaos)
+      })
+      .catch((error) => {
+        if (!active) return
+        setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar os dados.')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [])
 
   const selectedComplaint = complaints.find((complaint) => complaint.protocol === selectedProtocol)
   // Filtra denúncias pelo texto de busca e pelo status selecionado.
@@ -172,17 +187,42 @@ function ResponsiblePanelPage() {
     setCategoryDialog(false)
   }
 
-  // Aplica o novo status e setor à denúncia selecionada no painel demonstrativo.
-  function saveComplaintUpdate(event: React.FormEvent<HTMLFormElement>) {
+  // Persiste o status, o encaminhamento e a observação da denúncia na API.
+  async function saveComplaintUpdate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!selectedComplaint) return
+    if (!selectedComplaint?.id) return
     const formData = new FormData(event.currentTarget)
     const nextStatus = formData.get('status') as ComplaintStatus
-    setComplaints((current) => current.map((complaint) => complaint.protocol === selectedComplaint.protocol
-      ? { ...complaint, status: nextStatus, sector }
-      : complaint))
-    setStatus(nextStatus)
-    setSavedUpdate(true)
+    const selectedOrganization = organizations.find((organization) => organization.nome === sector)
+    try {
+      await apiRequest(`/api/complaints/${selectedComplaint.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: labelToApiStatus(nextStatus),
+          ...(selectedOrganization?.id_orgao ? { id_orgao: selectedOrganization.id_orgao } : {}),
+        }),
+      })
+      if (observation.trim()) {
+        await apiRequest('/api/historicos', {
+          method: 'POST',
+          body: JSON.stringify({
+            id_denuncia: selectedComplaint.id,
+            descricao: `Atualização de atendimento: ${nextStatus}`,
+            foto: 'sem-foto',
+            observacao: observation.trim(),
+          }),
+        })
+      }
+      setComplaints((current) => current.map((complaint) => complaint.protocol === selectedComplaint.protocol
+        ? { ...complaint, status: nextStatus, sector, sectorId: selectedOrganization?.id_orgao ?? complaint.sectorId }
+        : complaint))
+      setStatus(nextStatus)
+      setObservation('')
+      setSavedUpdate(true)
+    } catch (error) {
+      setSavedUpdate(false)
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível salvar a atualização.')
+    }
   }
 
   // Gera um arquivo CSV com os dados atualmente disponíveis na lista.
@@ -203,27 +243,31 @@ function ResponsiblePanelPage() {
 
   // Monta o resumo visual com métricas e atividade recente do painel.
   function renderDashboard() {
+    const pendingCount = complaints.filter((complaint) => complaint.status === 'Recebida' || complaint.status === 'Em análise').length
+    const inServiceCount = complaints.filter((complaint) => complaint.status === 'Em atendimento').length
+    const resolvedCount = complaints.filter((complaint) => complaint.status === 'Resolvida').length
+    const statusSummary: Array<[string, number, string]> = [
+      ['Recebidas', complaints.filter((complaint) => complaint.status === 'Recebida').length, 'blue'],
+      ['Em análise', complaints.filter((complaint) => complaint.status === 'Em análise').length, 'gold'],
+      ['Em atendimento', inServiceCount, 'sky'],
+      ['Resolvidas', resolvedCount, 'green'],
+    ]
     return (
       <>
         <div className="rp-page-heading">
           <div><h1>Visão geral</h1><p>Acompanhe as denúncias da sua área.</p></div>
         </div>
         <section className="rp-metric-grid" aria-label="Indicadores do mês">
-          <Metric label="Pendentes" value="24" note="Aguardando análise" color="blue" />
-          <Metric label="Em atendimento" value="18" note="Em execução" color="gold" />
-          <Metric label="Resolvidas" value="42" note="Neste mês" color="green" />
-          <Metric label="Tempo médio" value="3,2 dias" note="Até a resolução" color="teal" />
+          <Metric label="Pendentes" value={String(pendingCount)} note="Aguardando análise" color="blue" />
+          <Metric label="Em atendimento" value={String(inServiceCount)} note="Em execução" color="gold" />
+          <Metric label="Resolvidas" value={String(resolvedCount)} note="Neste mês" color="green" />
+          <Metric label="Total" value={String(complaints.length)} note="Denúncias carregadas" color="teal" />
         </section>
         <div className="rp-dashboard-grid">
           <section className="rp-panel rp-status-panel">
             <h2>Denúncias por status</h2>
             <div className="rp-status-bars">
-              {[
-                ['Recebidas', 24, 'blue'],
-                ['Em análise', 18, 'gold'],
-                ['Em atendimento', 18, 'sky'],
-                ['Resolvidas', 42, 'green'],
-              ].map(([label, count, color]) => (
+              {statusSummary.map(([label, count, color]) => (
                 <div className="rp-bar-row" key={label}>
                   <strong>{label}</strong><div className="rp-bar-track"><span className={`rp-bar-fill rp-fill-${color}`} style={{ width: `${Number(count) * 2.2}%` }} /></div><b>{count}</b>
                 </div>
@@ -267,9 +311,9 @@ function ResponsiblePanelPage() {
             <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
               <h2>Atualizar atendimento</h2>
               <label>Status atual<select name="status" value={status} onChange={(event) => { setStatus(event.target.value as ComplaintStatus); setSavedUpdate(false) }}>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
-              <label>Setor responsável<select value={sector} onChange={(event) => { setSector(event.target.value); setSavedUpdate(false) }}><option>Secretaria de Obras</option><option>Secretaria de Serviços</option><option>Secretaria de Saneamento</option><option>Secretaria de Meio Ambiente</option></select></label>
+              <label>Setor responsável<select value={sector} onChange={(event) => { setSector(event.target.value); setSavedUpdate(false) }}><option value="">Não encaminhada</option>{organizations.map((organization) => <option key={organization.id_orgao} value={organization.nome}>{organization.nome}</option>)}</select></label>
               <label>Observação<textarea value={observation} onChange={(event) => { setObservation(event.target.value); setSavedUpdate(false) }} placeholder="Inclua uma atualização para o cidadão acompanhar." rows={3} /></label>
-              {savedUpdate && <p className="rp-success-message" role="status">Atualização salva nesta demonstração.</p>}
+              {savedUpdate && <p className="rp-success-message" role="status">Atualização salva com sucesso.</p>}
               <button className="rp-primary-button" type="submit">Salvar atualização</button>
             </form>
           </div>
@@ -355,7 +399,10 @@ function ResponsiblePanelPage() {
       </aside>
       <div className="rp-main-column">
         <header className="rp-topbar"><h2>{heading}</h2><button type="button" className="rp-profile-button">Ajuda <span aria-hidden="true">·</span> Ana Souza <span aria-hidden="true">⌄</span></button></header>
-        <main className="rp-content">{body}</main>
+        <main className="rp-content">
+          {loadError && <p className="rp-error-message" role="alert">{loadError}</p>}
+          {loading ? <p className="rp-empty-state" aria-busy="true">Carregando dados do painel...</p> : body}
+        </main>
       </div>
       {categoryDialog && <div className="rp-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCategoryDialog(false) }}><form className="rp-modal" role="dialog" aria-modal="true" aria-labelledby="rp-category-dialog-title" onSubmit={saveType}><h2 id="rp-category-dialog-title">{editingType ? 'Editar categoria' : 'Nova categoria'}</h2><label>Nome da categoria<input autoFocus required value={typeName} onChange={(event) => setTypeName(event.target.value)} /></label><label>Descrição<textarea rows={3} value={typeDescription} onChange={(event) => setTypeDescription(event.target.value)} /></label><div className="rp-modal-actions"><button className="rp-outline-button" type="button" onClick={() => setCategoryDialog(false)}>Cancelar</button><button className="rp-primary-button" type="submit">Salvar categoria</button></div></form></div>}
     </div>
