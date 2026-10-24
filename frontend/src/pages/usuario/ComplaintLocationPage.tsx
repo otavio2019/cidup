@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
@@ -14,42 +13,11 @@ type ComplaintData = {
   neighborhood?: string
   complement?: string
   photoName?: string | null
-  id_orgao?: number
-  ids_orgaos?: number[]
   latitude?: number
   longitude?: number
 }
 
-type Organization = { id_orgao: number; nome: string }
-
-const organizationRules = [
-  { types: ['buraco', 'calcada', 'sinalizacao'], organizations: ['obra', 'infraestrutura', 'via'] },
-  { types: ['iluminacao'], organizations: ['iluminacao', 'servico'] },
-  { types: ['lixo', 'descarte'], organizations: ['limpeza', 'servico'] },
-  { types: ['arvore', 'area verde'], organizations: ['meio ambiente', 'ambiental', 'verde'] },
-  { types: ['alagamento', 'drenagem'], organizations: ['saneamento', 'drenagem', 'obra'] },
-]
-
-// Remove acentos e padroniza o texto para comparar categorias e órgãos.
-function normalizeText(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
-}
-
-// Sugere o órgão compatível com a categoria, mantendo uma opção única como alternativa.
-function findResponsibleOrganization(type: string | undefined, availableOrganizations: Organization[]) {
-  const normalizedType = normalizeText(type ?? '')
-  const rule = organizationRules.find(({ types }) => types.some((keyword) => normalizedType.includes(keyword)))
-  const matchingOrganization = rule
-    ? availableOrganizations.find((organization) => {
-      const normalizedName = normalizeText(organization.nome)
-      return rule.organizations.some((keyword) => normalizedName.includes(keyword))
-    })
-    : undefined
-
-  return matchingOrganization ?? (availableOrganizations.length === 1 ? availableOrganizations[0] : undefined)
-}
-
-// Confirma endereço, coordenadas e órgãos responsáveis para compor o rascunho da denúncia.
+// Confirma endereço e coordenadas para compor o rascunho da denúncia.
 function ComplaintLocationPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
@@ -76,40 +44,13 @@ function ComplaintLocationPage() {
   const [number, setNumber] = useState(complaint.number ?? '')
   const [neighborhood, setNeighborhood] = useState(complaint.neighborhood ?? '')
   const [reference, setReference] = useState(complaint.complement ?? '')
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [organizationIds, setOrganizationIds] = useState<string[]>(
-    complaint.ids_orgaos?.map(String) ?? (complaint.id_orgao ? [String(complaint.id_orgao)] : []),
-  )
   const [isLocating, setIsLocating] = useState(false)
   const [isAddressLoading, setIsAddressLoading] = useState(false)
-  const hadSavedOrganizations = organizationIds.length > 0
-  const complaintType = complaint.type
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
     typeof complaint.latitude === 'number' && typeof complaint.longitude === 'number'
       ? { latitude: complaint.latitude, longitude: complaint.longitude }
       : null,
   )
-
-  // Carrega órgãos públicos e sugere um responsável com base no tipo informado.
-  useEffect(() => {
-    let active = true
-    apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
-      .then(({ orgaos }) => {
-        if (!active) return
-        setOrganizations(orgaos)
-        if (!hadSavedOrganizations) {
-          const responsibleOrganization = findResponsibleOrganization(complaintType, orgaos)
-          if (responsibleOrganization) setOrganizationIds([String(responsibleOrganization.id_orgao)])
-        }
-      })
-      .catch((loadError: unknown) => {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os órgãos.')
-      })
-
-    return () => {
-      active = false
-    }
-  }, [complaintType, hadSavedOrganizations])
 
   // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
   function requestLocation() {
@@ -199,10 +140,6 @@ function ComplaintLocationPage() {
       setError('Informe o bairro da denúncia.')
       return
     }
-    if (organizationIds.length === 0) {
-      setError('Selecione pelo menos um órgão responsável.')
-      return
-    }
     if (!coordinates) {
       setError('Informe a localização pelo botão de geolocalização.')
       return
@@ -214,8 +151,6 @@ function ComplaintLocationPage() {
       number: number.trim(),
       neighborhood: neighborhood.trim(),
       complement: reference.trim(),
-      id_orgao: Number(organizationIds[0]),
-      ids_orgaos: organizationIds.map(Number),
       ...coordinates,
     }
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(locationData))
@@ -300,33 +235,6 @@ function ComplaintLocationPage() {
                 placeholder="Ex.: Próximo à escola municipal"
               />
             </div>
-
-            <fieldset className="organization-fieldset">
-              <legend>Órgãos responsáveis <span>*</span></legend>
-              <p className="organization-help">Você pode marcar mais de um órgão. O sugerido para o tipo do problema já vem marcado.</p>
-              <div className="organization-options">
-                {organizations.map((organization) => {
-                  const value = String(organization.id_orgao)
-                  const isSelected = organizationIds.includes(value)
-                  return (
-                    <label className={`organization-option${isSelected ? ' is-selected' : ''}`} key={organization.id_orgao}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(event) => {
-                          setError('')
-                          setOrganizationIds((current) => event.target.checked
-                            ? [...current, value]
-                            : current.filter((id) => id !== value))
-                        }}
-                      />
-                      <span>{organization.nome}</span>
-                    </label>
-                  )
-                })}
-              </div>
-              {organizations.length === 0 && <small>Nenhum órgão público disponível no momento.</small>}
-            </fieldset>
 
             <div className="complaint-field">
               <label>Coordenadas <span>*</span></label>

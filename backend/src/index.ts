@@ -34,6 +34,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+// Normaliza texto para que a regra funcione com ou sem acentos e diferenças de caixa.
+function normalizeRoutingText(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+}
+
+const organizationRoutingRules = [
+  { typeKeywords: ['buraco', 'calcada', 'sinalizacao', 'pavimento'], organizationKeywords: ['obra', 'infraestrutura'] },
+  { typeKeywords: ['iluminacao', 'poste', 'lampada'], organizationKeywords: ['iluminacao'] },
+  { typeKeywords: ['lixo', 'descarte', 'entulho', 'limpeza'], organizationKeywords: ['limpeza'] },
+  { typeKeywords: ['arvore', 'area verde', 'meio ambiente'], organizationKeywords: ['meio ambiente', 'ambiental'] },
+  { typeKeywords: ['alagamento', 'drenagem', 'esgoto', 'saneamento'], organizationKeywords: ['saneamento', 'drenagem'] },
+]
+
+// Encontra o órgão responsável exclusivamente com base no tipo informado pelo cidadão.
+function findOrganizationByComplaintType(type: string, organizations: Array<{ id_orgao: number; nome: string }>) {
+  const normalizedType = normalizeRoutingText(type)
+  const rule = organizationRoutingRules.find(({ typeKeywords }) =>
+    typeKeywords.some((keyword) => normalizedType.includes(keyword)),
+  )
+  if (!rule) return organizations.find(({ nome }) => normalizeRoutingText(nome).includes('obra'))
+  return organizations.find(({ nome }) => {
+    const normalizedName = normalizeRoutingText(nome)
+    return rule.organizationKeywords.some((keyword) => normalizedName.includes(keyword))
+  })
+}
+
 // Traduz erros conhecidos do Prisma e oculta detalhes internos nos demais casos.
 function handlePrismaError(error: unknown, response: express.Response, operation: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -644,7 +670,7 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
   }
 })
 
-// Valida e registra a denúncia, vinculando-a ao usuário autenticado e aos órgãos selecionados.
+// Valida e registra a denúncia, encaminhando-a automaticamente pelo tipo informado.
 app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const id_usuario = readAuthUserId(request)
@@ -652,11 +678,6 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   const tituloValue = body.titulo ?? body.title ?? tipoValue
   const descricaoValue = body.descricao ?? body.description
   const enderecoValue = body.endereco ?? body.address
-  const id_orgao = readPositiveInt(body.id_orgao ?? body.orgaoId)
-  const extraOrgaoIds = Array.isArray(body.ids_orgaos)
-    ? [...new Set(body.ids_orgaos.map(readPositiveInt).filter((id): id is number => id !== null && id !== undefined))]
-    : []
-  const primaryOrgaoId = extraOrgaoIds[0] ?? id_orgao
   const latitude = body.latitude
   const longitude = body.longitude
 
@@ -667,11 +688,11 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   if (typeof tipoValue !== 'string' || !tipoValue.trim() || tipoValue.trim().length > 100 ||
       typeof tituloValue !== 'string' || !tituloValue.trim() || tituloValue.trim().length > 200 ||
       typeof descricaoValue !== 'string' || !descricaoValue.trim() ||
-      !primaryOrgaoId || typeof latitude !== 'number' || !Number.isFinite(latitude) ||
+      typeof latitude !== 'number' || !Number.isFinite(latitude) ||
       latitude < -90 || latitude > 90 ||
       typeof longitude !== 'number' || !Number.isFinite(longitude) ||
       longitude < -180 || longitude > 180) {
-    response.status(400).json({ error: 'Informe tipo, descrição, órgão, latitude e longitude válidos.' })
+    response.status(400).json({ error: 'Informe tipo, descrição, latitude e longitude válidos.' })
     return
   }
   const legacyAddress = [
@@ -689,6 +710,15 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   }
 
   try {
+    const organizations = await database.orgao.findMany({
+      select: { id_orgao: true, nome: true },
+      orderBy: { nome: 'asc' },
+    })
+    const organization = findOrganizationByComplaintType(tipoValue.trim(), organizations)
+    if (!organization) {
+      response.status(503).json({ error: 'Nenhum órgão disponível para encaminhar esta denúncia.' })
+      return
+    }
     const denuncia = await database.denuncia.create({
       data: {
         titulo: tituloValue.trim(),
@@ -699,10 +729,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
         latitude,
         longitude,
         usuario: { connect: { id_usuario } },
-        orgao: { connect: { id_orgao: primaryOrgaoId } },
-        ...(extraOrgaoIds.length > 1
-          ? { orgaos_extras: { connect: extraOrgaoIds.slice(1).map((id) => ({ id_orgao: id })) } }
-          : {}),
+        orgao: { connect: { id_orgao: organization.id_orgao } },
       },
       include: { orgao: { select: { id_orgao: true, nome: true } }, orgaos_extras: { select: { id_orgao: true, nome: true } } },
     })
