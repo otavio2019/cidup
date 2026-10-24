@@ -280,7 +280,10 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
   }
 
   try {
-    const responsible = await database.responsavel.findUnique({ where: { email } })
+    const responsible = await database.responsavel.findUnique({
+      where: { email },
+      include: { orgao: { select: { id_orgao: true, nome: true } } },
+    })
     if (responsible) {
       if (!(await verifyPassword(password, responsible.senha))) {
         response.status(401).json({ error: 'E-mail ou senha inválidos.' })
@@ -301,6 +304,7 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
           email: responsible.email,
           phone: responsible.telefone,
           role: 'RESPONSIBLE',
+          orgao: responsible.orgao ?? null,
         },
       })
       return
@@ -354,7 +358,13 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
     if (readAuthPrincipalType(request) === 'RESPONSIBLE') {
       const responsible = await database.responsavel.findUnique({
         where: { id_responsavel: principalId },
-        select: { id_responsavel: true, nome: true, email: true, telefone: true },
+        select: {
+          id_responsavel: true,
+          nome: true,
+          email: true,
+          telefone: true,
+          orgao: { select: { id_orgao: true, nome: true } },
+        },
       })
       if (!responsible) {
         response.status(401).json({ error: 'Credencial inválida ou expirada.' })
@@ -367,6 +377,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
           email: responsible.email,
           phone: responsible.telefone,
           role: 'RESPONSIBLE',
+          orgao: responsible.orgao ?? null,
         },
       })
       return
