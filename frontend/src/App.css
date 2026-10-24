@@ -405,6 +405,32 @@ a {
   color: #708090;
 }
 
+.dashboard-delete-button {
+  min-height: 32px;
+  padding: 6px 11px;
+  border: 1px solid #f0c8c1;
+  border-radius: 8px;
+  color: #a44232;
+  background: #fff8f6;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.dashboard-delete-button:hover {
+  border-color: #d99588;
+  color: #873326;
+  background: #fff0ec;
+}
+
+.dashboard-delete-button:focus-visible {
+  outline: 3px solid rgba(164, 66, 50, 0.2);
+  outline-offset: 2px;
+}
+
 .status {
   display: inline-flex;
   min-height: 30px;
@@ -599,6 +625,11 @@ a {
   }
 
   .complaint-item a {
+    justify-self: start;
+  }
+
+  .dashboard-delete-button,
+  .complaint-item .status {
     justify-self: start;
   }
 }

@@ -215,7 +215,7 @@ function DashboardPage() {
                   <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
                 </div>
                 <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
-                <button type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
+                <button className="dashboard-delete-button" type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
               </article>
             ))}
           </section>
