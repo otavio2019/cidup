@@ -94,8 +94,8 @@ Endereços locais:
 
 - Frontend: <http://localhost:5173>
 - Adminer (interface web do banco): <http://localhost:8081>
-- Backend: <http://localhost:3000>
-- Verificação de saúde da API: <http://localhost:3000/health>
+- Backend: <http://localhost:3001> (porta do host configurável via `BACKEND_HOST_PORT`)
+- Verificação de saúde da API: <http://localhost:3001/health>
 
 ### Acessar o banco de dados
 
