@@ -140,6 +140,13 @@ function installDatabaseMocks(database: PrismaClient) {
     },
   })
 
+  installDelegate(database, 'responsavel', {
+    async findUnique(args) {
+      remember('responsavel', 'findUnique', args)
+      return null
+    },
+  })
+
   installDelegate(database, 'denuncia', {
     async count(args) {
       remember('denuncia', 'count', args)

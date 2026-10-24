@@ -27,14 +27,16 @@ model denuncia {
 }
 
 model historico {
-  id_historico Int      @id @default(autoincrement())
-  descricao    String
-  foto         String
-  observacao   String
-  id_usuario   Int
-  id_denuncia  Int
-  denuncia     denuncia @relation(fields: [id_denuncia], references: [id_denuncia], onDelete: NoAction, onUpdate: NoAction)
-  usuario      usuario  @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  id_historico    Int          @id @default(autoincrement())
+  descricao       String
+  foto            String
+  observacao      String
+  id_usuario      Int?
+  id_responsavel  Int?
+  id_denuncia     Int
+  denuncia        denuncia     @relation(fields: [id_denuncia], references: [id_denuncia], onDelete: NoAction, onUpdate: NoAction)
+  usuario         usuario?     @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  responsavel     responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model orgao {
@@ -56,6 +58,7 @@ model responsavel {
   senha          String @db.VarChar(255)
   id_orgao       Int
   orgao          orgao  @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
+  historicos     historico[]
 }
 
 model usuario {

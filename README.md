@@ -65,6 +65,20 @@ forem publicados em origens diferentes, configure `VITE_API_URL` no ambiente
 do frontend com a URL HTTPS da API; sem essa variável, a aplicação usa a API
 na mesma origem em produção.
 
+A conta única do responsável é criada pelo seed do backend. Defina
+`RESPONSAVEL_NAME`, `RESPONSAVEL_EMAIL`, `RESPONSAVEL_PHONE`,
+`RESPONSAVEL_PASSWORD` e `RESPONSAVEL_ORGAO_ID` no `.env` e execute:
+
+```bash
+cd backend
+npm run seed:responsavel
+```
+
+O seed é idempotente: pode ser executado novamente para atualizar a conta sem
+criar duplicatas. A rota `/api/auth/login` aceita cidadãos e responsáveis; a
+sessão retorna `role: RESPONSIBLE` para a conta cadastrada na tabela
+`responsavel`.
+
 Se o Docker apresentar `permission denied` ao acessar `/var/run/docker.sock`,
 adicione o usuário ao grupo do Docker e abra uma nova sessão:
 

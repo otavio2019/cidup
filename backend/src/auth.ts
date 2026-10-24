@@ -5,11 +5,13 @@ export const AUTH_COOKIE_NAME = 'cidup_session'
 export const AUTH_TOKEN_TTL_SECONDS = 15 * 60
 const AUTH_ISSUER = 'cidup-api'
 const AUTH_AUDIENCE = 'cidup-web'
+export type AuthPrincipalType = 'CITIZEN' | 'RESPONSIBLE'
 
 declare global {
   namespace Express {
     interface Request {
       authUserId?: number
+      authPrincipalType?: AuthPrincipalType
     }
   }
 }
@@ -23,12 +25,12 @@ function secretKey(secret: string) {
 }
 
 // Cria um token assinado com identidade, emissor, público e prazo de expiração definidos.
-export async function createAuthToken(userId: number, secret: string) {
+export async function createAuthToken(userId: number, secret: string, principalType: AuthPrincipalType = 'CITIZEN') {
   if (!Number.isInteger(userId) || userId <= 0) {
     throw new Error('É necessário informar um ID de usuário válido para criar o token de autenticação.')
   }
 
-  return new SignJWT({})
+  return new SignJWT({ principalType })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuer(AUTH_ISSUER)
     .setAudience(AUTH_AUDIENCE)
@@ -61,6 +63,7 @@ export function requireAuthentication(secret: string) {
         return
       }
       request.authUserId = userId
+      request.authPrincipalType = payload.principalType === 'RESPONSIBLE' ? 'RESPONSIBLE' : 'CITIZEN'
       next()
     } catch {
       response.status(401).json({ error: 'Credencial inválida ou expirada.' })
@@ -72,4 +75,8 @@ export function requireAuthentication(secret: string) {
 export function readAuthUserId(request: Request) {
   const userId = request.authUserId
   return Number.isSafeInteger(userId) && userId && userId > 0 ? userId : null
+}
+
+export function readAuthPrincipalType(request: Request): AuthPrincipalType {
+  return request.authPrincipalType ?? 'CITIZEN'
 }
