@@ -144,6 +144,7 @@ const frontendOrigins = (options.frontendOrigins ?? process.env.FRONTEND_ORIGINS
   .filter(Boolean)
 const allowedOrigins = new Set(frontendOrigins)
 const production = options.production ?? process.env.NODE_ENV === 'production'
+const authCookieSameSite = production ? 'none' : 'lax'
 if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 'https:')) {
   throw new Error('FRONTEND_ORIGINS deve usar HTTPS em produção.')
 }
@@ -287,7 +288,7 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
       response.cookie(AUTH_COOKIE_NAME, token, {
         httpOnly: true,
         secure: production,
-        sameSite: 'strict',
+        sameSite: authCookieSameSite,
         maxAge: AUTH_TOKEN_TTL_SECONDS * 1000,
         path: '/',
       })
@@ -335,7 +336,7 @@ app.post('/api/auth/logout', (_request, response) => {
   response.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
     secure: production,
-    sameSite: 'strict',
+    sameSite: authCookieSameSite,
     path: '/',
   })
   response.status(204).send()

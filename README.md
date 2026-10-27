@@ -97,6 +97,36 @@ Endereços locais:
 - Backend: <http://localhost:3001> (porta do host configurável via `BACKEND_HOST_PORT`)
 - Verificação de saúde da API: <http://localhost:3001/health>
 
+### Publicação rápida do MVP
+
+Para publicar o MVP sem adaptar o Express para funções serverless, use:
+
+```text
+Supabase → PostgreSQL
+Render   → backend Express
+Vercel  → frontend React
+```
+
+O arquivo `render.yaml` já contém a configuração do serviço da API. No Render,
+configure `DATABASE_URL` e `DIRECT_URL` com as URLs do Supabase, `FRONTEND_ORIGINS`
+com a URL HTTPS da Vercel e as variáveis da conta do responsável. O Render executa
+`npx prisma migrate deploy` no build e inicia a API com `npm run start`.
+
+No projeto da Vercel, use `frontend/` como diretório raiz. O arquivo
+`frontend/vercel.json` configura o build do Vite e o fallback das rotas do React.
+Configure `VITE_API_URL` com a URL HTTPS do backend no Render.
+
+Depois do primeiro deploy, execute o seed do responsável uma vez usando as mesmas
+variáveis de produção:
+
+```bash
+cd backend
+npm run seed:responsavel
+```
+
+O cookie de sessão usa `SameSite=None` e `Secure` quando `NODE_ENV=production`,
+permitindo o login entre os domínios separados da Vercel e do Render.
+
 ### Acessar o banco de dados
 
 Com os serviços iniciados pelo Docker Compose, abra o Adminer em
