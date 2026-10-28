@@ -14,6 +14,7 @@ type ComplaintDraft = {
   neighborhood?: string
   complement?: string
   photoName?: string | null
+  photoData?: string | null
 }
 
 // Recupera o rascunho da navegação ou do armazenamento temporário da sessão.
@@ -59,7 +60,7 @@ function ComplaintReviewPage() {
         }
       }>('/api/complaints', {
         method: 'POST',
-        body: JSON.stringify(draft),
+        body: JSON.stringify({ ...draft, photo: draft!.photoData ?? null }),
       })
 
       const registeredComplaint = {

@@ -16,6 +16,7 @@ type AdminComplaint = {
   status: ComplaintStatus
   category: string
   address: string
+  photo?: string | null
   citizen: string
   email: string
   sector: string
@@ -37,6 +38,7 @@ type ApiComplaint = {
   address: string
   status: string
   createdAt: string
+  photo?: string | null
   type: { name: string }
   orgao?: { id_orgao: number; nome: string } | null
   citizen?: string
@@ -127,6 +129,7 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
     status: apiStatusToLabel(complaint.status),
     category: complaint.type.name,
     address: complaint.address,
+    photo: complaint.photo ?? null,
     citizen: complaint.citizen || 'Cidadão não informado',
     email: complaint.citizenEmail || 'E-mail não informado',
     sector: complaint.orgao?.nome ?? 'Não encaminhada',
@@ -324,6 +327,7 @@ function ResponsiblePanelPage() {
               <Info label="Endereço" value={selectedComplaint.address} />
               <Info label="Cidadão" value={`${selectedComplaint.citizen} · ${selectedComplaint.email}`} />
               <Info label="Categoria" value={selectedComplaint.category} />
+              {selectedComplaint.photo && <div className="rp-photo-field"><strong>Foto anexada</strong><img src={selectedComplaint.photo} alt="Foto anexada pelo cidadão à denúncia" /></div>}
             </section>
             <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
               <h2>Atualizar atendimento</h2>

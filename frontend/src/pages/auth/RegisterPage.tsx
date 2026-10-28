@@ -9,6 +9,8 @@ function RegisterPage() {
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [cep, setCep] = useState('')
   const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
@@ -17,7 +19,7 @@ function RegisterPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!nome || !email || !telefone || !senha || !confirmarSenha) {
+    if (!nome || !email || !telefone || !cpf || !cep || !senha || !confirmarSenha) {
       setMensagem('Preencha todos os campos para continuar.')
       return
     }
@@ -30,12 +32,14 @@ function RegisterPage() {
     try {
       await apiRequest('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name: nome, email, phone: telefone, password: senha }),
+        body: JSON.stringify({ name: nome, email, phone: telefone, cpf, cep, password: senha }),
       })
       localStorage.setItem('cidup-profile', JSON.stringify({
         name: nome.trim(),
         email: email.trim(),
         phone: telefone.trim(),
+        cpf: cpf.replace(/\D/g, ''),
+        cep: cep.replace(/\D/g, ''),
         registeredAt: new Date().toISOString(),
       }))
       setMensagem('Cadastro realizado! Redirecionando para o login...')
@@ -122,6 +126,23 @@ function RegisterPage() {
                   onChange={(event) => setTelefone(event.target.value)}
                   autoComplete="tel"
                 />
+              </div>
+            </div>
+
+            <div className="complaint-grid complaint-grid-small">
+              <div className="form-group">
+                <label htmlFor="cadastro-cpf">CPF</label>
+                <div className="input-wrap">
+                  <span className="input-icon" aria-hidden="true">#</span>
+                  <input id="cadastro-cpf" type="text" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(event.target.value)} autoComplete="off" maxLength={14} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="cadastro-cep">CEP</label>
+                <div className="input-wrap">
+                  <span className="input-icon" aria-hidden="true">⌖</span>
+                  <input id="cadastro-cep" type="text" inputMode="numeric" placeholder="00000-000" value={cep} onChange={(event) => setCep(event.target.value)} autoComplete="postal-code" maxLength={9} />
+                </div>
               </div>
             </div>
 

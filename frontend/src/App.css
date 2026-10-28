@@ -2545,3 +2545,14 @@ a {
   color: #ffffff;
   background: #a85c4c;
 }
+
+.profile-avatar-block { display: grid; justify-items: center; gap: 12px; margin-bottom: 24px; }
+.profile-avatar { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; border: 4px solid #e6f1f8; }
+.profile-avatar-placeholder { display: grid; place-items: center; color: #1565c0; background: #eaf4fb; font-size: 34px; font-weight: 800; }
+.profile-photo-button { position: relative; overflow: hidden; cursor: pointer; }
+.profile-photo-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.profile-edit-form { display: grid; gap: 16px; }
+.profile-edit-form label { display: grid; gap: 7px; color: #526b7d; font-weight: 700; }
+.profile-edit-form input { min-height: 44px; padding: 10px 12px; border: 1px solid #cfe0eb; border-radius: 10px; color: #193a54; background: #fff; font: inherit; }
+.profile-edit-form input:focus-visible { outline: 3px solid rgb(21 101 192 / 24%); border-color: #1565c0; }
+@media (max-width: 640px) { .profile-avatar { width: 80px; height: 80px; } .profile-edit-form { gap: 13px; } }

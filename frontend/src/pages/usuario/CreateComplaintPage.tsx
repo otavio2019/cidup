@@ -36,7 +36,7 @@ const complaintTypes = [
   'Outro problema urbano',
 ]
 
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024
+const MAX_PHOTO_SIZE = 2 * 1024 * 1024
 
 // Coleta os dados iniciais da ocorrência e preserva rascunho e localização entre etapas.
 function CreateComplaintPage() {
@@ -234,13 +234,23 @@ function CreateComplaintPage() {
   }
 
   // Persiste o rascunho validado e encaminha o cidadão à confirmação da localização.
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors = validateForm()
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
       return
+    }
+
+    let photoData: string | null = null
+    if (photo) {
+      photoData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(new Error('Não foi possível ler a foto.'))
+        reader.readAsDataURL(photo)
+      })
     }
 
     const complaintDraft = {
@@ -252,6 +262,7 @@ function CreateComplaintPage() {
       neighborhood: form.neighborhood.trim(),
       complement: form.complement.trim(),
       photoName: photo?.name ?? null,
+      photoData,
       ...(coordinates ?? {}),
     }
 
@@ -422,7 +433,7 @@ function CreateComplaintPage() {
               <span className="photo-upload-icon" aria-hidden="true">＋</span>
               <span>
                 <strong>{photo ? photo.name : 'Adicionar uma foto'}</strong>
-                <small>{photo ? 'Imagem selecionada' : 'PNG, JPG ou WEBP até 5 MB'}</small>
+                <small>{photo ? 'Imagem selecionada' : 'PNG, JPG ou WEBP até 2 MB'}</small>
               </span>
               <input
                 id="photo"

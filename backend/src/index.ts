@@ -34,6 +34,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function digits(value: unknown) {
+  return typeof value === 'string' ? value.replace(/\D/g, '') : ''
+}
+
+function isValidCpf(value: unknown) {
+  const cpf = digits(value)
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false
+  let sum = 0
+  for (let index = 0; index < 9; index += 1) sum += Number(cpf[index]) * (10 - index)
+  let digit = (sum * 10) % 11
+  if (digit === 10) digit = 0
+  if (digit !== Number(cpf[9])) return false
+  sum = 0
+  for (let index = 0; index < 10; index += 1) sum += Number(cpf[index]) * (11 - index)
+  digit = (sum * 10) % 11
+  if (digit === 10) digit = 0
+  return digit === Number(cpf[10])
+}
+
+function isValidCep(value: unknown) {
+  return /^\d{8}$/.test(digits(value))
+}
+
+function isValidImageData(value: unknown) {
+  if (typeof value !== 'string' || value.length > 3_000_000) return false
+  return /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
+}
+
 // Normaliza texto para que a regra funcione com ou sem acentos e diferenças de caixa.
 function normalizeRoutingText(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
@@ -96,6 +124,7 @@ function complaintResponse(complaint: {
   endereco: string
   latitude: number
   longitude: number
+  foto?: string | null
   id_usuario: number
   id_orgao: number
   orgao?: { id_orgao: number; nome: string } | null
@@ -109,6 +138,7 @@ function complaintResponse(complaint: {
     title: complaint.titulo,
     description: complaint.descricao,
     address: complaint.endereco,
+    photo: complaint.foto ?? null,
     neighborhood: '',
     number: '',
     complement: '',
@@ -243,18 +273,21 @@ async function registerUser(request: express.Request, response: express.Response
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
+  const cpf = digits(body.cpf)
+  const cep = digits(body.cep)
   const password = body.password
 
   if (name.length < 2 || name.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255 ||
-      !phone || phone.length > 20 || typeof password !== 'string' || password.length < 6 || password.length > 1024) {
-    response.status(400).json({ error: 'Informe nome, e-mail, telefone e uma senha com pelo menos 6 caracteres.' })
+      !phone || phone.length > 20 || !isValidCpf(body.cpf) || !isValidCep(body.cep) ||
+      typeof password !== 'string' || password.length < 6 || password.length > 1024) {
+    response.status(400).json({ error: 'Informe nome, e-mail, telefone, CPF, CEP e uma senha válida.' })
     return
   }
 
   try {
     const user = await database.usuario.create({
-      data: { nome: name, email, telefone: phone, senha: await hashPassword(password) },
-      select: { id_usuario: true, nome: true, email: true, telefone: true },
+      data: { nome: name, email, telefone: phone, cpf, cep, senha: await hashPassword(password) },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
     })
     response.status(201).json({ user })
   } catch (error) {
@@ -323,6 +356,9 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
         name: user.nome,
         email: user.email,
         phone: user.telefone,
+        cpf: user.cpf,
+        cep: user.cep,
+        photo: user.foto,
         role: 'CITIZEN',
       },
     })
@@ -380,7 +416,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
     const id_usuario = principalId
     const user = await database.usuario.findUnique({
       where: { id_usuario },
-      select: { id_usuario: true, nome: true, email: true, telefone: true },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
     })
     if (!user) {
       response.status(401).json({ error: 'Credencial inválida ou expirada.' })
@@ -410,7 +446,7 @@ app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response)
   try {
     const user = await database.usuario.findUnique({
       where: { id_usuario },
-      select: { id_usuario: true, nome: true, email: true, telefone: true },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
     })
     if (!user) {
       response.status(404).json({ error: 'Usuário não encontrado.' })
@@ -442,7 +478,7 @@ app.get(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, r
   try {
     const user = await database.usuario.findUnique({
       where: { id_usuario: authenticatedUserId },
-      select: { id_usuario: true, nome: true, email: true, telefone: true },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
     })
     if (!user) {
       response.status(404).json({ error: 'Usuário não encontrado.' })
@@ -496,6 +532,28 @@ app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request,
     }
     data.telefone = telefone.trim()
   }
+  if ('cpf' in body) {
+    if (!isValidCpf(body.cpf)) {
+      response.status(400).json({ error: 'CPF inválido.' })
+      return
+    }
+    data.cpf = digits(body.cpf)
+  }
+  if ('cep' in body) {
+    if (!isValidCep(body.cep)) {
+      response.status(400).json({ error: 'CEP inválido.' })
+      return
+    }
+    data.cep = digits(body.cep)
+  }
+  if ('photo' in body || 'foto' in body) {
+    const photo = body.photo ?? body.foto
+    if (photo !== null && !isValidImageData(photo)) {
+      response.status(400).json({ error: 'Foto inválida. Use PNG, JPG ou WEBP de até 2 MB.' })
+      return
+    }
+    data.foto = photo === null ? null : String(photo)
+  }
   if ('password' in body || 'senha' in body) {
     const senha = body.senha ?? body.password
     if (typeof senha !== 'string' || senha.length < 6 || senha.length > 1024) {
@@ -513,7 +571,7 @@ app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request,
     const user = await database.usuario.update({
       where: { id_usuario: authenticatedUserId },
       data,
-      select: { id_usuario: true, nome: true, email: true, telefone: true },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
     })
     response.json({ user })
   } catch (error) {
@@ -744,6 +802,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   const enderecoValue = body.endereco ?? body.address
   const latitude = body.latitude
   const longitude = body.longitude
+  const photoValue = body.foto ?? body.photo
 
   if (!id_usuario) {
     response.status(401).json({ error: 'Autenticação necessária.' })
@@ -755,7 +814,8 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
       typeof latitude !== 'number' || !Number.isFinite(latitude) ||
       latitude < -90 || latitude > 90 ||
       typeof longitude !== 'number' || !Number.isFinite(longitude) ||
-      longitude < -180 || longitude > 180) {
+      longitude < -180 || longitude > 180 ||
+      (photoValue !== undefined && photoValue !== null && !isValidImageData(photoValue))) {
     response.status(400).json({ error: 'Informe tipo, descrição, latitude e longitude válidos.' })
     return
   }
@@ -792,6 +852,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
         endereco,
         latitude,
         longitude,
+        foto: photoValue === undefined || photoValue === null ? null : String(photoValue),
         usuario: { connect: { id_usuario } },
         orgao: { connect: { id_orgao: organization.id_orgao } },
       },

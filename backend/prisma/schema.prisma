@@ -18,6 +18,7 @@ model denuncia {
   endereco      String
   latitude      Float
   longitude     Float
+  foto          String?     @db.Text
   id_usuario    Int
   id_orgao      Int
   orgao         orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
@@ -63,11 +64,12 @@ model responsavel {
 
 model usuario {
   id_usuario Int         @id @default(autoincrement())
-  cpf        Int         @unique
+  cpf        String?     @unique @db.VarChar(11)
   nome       String      @db.VarChar(150)
   email      String      @unique @db.VarChar(255)
   telefone   String?     @unique @db.VarChar(20)
-  cep        String      @db.VarChar(8)
+  cep        String?     @db.VarChar(8)
+  foto       String?     @db.Text
   senha      String      @db.VarChar(255)
   denuncia   denuncia[]
   historico  historico[]
