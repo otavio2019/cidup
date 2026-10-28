@@ -128,7 +128,7 @@ function complaintResponse(complaint: {
   id_usuario: number
   id_orgao: number
   orgao?: { id_orgao: number; nome: string } | null
-  usuario?: { id_usuario: number; nome: string; email: string } | null
+  usuario?: { id_usuario: number; nome: string; email: string; telefone?: string | null; cpf?: string | null; foto?: string | null } | null
   historico?: Array<{ id_historico: number; descricao: string; observacao: string }>
 }) {
   return {
@@ -147,6 +147,9 @@ function complaintResponse(complaint: {
     type: { name: complaint.tipo },
     citizen: complaint.usuario?.nome ?? '',
     citizenEmail: complaint.usuario?.email ?? '',
+    citizenPhone: complaint.usuario?.telefone ?? '',
+    citizenCpf: complaint.usuario?.cpf ?? '',
+    citizenPhoto: complaint.usuario?.foto ?? null,
     history: (complaint.historico ?? []).map((item) => ({
       id: item.id_historico,
       description: item.descricao,
@@ -740,7 +743,7 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
       where: responsibleUser ? {} : { id_usuario },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
-        usuario: { select: { id_usuario: true, nome: true, email: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
           select: { id_historico: true, descricao: true, observacao: true },
@@ -775,7 +778,7 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
       },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
-        usuario: { select: { id_usuario: true, nome: true, email: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
           select: { id_historico: true, descricao: true, observacao: true },
@@ -937,7 +940,7 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
       data,
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
-        usuario: { select: { id_usuario: true, nome: true, email: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
           select: { id_historico: true, descricao: true, observacao: true },

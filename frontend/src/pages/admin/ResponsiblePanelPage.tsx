@@ -19,6 +19,9 @@ type AdminComplaint = {
   photo?: string | null
   citizen: string
   email: string
+  phone: string
+  cpf: string
+  citizenPhoto?: string | null
   sector: string
   sectorId?: number
   history: ComplaintHistory[]
@@ -43,6 +46,9 @@ type ApiComplaint = {
   orgao?: { id_orgao: number; nome: string } | null
   citizen?: string
   citizenEmail?: string
+  citizenPhone?: string
+  citizenCpf?: string
+  citizenPhoto?: string | null
   history?: ComplaintHistory[]
 }
 
@@ -132,6 +138,9 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
     photo: complaint.photo ?? null,
     citizen: complaint.citizen || 'Cidadão não informado',
     email: complaint.citizenEmail || 'E-mail não informado',
+    phone: complaint.citizenPhone || 'Telefone não informado',
+    cpf: complaint.citizenCpf || 'CPF não informado',
+    citizenPhoto: complaint.citizenPhoto ?? null,
     sector: complaint.orgao?.nome ?? 'Não encaminhada',
     sectorId: complaint.orgao?.id_orgao,
     history: complaint.history ?? [],
@@ -325,7 +334,10 @@ function ResponsiblePanelPage() {
               <h2>Informações da denúncia</h2>
               <Info label="Descrição" value={selectedComplaint.description} />
               <Info label="Endereço" value={selectedComplaint.address} />
-              <Info label="Cidadão" value={`${selectedComplaint.citizen} · ${selectedComplaint.email}`} />
+              <Info label="Cidadão" value={selectedComplaint.citizen} />
+              <Info label="E-mail" value={selectedComplaint.email} />
+              <Info label="Telefone" value={selectedComplaint.phone} />
+              <Info label="CPF" value={selectedComplaint.cpf} />
               <Info label="Categoria" value={selectedComplaint.category} />
               {selectedComplaint.photo && <div className="rp-photo-field"><strong>Foto anexada</strong><img src={selectedComplaint.photo} alt="Foto anexada pelo cidadão à denúncia" /></div>}
             </section>
