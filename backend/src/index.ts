@@ -293,9 +293,16 @@ async function registerUser(request: express.Request, response: express.Response
   const password = body.password
 
   if (name.length < 2 || name.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255 ||
-      !phone || phone.length > 20 || !isValidCpf(body.cpf) || !isValidCep(body.cep) ||
-      typeof password !== 'string' || password.length < 6 || password.length > 1024) {
+      !phone || phone.length > 20 || typeof password !== 'string' || password.length < 6 || password.length > 1024) {
     response.status(400).json({ error: 'Informe nome, e-mail, telefone, CPF, CEP e uma senha válida.' })
+    return
+  }
+  if (!isValidCpf(body.cpf)) {
+    response.status(400).json({ error: 'CPF inválido. Confira os números digitados.' })
+    return
+  }
+  if (!isValidCep(body.cep)) {
+    response.status(400).json({ error: 'CEP inválido. Informe 8 números no formato 00000-000.' })
     return
   }
 

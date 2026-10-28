@@ -28,6 +28,21 @@ function formatPhone(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
+function isValidCpf(value: string) {
+  const cpf = onlyDigits(value)
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false
+  let sum = 0
+  for (let index = 0; index < 9; index += 1) sum += Number(cpf[index]) * (10 - index)
+  let digit = (sum * 10) % 11
+  if (digit === 10) digit = 0
+  if (digit !== Number(cpf[9])) return false
+  sum = 0
+  for (let index = 0; index < 10; index += 1) sum += Number(cpf[index]) * (11 - index)
+  digit = (sum * 10) % 11
+  if (digit === 10) digit = 0
+  return digit === Number(cpf[10])
+}
+
 // Apresenta o cadastro e controla os campos, a confirmação de senha e o feedback.
 function RegisterPage() {
   const navigate = useNavigate()
@@ -46,6 +61,16 @@ function RegisterPage() {
 
     if (!nome || !email || !telefone || !cpf || !cep || !senha || !confirmarSenha) {
       setMensagem('Preencha todos os campos para continuar.')
+      return
+    }
+
+    if (!isValidCpf(cpf)) {
+      setMensagem('CPF inválido. Confira os números digitados.')
+      return
+    }
+
+    if (onlyDigits(cep).length !== 8) {
+      setMensagem('CEP inválido. Informe 8 números no formato 00000-000.')
       return
     }
 
