@@ -93,24 +93,30 @@ function CreateComplaintPage() {
           neighbourhood?: string
           suburb?: string
           city_district?: string
+          city?: string
+          town?: string
+          village?: string
+          postcode?: string
         }
       }
       const found = data.address ?? {}
-      const street = found.road ?? found.pedestrian ?? found.residential ?? data.display_name
+      const street = found.road ?? found.pedestrian ?? found.residential
       const neighborhood = found.neighbourhood ?? found.suburb ?? found.city_district
 
       setForm((current) => ({
         ...current,
-        address: street ?? current.address,
+        // Nunca usamos display_name como rua: ele pode ser apenas cidade, estado e CEP.
+        address: street ?? (current.address.includes(',') ? '' : current.address),
         number: found.house_number ?? current.number,
         neighborhood: neighborhood ?? current.neighborhood,
       }))
-      setErrors((current) => ({ ...current, address: undefined, number: undefined, neighborhood: undefined }))
-      setLocationMessage(
-        street
-          ? `Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Endereço preenchido; confira e edite se precisar.`
-          : `Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Preencha o endereço manualmente.`,
-      )
+      if (street) {
+        setErrors((current) => ({ ...current, address: undefined, number: undefined, neighborhood: undefined }))
+        setLocationMessage(`Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Confira a rua e o número.`)
+      } else {
+        setErrors((current) => ({ ...current, address: 'Não encontramos uma rua precisa. Informe a rua manualmente.', number: undefined }))
+        setLocationMessage('A localização foi obtida, mas o mapa retornou apenas a região. Informe a rua e o número manualmente.')
+      }
     } catch {
       setLocationMessage('Localização obtida, mas não foi possível preencher o endereço automaticamente. Confira os campos.')
     }

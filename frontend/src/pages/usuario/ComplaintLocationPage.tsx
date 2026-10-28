@@ -96,16 +96,20 @@ function ComplaintLocationPage() {
           neighbourhood?: string
           suburb?: string
           city_district?: string
+          city?: string
+          town?: string
+          village?: string
+          postcode?: string
         }
       }
       const reverseAddress = data.address ?? {}
       const street = reverseAddress.road ?? reverseAddress.pedestrian ?? reverseAddress.residential
       const neighborhoodName = reverseAddress.neighbourhood ?? reverseAddress.suburb ?? reverseAddress.city_district
       if (street) setAddress(street)
+      else if (address.includes(',')) setAddress('')
       if (reverseAddress.house_number) setNumber(reverseAddress.house_number)
       if (neighborhoodName) setNeighborhood(neighborhoodName)
-      if (!street && data.display_name) setAddress(data.display_name)
-      if (!street && !data.display_name) setError('Localização obtida, mas não foi possível preencher o endereço automaticamente.')
+      if (!street) setError('A localização foi obtida, mas o mapa retornou apenas a região. Informe a rua e o número manualmente.')
     } catch {
       setError('Localização obtida. Não foi possível preencher o endereço automaticamente; confira os campos.')
     } finally {
