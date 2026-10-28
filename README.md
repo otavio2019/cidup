@@ -161,10 +161,15 @@ coincida com o valor atual do `.env` usando `ALTER ROLE cidup WITH PASSWORD
 
 ### Supabase com Prisma
 
-O backend usa Prisma ORM 6.16.2 e o PostgreSQL padrão do Prisma Client; não
+O backend usa Prisma ORM 6.19.3 e o PostgreSQL padrão do Prisma Client; não
 precisa instalar adaptador PostgreSQL. `DATABASE_URL` é a conexão usada em
 tempo de execução e `DIRECT_URL` é usada pelo Prisma Migrate para migrações.
 No Prisma 6, essa separação é declarada por `directUrl` no `schema.prisma`.
+
+O `backend/.env.example` mantém o PostgreSQL local como padrão e inclui um
+exemplo comentado de conexão Supabase para redes IPv4. Para usá-lo, copie as
+URLs para `backend/.env`, substitua `[YOUR-PASSWORD]` localmente e não versione
+o arquivo `.env`.
 
 Obtenha as strings no painel do projeto Supabase: **Connect** → selecione o
 método de conexão → copie a connection string. Use a conexão direta para
