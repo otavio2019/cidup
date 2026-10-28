@@ -38,6 +38,25 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
+function formatInputCpf(value: string) {
+  return onlyDigits(value).slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
+function formatInputCep(value: string) {
+  return onlyDigits(value).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')
+}
+
+function formatInputPhone(value: string) {
+  const digits = onlyDigits(value).slice(0, 11)
+  if (digits.length <= 2) return digits ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
 function formatCpf(value?: string | null) {
   const digits = onlyDigits(value ?? '')
   return digits.length === 11 ? digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : value || 'Não informado'
@@ -62,9 +81,9 @@ function ProfilePage() {
   const [profile, setProfile] = useState<CitizenProfile>(() => readProfile())
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(profile.name ?? '')
-  const [phone, setPhone] = useState(profile.phone ?? '')
-  const [cpf, setCpf] = useState(profile.cpf ?? '')
-  const [cep, setCep] = useState(profile.cep ?? '')
+  const [phone, setPhone] = useState(formatInputPhone(profile.phone ?? ''))
+  const [cpf, setCpf] = useState(formatInputCpf(profile.cpf ?? ''))
+  const [cep, setCep] = useState(formatInputCep(profile.cep ?? ''))
   const [photo, setPhoto] = useState(profile.photo ?? null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -76,9 +95,9 @@ function ProfilePage() {
         const next = { ...readProfile(), ...user }
         setProfile(next)
         setName(next.name ?? '')
-        setPhone(next.phone ?? '')
-        setCpf(next.cpf ?? '')
-        setCep(next.cep ?? '')
+        setPhone(formatInputPhone(next.phone ?? ''))
+        setCpf(formatInputCpf(next.cpf ?? ''))
+        setCep(formatInputCep(next.cep ?? ''))
         setPhoto(next.photo ?? null)
         localStorage.setItem('cidup-profile', JSON.stringify(next))
       })
@@ -153,9 +172,9 @@ function ProfilePage() {
           {isEditing ? (
             <form className="profile-edit-form" onSubmit={handleSave}>
               <label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
-              <label>Telefone<input value={phone} onChange={(event) => setPhone(event.target.value)} required /></label>
-              <label>CPF<input value={cpf} onChange={(event) => setCpf(event.target.value)} inputMode="numeric" required /></label>
-              <label>CEP<input value={cep} onChange={(event) => setCep(event.target.value)} inputMode="numeric" required /></label>
+            <label>Telefone<input value={phone} onChange={(event) => setPhone(formatInputPhone(event.target.value))} inputMode="tel" maxLength={15} required /></label>
+            <label>CPF<input value={cpf} onChange={(event) => setCpf(formatInputCpf(event.target.value))} inputMode="numeric" maxLength={14} required /></label>
+            <label>CEP<input value={cep} onChange={(event) => setCep(formatInputCep(event.target.value))} inputMode="numeric" maxLength={9} required /></label>
               {error && <p className="form-message" role="alert">{error}</p>}
               <div className="profile-actions"><button className="primary-action" type="submit">Salvar alterações</button><button className="secondary-action" type="button" onClick={() => setIsEditing(false)}>Cancelar</button></div>
             </form>

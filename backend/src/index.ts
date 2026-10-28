@@ -95,8 +95,20 @@ function handlePrismaError(error: unknown, response: express.Response, operation
       response.status(404).json({ error: 'Registro não encontrado.' })
       return
     }
-    if (error.code === 'P2002' || error.code === 'P2003') {
-      response.status(409).json({ error: 'O registro conflita com dados existentes ou relacionamentos.' })
+    if (error.code === 'P2002') {
+      const target = Array.isArray(error.meta?.target) ? error.meta.target.join(', ') : ''
+      const fieldMessage = target.includes('email')
+        ? 'Este e-mail já está cadastrado.'
+        : target.includes('cpf')
+          ? 'Este CPF já está cadastrado.'
+          : target.includes('telefone')
+            ? 'Este telefone já está cadastrado.'
+            : 'Um dos dados informados já está cadastrado.'
+      response.status(409).json({ error: fieldMessage })
+      return
+    }
+    if (error.code === 'P2003') {
+      response.status(409).json({ error: 'O registro possui um relacionamento inválido.' })
       return
     }
   }

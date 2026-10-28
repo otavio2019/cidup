@@ -3,6 +3,31 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, '')
+}
+
+function formatCpf(value: string) {
+  const digits = onlyDigits(value).slice(0, 11)
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
+function formatCep(value: string) {
+  const digits = onlyDigits(value).slice(0, 8)
+  return digits.replace(/(\d{5})(\d)/, '$1-$2')
+}
+
+function formatPhone(value: string) {
+  const digits = onlyDigits(value).slice(0, 11)
+  if (digits.length <= 2) return digits ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
 // Apresenta o cadastro e controla os campos, a confirmação de senha e o feedback.
 function RegisterPage() {
   const navigate = useNavigate()
@@ -123,7 +148,7 @@ function RegisterPage() {
                   type="tel"
                   placeholder="(00) 00000-0000"
                   value={telefone}
-                  onChange={(event) => setTelefone(event.target.value)}
+                  onChange={(event) => setTelefone(formatPhone(event.target.value))}
                   autoComplete="tel"
                 />
               </div>
@@ -134,14 +159,14 @@ function RegisterPage() {
                 <label htmlFor="cadastro-cpf">CPF</label>
                 <div className="input-wrap">
                   <span className="input-icon" aria-hidden="true">#</span>
-                  <input id="cadastro-cpf" type="text" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(event.target.value)} autoComplete="off" maxLength={14} />
+                  <input id="cadastro-cpf" type="text" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(formatCpf(event.target.value))} autoComplete="off" maxLength={14} />
                 </div>
               </div>
               <div className="form-group">
                 <label htmlFor="cadastro-cep">CEP</label>
                 <div className="input-wrap">
                   <span className="input-icon" aria-hidden="true">⌖</span>
-                  <input id="cadastro-cep" type="text" inputMode="numeric" placeholder="00000-000" value={cep} onChange={(event) => setCep(event.target.value)} autoComplete="postal-code" maxLength={9} />
+                  <input id="cadastro-cep" type="text" inputMode="numeric" placeholder="00000-000" value={cep} onChange={(event) => setCep(formatCep(event.target.value))} autoComplete="postal-code" maxLength={9} />
                 </div>
               </div>
             </div>
