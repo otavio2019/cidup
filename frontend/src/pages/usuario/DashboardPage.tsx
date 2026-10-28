@@ -16,9 +16,7 @@ const complaintStatusLabels: Record<string, string> = {
   CANCELED: 'Cancelada',
 }
 
-// TODO: substituir os números e denúncias simulados pelos dados da API.
-// TODO: conectar os links às telas de registrar denúncia e detalhes.
-// Carrega o resumo das denúncias e reúne atalhos e recursos do painel cidadão.
+  // Carrega o resumo das denúncias e reúne atalhos e recursos do painel cidadão.
 function DashboardPage() {
   const navigate = useNavigate()
   const [complaints, setComplaints] = useState<Complaint[]>([])
@@ -103,6 +101,8 @@ function DashboardPage() {
     }
   }
 
+  const countStatus = (status: string) => complaints.filter((complaint) => complaint.status === status).length
+
   return (
     <main className="dashboard-page">
       <CitizenHeader active="home" />
@@ -172,29 +172,29 @@ function DashboardPage() {
           <div className="summary-grid">
             <article className="summary-card progress-card">
               <span className="summary-icon">●</span>
-              <p>Em progresso</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE').length}</strong>
-              <span>Soluções em andamento</span>
+              <p>Recebida</p>
+              <strong>{countStatus('RECEIVED')}</strong>
+              <span>Denúncias recebidas</span>
             </article>
 
             <article className="summary-card open-card">
               <span className="summary-icon">◷</span>
-              <p>Denúncias abertas</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'RECEIVED' || complaint.status === 'IN_ANALYSIS').length}</strong>
-              <span>Aguardando análise</span>
+              <p>Em análise</p>
+              <strong>{countStatus('IN_ANALYSIS')}</strong>
+              <span>Aguardando avaliação</span>
             </article>
 
             <article className="summary-card yellow-card">
               <span className="summary-icon">◷</span>
               <p>Em atendimento</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE').length}</strong>
-              <span>Em análise pelos órgãos</span>
+              <strong>{countStatus('FORWARDED') + countStatus('IN_SERVICE')}</strong>
+              <span>Em execução pelos órgãos</span>
             </article>
 
             <article className="summary-card green-card">
               <span className="summary-icon">✓</span>
-              <p>Resolvidas</p>
-              <strong>{complaints.filter((complaint) => complaint.status === 'RESOLVED').length}</strong>
+              <p>Resolvida</p>
+              <strong>{countStatus('RESOLVED')}</strong>
               <span>Problemas solucionados</span>
             </article>
           </div>
