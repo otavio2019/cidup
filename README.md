@@ -110,7 +110,12 @@ Vercel  → frontend React
 O arquivo `render.yaml` já contém a configuração do serviço da API. No Render,
 configure `DATABASE_URL` e `DIRECT_URL` com as URLs do Supabase, `FRONTEND_ORIGINS`
 com a URL HTTPS da Vercel e as variáveis da conta do responsável. O Render executa
-`npx prisma migrate deploy` no build e inicia a API com `npm run start`.
+`npx prisma generate` no build e inicia a API com `npm run start`.
+
+As migrations do schema inicial devem ser aplicadas no projeto Supabase antes do
+primeiro deploy. Não execute `prisma migrate deploy` nesse banco já provisionado
+sem antes registrar as migrations no histórico interno do Prisma, pois isso pode
+tentar recriar tabelas existentes.
 
 No projeto da Vercel, use `frontend/` como diretório raiz. O arquivo
 `frontend/vercel.json` configura o build do Vite e o fallback das rotas do React.
