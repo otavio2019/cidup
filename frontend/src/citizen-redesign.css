@@ -715,6 +715,25 @@
   font-size: 18px;
 }
 
+.review-photo-card {
+  display: grid;
+  gap: 10px;
+}
+
+.review-photo-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.review-photo-preview {
+  width: min(100%, 360px);
+  max-height: 240px;
+  border: 1px solid #d7e1eb;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
 .complaint-page .secondary-action,
 .location-page .secondary-action,
 .review-page .secondary-action,
@@ -803,6 +822,30 @@
 .confirmation-actions .primary-action,
 .confirmation-actions .secondary-action {
   width: auto;
+}
+
+@media print {
+  .citizen-header,
+  .citizen-mobile-nav,
+  .confirmation-actions {
+    display: none !important;
+  }
+
+  .confirmation-page {
+    padding: 0;
+    background: #fff;
+  }
+
+  .confirmation-card {
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    box-shadow: none;
+  }
+
+  .protocol-box {
+    border: 1px solid #bfd6e8;
+  }
 }
 
 /* Apresentação responsiva das telas de autenticação. */

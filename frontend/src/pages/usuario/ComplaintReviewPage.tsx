@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
@@ -15,6 +15,30 @@ type ComplaintDraft = {
   complement?: string
   photoName?: string | null
   photoData?: string | null
+  latitude?: number
+  longitude?: number
+}
+
+type Organization = { nome: string }
+
+function normalizeText(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+}
+
+function findResponsibleOrganization(type: string, organizations: Organization[]) {
+  const normalizedType = normalizeText(type)
+  const rules = [
+    { types: ['buraco', 'calcada', 'sinalizacao', 'pavimento'], organizations: ['obra', 'infraestrutura'] },
+    { types: ['iluminacao', 'poste', 'lampada'], organizations: ['iluminacao'] },
+    { types: ['lixo', 'descarte', 'entulho', 'limpeza'], organizations: ['limpeza'] },
+    { types: ['arvore', 'area verde', 'meio ambiente'], organizations: ['meio ambiente', 'ambiental'] },
+    { types: ['alagamento', 'drenagem', 'esgoto', 'saneamento'], organizations: ['saneamento', 'drenagem'] },
+  ]
+  const rule = rules.find(({ types }) => types.some((keyword) => normalizedType.includes(keyword)))
+  return organizations.find(({ nome }) => {
+    const normalizedName = normalizeText(nome)
+    return (rule?.organizations ?? ['obra']).some((keyword) => normalizedName.includes(keyword))
+  })?.nome
 }
 
 // Recupera o rascunho da navegação ou do armazenamento temporário da sessão.
@@ -38,6 +62,18 @@ function ComplaintReviewPage() {
   )
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [organizationName, setOrganizationName] = useState('')
+
+  useEffect(() => {
+    if (!draft?.type) return undefined
+    let active = true
+    apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
+      .then(({ orgaos }) => {
+        if (active) setOrganizationName(findResponsibleOrganization(draft.type!, orgaos) ?? '')
+      })
+      .catch(() => undefined)
+    return () => { active = false }
+  }, [draft?.type])
 
   if (!draft?.type || !draft.description || !draft.address || !draft.number || !draft.neighborhood) {
     return <Navigate to="/registrar-denuncia" replace />
@@ -113,6 +149,19 @@ function ComplaintReviewPage() {
             <ReviewField label="Endereço" value={`${draft.address}, ${draft.number}`} />
             <ReviewField label="Bairro" value={draft.neighborhood} />
             {draft.complement && <ReviewField label="Ponto de referência" value={draft.complement} />}
+            {typeof draft.latitude === 'number' && typeof draft.longitude === 'number' && (
+              <ReviewField label="Coordenadas" value={`${draft.latitude.toFixed(5)}, ${draft.longitude.toFixed(5)}`} />
+            )}
+            <ReviewField label="Órgão responsável" value={organizationName || 'Encaminhamento automático conforme o tipo da ocorrência'} />
+          </section>
+
+          <section className="review-card review-photo-card">
+            <h2>Foto anexada</h2>
+            {draft.photoData ? (
+              <img className="review-photo-preview" src={draft.photoData} alt={`Pré-visualização: ${draft.photoName ?? 'foto da denúncia'}`} />
+            ) : (
+              <p>Nenhuma foto foi anexada. Esse campo é opcional.</p>
+            )}
           </section>
 
           {error && <p className="form-message complaint-submit-error" role="alert">{error}</p>}

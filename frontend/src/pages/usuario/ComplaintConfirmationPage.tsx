@@ -43,6 +43,10 @@ function ComplaintConfirmationPage() {
     ? complaint.type
     : complaint.type?.name ?? 'Não informado'
 
+  function exportProtocolPdf() {
+    window.print()
+  }
+
   return (
     <main className="confirmation-page">
       <CitizenHeader active="complaints" />
@@ -86,6 +90,9 @@ function ComplaintConfirmationPage() {
         </div>
 
         <div className="confirmation-actions">
+          <button className="secondary-action" type="button" onClick={exportProtocolPdf}>
+            Exportar protocolo em PDF
+          </button>
           <Link className="primary-action" to="/minhas-denuncias">
             Acompanhar minhas denúncias
           </Link>
