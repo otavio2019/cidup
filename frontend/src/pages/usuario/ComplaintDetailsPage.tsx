@@ -86,14 +86,19 @@ function Header() {
 					</div>
 				) : (
 					<article className="complaint-detail-panel">
-						<div className="complaint-detail-heading">
-							<div>
-								<p className="complaint-kicker">DETALHES DA DENÚNCIA</p>
-								<h2 id="complaint-details-title">{complaint.type.name || 'Denúncia'}</h2>
-								<span className="complaint-protocol">{complaint.protocol}</span>
+							<div className="complaint-detail-heading">
+								<div>
+									<p className="complaint-kicker">DETALHES DA DENÚNCIA</p>
+									<h2 id="complaint-details-title">{complaint.type.name || 'Denúncia'}</h2>
+									<span className="complaint-protocol">{complaint.protocol}</span>
+								</div>
+								<div className="complaint-detail-heading-actions">
+									<span className={`status ${statusClasses[status] ?? 'status-received'}`}>{status}</span>
+									<button className="secondary-action complaint-detail-print" type="button" onClick={() => window.print()}>
+										Imprimir protocolo / Salvar em PDF
+									</button>
+								</div>
 							</div>
-							<span className={`status ${statusClasses[status] ?? 'status-received'}`}>{status}</span>
-						</div>
 
 						<section className="complaint-timeline" aria-labelledby="timeline-title">
 							<h3 id="timeline-title">Acompanhamento</h3>

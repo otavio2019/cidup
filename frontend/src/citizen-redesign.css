@@ -824,10 +824,34 @@
   width: auto;
 }
 
+.complaint-detail-heading-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.complaint-detail-print {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #b9c4ce;
+  border-radius: 6px;
+  color: var(--citizen-blue);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.complaint-detail-print:hover {
+  border-color: var(--citizen-blue);
+  background: #f4f9ff;
+}
+
 @media print {
   .citizen-header,
   .citizen-mobile-nav,
-  .confirmation-actions {
+  .confirmation-actions,
+  .complaint-detail-print {
     display: none !important;
   }
 
