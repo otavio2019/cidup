@@ -189,7 +189,7 @@
 }
 
 .summary-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin: 18px 0;
 }
@@ -270,6 +270,15 @@
 .green-card .summary-icon {
   color: #13314c;
   background: #8eff8e;
+}
+
+.denied-card {
+  border-color: #c62828;
+}
+
+.denied-card .summary-icon {
+  color: #fff;
+  background: #c62828;
 }
 
 .complaints-section {

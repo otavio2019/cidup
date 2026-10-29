@@ -206,7 +206,17 @@ function ResponsiblePanelPage() {
   const visibleComplaints = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR')
     return periodComplaints.filter((complaint) => {
-      const matchesQuery = [complaint.protocol, complaint.title, complaint.neighborhood]
+      const matchesQuery = [
+        complaint.protocol,
+        complaint.title,
+        complaint.description,
+        complaint.neighborhood,
+        complaint.address,
+        complaint.citizen,
+        complaint.email,
+        complaint.phone,
+        complaint.cpf,
+      ]
         .some((value) => value.toLocaleLowerCase('pt-BR').includes(normalizedQuery))
       return matchesQuery && (statusFilter === 'Todos' || complaint.status === statusFilter)
     })
@@ -376,7 +386,7 @@ function ResponsiblePanelPage() {
           <button className="rp-outline-button" type="button" onClick={exportReport}>↓ Exportar relatório</button>
         </div>
         <section className="rp-filter-bar" aria-label="Filtros de denúncias">
-          <label className="rp-search-field"><span>Buscar por protocolo, bairro ou descrição</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para buscar..." /></label>
+          <label className="rp-search-field"><span>Buscar por protocolo, CPF, nome, e-mail ou telefone</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para buscar..." /></label>
           <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>Todos</option>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
           <label>Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value={ALL_PERIODS}>Todos os períodos</option>{periodOptions.map((key) => <option key={key} value={key}>{monthLabel(key)}</option>)}</select></label>
         </section>

@@ -16,6 +16,15 @@ const complaintStatusLabels: Record<string, string> = {
   CANCELED: 'Cancelada',
 }
 
+function readStoredCitizenName() {
+  try {
+    const profile = JSON.parse(localStorage.getItem('cidup-profile') ?? '{}') as { name?: unknown }
+    return typeof profile.name === 'string' ? profile.name.trim().split(/\s+/)[0] : ''
+  } catch {
+    return ''
+  }
+}
+
   // Carrega o resumo das denúncias e reúne atalhos e recursos do painel cidadão.
 function DashboardPage() {
   const navigate = useNavigate()
@@ -23,6 +32,7 @@ function DashboardPage() {
   const [complaintMessage, setComplaintMessage] = useState('')
   const [logoutError, setLogoutError] = useState('')
   const [description, setDescription] = useState('')
+  const [citizenName, setCitizenName] = useState(readStoredCitizenName)
   const [draft, setDraft] = useState<{
     title: string
     category: string
@@ -37,6 +47,18 @@ function DashboardPage() {
     apiRequest<{ complaints: Complaint[] }>('/api/complaints')
       .then((data) => setComplaints(data.complaints))
       .catch((error: unknown) => setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível carregar as denúncias.'))
+  }, [])
+
+  useEffect(() => {
+    apiRequest<{ user: { name?: string } }>('/api/auth/session')
+      .then(({ user }) => {
+        const name = user.name?.trim() ?? ''
+        if (name) {
+          setCitizenName(name.split(/\s+/)[0])
+          localStorage.setItem('cidup-profile', JSON.stringify({ ...JSON.parse(localStorage.getItem('cidup-profile') ?? '{}'), name }))
+        }
+      })
+      .catch(() => undefined)
   }, [])
 
   async function handleLogout() {
@@ -102,6 +124,7 @@ function DashboardPage() {
   }
 
   const countStatus = (status: string) => complaints.filter((complaint) => complaint.status === status).length
+  const deniedCount = countStatus('NOT_SERVED') + countStatus('CANCELLED') + countStatus('CANCELED')
 
   return (
     <main className="dashboard-page">
@@ -110,7 +133,7 @@ function DashboardPage() {
       <section className="dashboard-content">
         <div className="dashboard-main">
           <div className="welcome-section">
-            <h2>Olá, cidadão</h2>
+            <h2>Olá, {citizenName || 'cidadão'}</h2>
             <p>O que você deseja fazer hoje?</p>
           </div>
 
@@ -197,6 +220,13 @@ function DashboardPage() {
               <strong>{countStatus('RESOLVED')}</strong>
               <span>Problemas solucionados</span>
             </article>
+
+            <article className="summary-card denied-card">
+              <span className="summary-icon">!</span>
+              <p>Negadas</p>
+              <strong>{deniedCount}</strong>
+              <span>Não seguirão para atendimento</span>
+            </article>
           </div>
 
           <section className="complaints-section">
@@ -214,7 +244,7 @@ function DashboardPage() {
                   <p>{complaint.title}</p>
                   <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
                 </div>
-                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
+                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : ['NOT_SERVED', 'CANCELLED', 'CANCELED'].includes(complaint.status) ? 'status-canceled' : complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE' ? 'status-service' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
                 <button className="dashboard-delete-button" type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
               </article>
             ))}
