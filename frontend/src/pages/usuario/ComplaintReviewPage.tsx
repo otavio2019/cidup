@@ -74,7 +74,7 @@ function ComplaintReviewPage() {
           FORWARDED: 'Em atendimento',
           IN_SERVICE: 'Em atendimento',
           RESOLVED: 'Resolvida',
-          NOT_SERVED: 'Não atendida',
+          NOT_SERVED: 'Negada',
         } as Record<string, string>)[data.complaint.status] ?? data.complaint.status,
         id: data.complaint.id,
       }

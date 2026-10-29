@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import './ResponsiblePanelPage.css'
 
-type ComplaintStatus = 'Recebida' | 'Em análise' | 'Encaminhada' | 'Em atendimento' | 'Resolvida' | 'Não atendida'
+type ComplaintStatus = 'Recebida' | 'Em análise' | 'Encaminhada' | 'Em atendimento' | 'Resolvida' | 'Negada'
 
 type AdminComplaint = {
   id?: number
@@ -86,7 +86,7 @@ function percent(part: number, total: number) {
   return total === 0 ? 0 : (part / total) * 100
 }
 
-const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhada', 'Em atendimento', 'Resolvida', 'Não atendida']
+const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhada', 'Em atendimento', 'Resolvida', 'Negada']
 const navigation = [
   { path: '/responsavel/dashboard', label: 'Painel' },
   { path: '/responsavel/denuncias', label: 'Denúncias' },
@@ -108,7 +108,7 @@ function apiStatusToLabel(status: string): ComplaintStatus {
     FORWARDED: 'Encaminhada',
     IN_SERVICE: 'Em atendimento',
     RESOLVED: 'Resolvida',
-    NOT_SERVED: 'Não atendida',
+    NOT_SERVED: 'Negada',
   } as Record<string, ComplaintStatus>)[status] ?? 'Recebida'
 }
 
@@ -119,7 +119,7 @@ function labelToApiStatus(status: ComplaintStatus) {
     Encaminhada: 'FORWARDED',
     'Em atendimento': 'IN_SERVICE',
     Resolvida: 'RESOLVED',
-    'Não atendida': 'NOT_SERVED',
+    Negada: 'NOT_SERVED',
   } as Record<ComplaintStatus, string>)[status]
 }
 

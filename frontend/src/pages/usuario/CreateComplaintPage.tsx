@@ -191,7 +191,7 @@ function CreateComplaintPage() {
       setPhoto(null)
       setErrors((current) => ({
         ...current,
-        photo: 'A imagem deve ter no máximo 5 MB.',
+        photo: 'A imagem deve ter no máximo 2 MB.',
       }))
       return
     }

@@ -11,7 +11,7 @@ const complaintStatusLabels: Record<string, string> = {
   FORWARDED: 'Em atendimento',
   IN_SERVICE: 'Em atendimento',
   RESOLVED: 'Resolvida',
-  NOT_SERVED: 'Não atendida',
+  NOT_SERVED: 'Negada',
   CANCELLED: 'Cancelada',
   CANCELED: 'Cancelada',
 }

@@ -57,9 +57,17 @@ function isValidCep(value: unknown) {
   return /^\d{8}$/.test(digits(value))
 }
 
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+
 function isValidImageData(value: unknown) {
-  if (typeof value !== 'string' || value.length > 3_000_000) return false
-  return /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
+  if (typeof value !== 'string') return false
+  const match = value.match(/^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/)
+  if (!match) return false
+  try {
+    return Buffer.from(match[1], 'base64').length <= MAX_IMAGE_BYTES
+  } catch {
+    return false
+  }
 }
 
 // Normaliza texto para que a regra funcione com ou sem acentos e diferenças de caixa.
@@ -216,7 +224,7 @@ app.use(cors({
   credentials: true,
 }))
 // Define limites e middlewares necessários para interpretar JSON e cookies de sessão.
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json({ limit: '4mb' }))
 app.use(cookieParser())
 // Impede que respostas com dados de API sejam reutilizadas por caches intermediários.
 app.use('/api', (_request, response, next) => {
@@ -836,9 +844,12 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
       typeof latitude !== 'number' || !Number.isFinite(latitude) ||
       latitude < -90 || latitude > 90 ||
       typeof longitude !== 'number' || !Number.isFinite(longitude) ||
-      longitude < -180 || longitude > 180 ||
-      (photoValue !== undefined && photoValue !== null && !isValidImageData(photoValue))) {
+      longitude < -180 || longitude > 180) {
     response.status(400).json({ error: 'Informe tipo, descrição, latitude e longitude válidos.' })
+    return
+  }
+  if (photoValue !== undefined && photoValue !== null && !isValidImageData(photoValue)) {
+    response.status(400).json({ error: 'A foto deve ser PNG, JPG ou WEBP e ter no máximo 2 MB.' })
     return
   }
   const legacyAddress = [
@@ -1299,6 +1310,10 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
 
 // Converte erros inesperados e JSON malformado em respostas seguras para o cliente.
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  if (isRecord(error) && (error.type === 'entity.too.large' || error.name === 'PayloadTooLargeError')) {
+    response.status(413).json({ error: 'A requisição é muito grande. A foto deve ter no máximo 2 MB.' })
+    return
+  }
   if (error instanceof SyntaxError) {
     response.status(400).json({ error: 'Corpo da requisição inválido.' })
     return

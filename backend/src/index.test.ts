@@ -458,6 +458,47 @@ test('encaminha denúncias automaticamente para o órgão compatível com a cate
   }
 })
 
+test('aceita uma foto válida na criação da denúncia', async () => {
+  calls.length = 0
+  const photo = 'data:image/png;base64, iVBORw0KGgo='.replace(' ', '')
+  const response = await callApi('/api/complaints', {
+    method: 'POST',
+    headers: { Cookie: await cookieFor(1) },
+    body: JSON.stringify({
+      type: 'Iluminação pública',
+      title: 'Foto válida',
+      description: 'Relato com uma imagem válida para teste.',
+      address: 'Rua de teste, 10, Centro',
+      latitude: -23,
+      longitude: -46,
+      photo,
+    }),
+  })
+  assert.equal(response.status, 201)
+  assert.equal(record(calls.find((call) => call.model === 'denuncia' && call.method === 'create')?.args.data).foto, photo)
+})
+
+test('rejeita foto maior que 2 MB antes de persistir a denúncia', async () => {
+  calls.length = 0
+  const oversizedPhoto = `data:image/png;base64,${'A'.repeat(2_800_000)}`
+  const response = await callApi('/api/complaints', {
+    method: 'POST',
+    headers: { Cookie: await cookieFor(1) },
+    body: JSON.stringify({
+      type: 'Iluminação pública',
+      title: 'Foto grande',
+      description: 'Relato com uma imagem acima do limite permitido.',
+      address: 'Rua de teste, 10, Centro',
+      latitude: -23,
+      longitude: -46,
+      photo: oversizedPhoto,
+    }),
+  })
+  assert.equal(response.status, 400)
+  assert.match(await response.text(), /no máximo 2 MB/i)
+  assert.equal(calls.some((call) => call.model === 'denuncia' && call.method === 'create'), false)
+})
+
 test('a API protegida rejeita solicitações sem cookie, independentemente de x-user-id', async () => {
   const response = await callApi('/api/complaints', {
     headers: { 'x-user-id': '1' },

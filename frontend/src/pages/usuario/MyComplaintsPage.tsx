@@ -10,7 +10,7 @@ const statusClasses: Record<string, string> = {
 	'Em análise': 'status-analysis',
 	'Em atendimento': 'status-service',
 	'Resolvida': 'status-solved',
-	'Não atendida': 'status-canceled',
+	'Negada': 'status-canceled',
 	'Cancelada': 'status-canceled',
 }
 
@@ -20,7 +20,7 @@ const statusLabels: Record<string, string> = {
 	FORWARDED: 'Em atendimento',
 	IN_SERVICE: 'Em atendimento',
 	RESOLVED: 'Resolvida',
-	NOT_SERVED: 'Não atendida',
+	NOT_SERVED: 'Negada',
 }
 
 // Formata datas para exibição local e oferece uma mensagem para valores inválidos.

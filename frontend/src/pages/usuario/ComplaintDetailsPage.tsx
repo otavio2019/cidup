@@ -5,7 +5,7 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
-type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Não atendida' | 'Cancelada'
+type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Negada' | 'Cancelada'
 
 const statusSteps: ComplaintStatus[] = ['Recebida', 'Em análise', 'Em atendimento', 'Resolvida']
 const statusClasses: Record<ComplaintStatus, string> = {
@@ -13,7 +13,7 @@ const statusClasses: Record<ComplaintStatus, string> = {
 	'Em análise': 'status-analysis',
 	'Em atendimento': 'status-service',
 	Resolvida: 'status-solved',
-	'Não atendida': 'status-canceled',
+	Negada: 'status-canceled',
 	Cancelada: 'status-canceled',
 }
 const statusLabels: Record<string, ComplaintStatus> = {
@@ -22,7 +22,7 @@ const statusLabels: Record<string, ComplaintStatus> = {
 	FORWARDED: 'Em atendimento',
 	IN_SERVICE: 'Em atendimento',
 	RESOLVED: 'Resolvida',
-	NOT_SERVED: 'Não atendida',
+	NOT_SERVED: 'Negada',
 }
 
 // Apresenta uma data localizada ou um texto alternativo para valores ausentes/inválidos.
@@ -67,7 +67,7 @@ function Header() {
 	const status = complaint
 		? statusLabels[complaint.status] ?? complaint.status as ComplaintStatus
 		: 'Recebida'
-	const currentStep = status === 'Cancelada' || status === 'Não atendida'
+		const currentStep = status === 'Cancelada' || status === 'Negada'
 		? -1
 		: statusSteps.indexOf(status)
 
