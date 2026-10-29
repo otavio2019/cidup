@@ -10,6 +10,7 @@ function LoginPage() {
   const [senha, setSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Valida os campos, autentica o cidadão e redireciona conforme o perfil retornado.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -20,6 +21,8 @@ function LoginPage() {
       return
     }
 
+    setIsSubmitting(true)
+    setMensagem('')
     try {
       const data = await apiRequest<{
         user: {
@@ -38,6 +41,8 @@ function LoginPage() {
       navigate(data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
     } catch (error) {
       setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -124,9 +129,9 @@ function LoginPage() {
               <span>Lembrar-me neste dispositivo</span>
             </label>
 
-            <button type="submit" className="login-button">
-              Entrar na conta
-              <span aria-hidden="true">→</span>
+            <button type="submit" className="login-button" disabled={isSubmitting} aria-busy={isSubmitting}>
+              {isSubmitting ? 'Entrando...' : 'Entrar na conta'}
+              {!isSubmitting && <span aria-hidden="true">→</span>}
             </button>
 
             {mensagem && (
@@ -138,7 +143,7 @@ function LoginPage() {
 
           <div className="register-link">
             <span>Ainda não possui uma conta?</span>
-            <Link to="/cadastro">Criar cadastro</Link>
+            <Link className="register-cta" to="/cadastro">Criar cadastro</Link>
           </div>
 
           <p className="login-privacy">

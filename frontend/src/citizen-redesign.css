@@ -857,6 +857,12 @@
   transform: none;
 }
 
+.login-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
 .remember-option {
   gap: 7px;
   font-size: 13px;
@@ -865,6 +871,26 @@
 .register-link {
   margin-top: 16px;
   font-size: 13px;
+}
+
+.register-link .register-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid rgba(8, 115, 196, 0.3);
+  border-radius: 6px;
+  background: #eef6ff;
+  color: #075fa4;
+  font-weight: 800;
+}
+
+.register-link .register-cta:focus-visible,
+.login-button:focus-visible,
+.password-toggle:focus-visible,
+.forgot-link:focus-visible {
+  outline: 3px solid rgba(8, 115, 196, 0.35);
+  outline-offset: 3px;
 }
 
 .login-privacy {

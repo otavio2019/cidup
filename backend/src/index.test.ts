@@ -369,6 +369,8 @@ test('o cadastro aceita dados válidos sem retornar o hash da senha', async () =
       name: 'Pessoa Nova',
       email: 'nova@example.test',
       phone: '3333333333',
+      cpf: '123.456.789-09',
+      cep: '58707-660',
       password: 'senha-segura',
     }),
   })
