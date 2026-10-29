@@ -228,8 +228,15 @@ function CreateComplaintPage() {
       nextErrors.address = 'Informe o nome da rua ou avenida.'
     }
 
-    if (!form.number.trim()) {
+    const normalizedNumber = form.number.trim().toUpperCase()
+    const hasNoNumber = normalizedNumber === 'S/N'
+
+    if (!normalizedNumber) {
       nextErrors.number = 'Informe o número ou digite “S/N”.'
+    }
+
+    if (hasNoNumber && !form.complement.trim()) {
+      nextErrors.complement = 'Informe um ponto de referência quando o local não tiver número.'
     }
 
     if (!form.neighborhood.trim()) {
@@ -264,7 +271,7 @@ function CreateComplaintPage() {
       type: form.type,
       description: form.description.trim(),
       address: form.address.trim(),
-      number: form.number.trim(),
+      number: form.number.trim().toUpperCase() === 'S/N' ? 'S/N' : form.number.trim(),
       neighborhood: form.neighborhood.trim(),
       complement: form.complement.trim(),
       photoName: photo?.name ?? null,
@@ -368,7 +375,7 @@ function CreateComplaintPage() {
 
             <div className="complaint-grid complaint-grid-small">
               <div className="complaint-field">
-                <label htmlFor="number">Número <span>*</span></label>
+                <label htmlFor="number">Número ou S/N <span>*</span></label>
                 <input
                   id="number"
                   name="number"
@@ -401,7 +408,7 @@ function CreateComplaintPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="complement">Ponto de referência <small>(opcional)</small></label>
+              <label htmlFor="complement">Ponto de referência <small>{form.number.trim().toUpperCase() === 'S/N' ? '(obrigatório para S/N)' : '(opcional)'}</small></label>
               <input
                 id="complement"
                 name="complement"
@@ -409,7 +416,10 @@ function CreateComplaintPage() {
                 value={form.complement}
                 onChange={handleChange}
                 placeholder="Ex.: Próximo à escola municipal"
+                aria-invalid={Boolean(errors.complement)}
+                aria-describedby={errors.complement ? 'complement-error' : undefined}
               />
+              {errors.complement && <p className="field-error" id="complement-error">{errors.complement}</p>}
             </div>
 
             <div className="complaint-field">

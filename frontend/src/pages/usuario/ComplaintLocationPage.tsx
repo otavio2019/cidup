@@ -135,8 +135,16 @@ function ComplaintLocationPage() {
       return
     }
 
-    if (!number.trim()) {
+    const normalizedNumber = number.trim().toUpperCase()
+    const hasNoNumber = normalizedNumber === 'S/N'
+
+    if (!normalizedNumber) {
       setError('Informe o número ou digite S/N.')
+      return
+    }
+
+    if (hasNoNumber && !reference.trim()) {
+      setError('Informe um ponto de referência quando o local não tiver número.')
       return
     }
 
@@ -152,7 +160,7 @@ function ComplaintLocationPage() {
     const locationData = {
       ...complaint,
       address: address.trim(),
-      number: number.trim(),
+      number: hasNoNumber ? 'S/N' : number.trim(),
       neighborhood: neighborhood.trim(),
       complement: reference.trim(),
       ...coordinates,
@@ -188,7 +196,7 @@ function ComplaintLocationPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="location-number">Número <span>*</span></label>
+              <label htmlFor="location-number">Número ou S/N <span>*</span></label>
               <input
                 id="location-number"
                 type="text"
@@ -230,7 +238,7 @@ function ComplaintLocationPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="location-reference">Ponto de referência <small>(opcional)</small></label>
+              <label htmlFor="location-reference">Ponto de referência <small>{number.trim().toUpperCase() === 'S/N' ? '(obrigatório para S/N)' : '(opcional)'}</small></label>
               <input
                 id="location-reference"
                 type="text"
