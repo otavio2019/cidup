@@ -50,7 +50,7 @@ O login chama `POST /api/auth/login`. O backend procura primeiro a conta de `res
 
 `GET /api/auth/session` reconfirma a sessão no servidor. `App.tsx` usa essa rota nos componentes `ProtectedRoute` e `ResponsibleRoute`, evitando renderizar páginas protegidas apenas por valores antigos do navegador. `POST /api/auth/logout` remove o cookie com os mesmos atributos de segurança. As páginas de painel e perfil limpam também rascunhos locais ao sair.
 
-A recuperação manual usa `POST /api/auth/forgot-password` para abrir uma solicitação com resposta genérica, sem confirmar se o CPF está cadastrado. Responsáveis autenticados consultam a fila em `/api/admin/password-recovery-requests` e definem uma senha temporária pelo endpoint associado; essa senha é armazenada como hash e exige troca obrigatória no próximo acesso. Enquanto a troca não é feita, a API bloqueia as demais rotas do cidadão. O serviço Render aplica as migrações Prisma ao iniciar.
+A recuperação manual usa `POST /api/auth/forgot-password` para abrir uma solicitação com resposta genérica, sem confirmar se o CPF está cadastrado. Responsáveis autenticados consultam a fila em `/api/admin/password-recovery-requests` e definem uma senha temporária pelo endpoint associado; essa senha é armazenada como hash e exige troca obrigatória no próximo acesso. Enquanto a troca não é feita, a API bloqueia as demais rotas do cidadão. O hook `prestart` do backend aplica as migrações Prisma antes de cada inicialização do serviço Render.
 
 ## Cidadão e perfil
 
