@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
@@ -6,6 +6,8 @@ import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
 import { reverseGeocode } from '../../geocoding'
 import '../../App.css'
+
+const InteractiveLocationMap = lazy(() => import('../../components/usuario/InteractiveLocationMap'))
 
 /** Segunda etapa do fluxo: confirma coordenadas e endereço antes da revisão. */
 
@@ -77,6 +79,13 @@ function ComplaintLocationPage() {
       setIsAddressLoading(false)
     }
   }, [])
+
+  const handleMapPositionChange = useCallback((latitude: number, longitude: number) => {
+    const nextCoordinates = { latitude, longitude }
+    setCoordinates(nextCoordinates)
+    setError('')
+    void fillAddressFromCoordinates(latitude, longitude)
+  }, [fillAddressFromCoordinates])
 
   // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
   const requestLocation = useCallback(() => {
@@ -255,11 +264,20 @@ function ComplaintLocationPage() {
           </section>
 
           {/* Resumo indica que o relato completo será conferido na etapa seguinte. */}
-          <section className="map-placeholder" aria-label="Mapa da localização">
-            <div className="map-placeholder-icon" aria-hidden="true">⌖</div>
-              <h2>Confira a denúncia</h2>
-              <p>Na próxima etapa você revisa o relato completo antes de enviar.</p>
-              <span className="map-status">Localização informada manualmente</span>
+          <section className="map-placeholder interactive-map-card" aria-label="Mapa da localização">
+            <div className="map-placeholder-heading">
+              <div>
+                <h2>Confira a localização no mapa</h2>
+                <p>O marcador representa o ponto da ocorrência. Você pode arrastá-lo ou clicar em outro ponto.</p>
+              </div>
+              <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
+            </div>
+            <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
+              <InteractiveLocationMap
+                coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
+                onPositionChange={({ lat, lng }) => handleMapPositionChange(lat, lng)}
+              />
+            </Suspense>
           </section>
 
           {error && <p className="form-message complaint-submit-error" role="alert">{error}</p>}

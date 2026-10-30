@@ -2016,6 +2016,81 @@ a {
   font-weight: 750;
 }
 
+.interactive-map-card {
+  display: block;
+  min-height: 0;
+  text-align: left;
+  background: #ffffff;
+}
+
+.map-placeholder-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.map-placeholder-heading h2 {
+  margin: 0 0 6px;
+}
+
+.map-placeholder-heading p {
+  max-width: 620px;
+}
+
+.map-placeholder-heading .map-status {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.interactive-location-map {
+  overflow: hidden;
+  border: 1px solid #cfe0eb;
+  border-radius: 12px;
+  background: #edf5f9;
+}
+
+.location-map-canvas {
+  width: 100%;
+  height: 330px;
+}
+
+.location-map-loading {
+  display: grid;
+  height: 330px;
+  place-items: center;
+  color: #526b7d;
+  background: #edf5f9;
+  font-size: 14px;
+}
+
+.location-map-help {
+  margin: 0;
+  padding: 10px 12px;
+  color: #526b7d;
+  background: #f7fbfd;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cidup-map-marker {
+  display: grid;
+  place-items: center;
+  border: 3px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  color: #ffffff;
+  background: #1565c0;
+  box-shadow: 0 3px 10px rgba(13, 43, 69, 0.3);
+  font-size: 21px;
+  transform: rotate(-45deg);
+}
+
+.cidup-map-marker span {
+  display: block;
+  transform: rotate(45deg);
+}
+
 @media (max-width: 600px) {
   .location-shell {
     width: calc(100% - 28px);
@@ -2030,6 +2105,18 @@ a {
 
   .map-placeholder {
     min-height: 220px;
+  }
+
+  .map-placeholder-heading {
+    flex-direction: column;
+  }
+
+  .location-map-canvas {
+    height: 270px;
+  }
+
+  .location-map-loading {
+    height: 270px;
   }
 
   .organization-options {
