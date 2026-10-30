@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { deleteDraft, getActiveDraftId } from '../../drafts'
 import '../../App.css'
 
 /** Última etapa do cidadão: revisa o rascunho e cria a denúncia somente após confirmação. */
@@ -122,6 +123,8 @@ function ComplaintReviewPage() {
         id: data.complaint.id,
       }
       sessionStorage.setItem('cidup-complaint-confirmation', JSON.stringify(registeredComplaint))
+      const activeDraftId = getActiveDraftId()
+      if (activeDraftId) deleteDraft(activeDraftId)
       sessionStorage.removeItem('cidup-complaint-draft')
       navigate('/denuncia/confirmacao', { state: registeredComplaint })
     } catch (submitError) {

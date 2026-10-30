@@ -8,6 +8,7 @@ import ComplaintLocationPage from './pages/usuario/ComplaintLocationPage'
 import ComplaintReviewPage from './pages/usuario/ComplaintReviewPage'
 import CreateComplaintPage from './pages/usuario/CreateComplaintPage'
 import DashboardPage from './pages/usuario/DashboardPage'
+import DraftsPage from './pages/usuario/DraftsPage'
 import LoginPage from './pages/auth/LoginPage'
 import MyComplaintsPage from './pages/usuario/MyComplaintsPage'
 import ProfilePage from './pages/usuario/ProfilePage'
@@ -148,6 +149,15 @@ function App() {
         element={
           <ProtectedRoute>
             <MyComplaintsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/rascunhos"
+        element={
+          <ProtectedRoute>
+            <DraftsPage />
           </ProtectedRoute>
         }
       />

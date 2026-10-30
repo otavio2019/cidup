@@ -42,7 +42,7 @@ function DashboardPage() {
   } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
-  const [utilityMessage, setUtilityMessage] = useState('')
+
 
   // Busca as denúncias da sessão para preencher os indicadores e a lista recente.
   useEffect(() => {
@@ -77,12 +77,8 @@ function DashboardPage() {
     localStorage.removeItem('cidup-profile')
     sessionStorage.removeItem('cidup-complaint-draft')
     sessionStorage.removeItem('cidup-complaint-confirmation')
+    sessionStorage.removeItem('cidup-active-draft-id')
     navigate('/login', { replace: true })
-  }
-
-  function clearSavedDraft() {
-    sessionStorage.removeItem('cidup-complaint-draft')
-    setUtilityMessage('Rascunho local removido deste navegador.')
   }
 
   // Pede confirmação antes de excluir e remove da tela apenas após sucesso na API.
@@ -279,13 +275,14 @@ function DashboardPage() {
               <b>›</b>
             </Link>
 
-            <a href="#configuracoes">
-              <span>⚙</span>
+            <Link to="/rascunhos">
+              <span>✎</span>
               <div>
-                <strong>Configurações</strong>
+                <strong>Rascunhos</strong>
+                <small>Continue denúncias salvas</small>
               </div>
               <b>›</b>
-            </a>
+            </Link>
 
             <a href="#ajuda">
               <span>?</span>
@@ -332,18 +329,6 @@ function DashboardPage() {
               <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
             </details>
           </div>
-        </section>
-
-        <section className="dashboard-utility-card" id="configuracoes" aria-labelledby="configuracoes-title">
-          <p className="complaint-kicker">CONTA</p>
-          <h2 id="configuracoes-title">Configurações</h2>
-          <p>Gerencie seus dados e o conteúdo salvo neste navegador.</p>
-          <div className="settings-actions">
-            <Link className="secondary-action" to="/perfil">Editar meu perfil</Link>
-            <button className="secondary-action" type="button" onClick={clearSavedDraft}>Limpar rascunho local</button>
-          </div>
-          {utilityMessage && <p className="form-message" role="status">{utilityMessage}</p>}
-          <small className="settings-note">O rascunho local fica apenas neste navegador e não é enviado até você confirmar a denúncia.</small>
         </section>
       </section>
       <CitizenMobileNav />

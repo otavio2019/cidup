@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { getActiveDraftId, saveDraft } from '../../drafts'
 import '../../App.css'
 
 /** Segunda etapa do fluxo: confirma coordenadas e endereço antes da revisão. */
@@ -172,6 +173,7 @@ function ComplaintLocationPage() {
       ...coordinates,
     }
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(locationData))
+    saveDraft(locationData, getActiveDraftId())
     navigate('/denuncia/revisar', { state: locationData })
   }
 

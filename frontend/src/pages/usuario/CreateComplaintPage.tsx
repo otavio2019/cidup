@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { getActiveDraftId, saveDraft } from '../../drafts'
 import '../../App.css'
 
 /** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
@@ -77,6 +78,7 @@ function CreateComplaintPage() {
   })
   const [isLocating, setIsLocating] = useState(false)
   const [locationMessage, setLocationMessage] = useState('')
+  const [draftMessage, setDraftMessage] = useState('')
 
   // ===== LOCALIZAÇÃO E GEOCODIFICAÇÃO =====
   // Consulta o serviço Nominatim de geocodificação reversa para sugerir rua, número e bairro.
@@ -254,6 +256,19 @@ function CreateComplaintPage() {
   }
 
   // ===== VALIDAÇÃO E PRÓXIMA ETAPA =====
+  // Salva o que já foi preenchido (sem validar) para o cidadão continuar depois em /rascunhos.
+  function handleSaveDraft() {
+    const hasContent = Object.values(form).some((value) => value.trim()) || photo
+    if (!hasContent) {
+      setDraftMessage('Preencha ao menos um campo para salvar o rascunho.')
+      return
+    }
+    const draft = { ...form, photoName: photo?.name ?? null, ...(coordinates ?? {}) }
+    sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(draft))
+    saveDraft(draft, getActiveDraftId())
+    setDraftMessage('Rascunho salvo. Você pode continuar depois em “Rascunhos”.')
+  }
+
   // Persiste o rascunho validado e encaminha o cidadão à confirmação da localização.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -288,6 +303,7 @@ function CreateComplaintPage() {
     }
 
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(complaintDraft))
+    saveDraft(complaintDraft, getActiveDraftId())
     setSubmitError('')
     navigate('/registrar-denuncia/localizacao', { state: complaintDraft })
   }
@@ -478,6 +494,8 @@ function CreateComplaintPage() {
 
           <div className="complaint-actions">
             <Link className="secondary-action" to="/dashboard">Cancelar</Link>
+            <button className="secondary-action" type="button" onClick={handleSaveDraft}>Salvar rascunho</button>
+            {draftMessage && <p className="form-message" role="status">{draftMessage}</p>}
             <button className="primary-action" type="submit">
               Continuar para localização <span aria-hidden="true">→</span>
             </button>

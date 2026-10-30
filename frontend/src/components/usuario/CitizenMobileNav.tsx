@@ -21,6 +21,10 @@ function CitizenMobileNav() {
       <NavLink to="/registrar-denuncia" className={`citizen-mobile-link citizen-mobile-create${isNewComplaint ? ' is-active' : ''}`} aria-label="Registrar denúncia">
         <span aria-hidden="true">＋</span>
       </NavLink>
+      <NavLink to="/rascunhos" className={({ isActive }) => `citizen-mobile-link${isActive ? ' is-active' : ''}`}>
+        <span className="citizen-mobile-icon" aria-hidden="true">✎</span>
+        <span>Rascunhos</span>
+      </NavLink>
       <NavLink to="/perfil" className={({ isActive }) => `citizen-mobile-link${isActive ? ' is-active' : ''}`}>
         <span className="citizen-mobile-icon" aria-hidden="true">♙</span>
         <span>Perfil</span>

@@ -156,6 +156,7 @@ function ProfilePage() {
     localStorage.removeItem('cidup-profile')
     sessionStorage.removeItem('cidup-complaint-draft')
     sessionStorage.removeItem('cidup-complaint-confirmation')
+    sessionStorage.removeItem('cidup-active-draft-id')
     navigate('/login', { replace: true })
   }
 
