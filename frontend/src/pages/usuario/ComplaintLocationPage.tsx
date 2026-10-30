@@ -270,10 +270,12 @@ function ComplaintLocationPage() {
                 <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
               </div>
               <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
-                <InteractiveLocationMap
-                  coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
-                  onPositionChange={({ lat, lng }) => handleMapPositionChange(lat, lng)}
-                />
+              <InteractiveLocationMap
+                coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
+                onPositionChange={({ lat, lng }) => handleMapPositionChange(lat, lng)}
+                onRequestLocation={requestLocation}
+                isLocating={isLocating}
+              />
               </Suspense>
             </div>
           </section>

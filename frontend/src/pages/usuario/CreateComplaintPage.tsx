@@ -469,12 +469,14 @@ function CreateComplaintPage() {
               <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
                 <InteractiveLocationMap
                   coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
-                  onPositionChange={({ lat, lng }) => {
-                    setCoordinates({ latitude: lat, longitude: lng })
-                    setLocationMessage('')
-                    void fillAddressFromCoordinates(lat, lng)
-                  }}
-                />
+                onPositionChange={({ lat, lng }) => {
+                  setCoordinates({ latitude: lat, longitude: lng })
+                  setLocationMessage('')
+                  void fillAddressFromCoordinates(lat, lng)
+                }}
+                onRequestLocation={requestLocation}
+                isLocating={isLocating}
+              />
               </Suspense>
             </div>
           </div>

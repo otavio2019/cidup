@@ -6,6 +6,8 @@ import 'leaflet/dist/leaflet.css'
 type InteractiveLocationMapProps = {
   coordinates: LatLngLiteral | null
   onPositionChange: (coordinates: LatLngLiteral) => void
+  onRequestLocation?: () => void
+  isLocating?: boolean
 }
 
 function MapCenterUpdater({ coordinates }: { coordinates: LatLngLiteral }) {
@@ -25,7 +27,7 @@ function MapClickHandler({ onPositionChange }: { onPositionChange: (coordinates:
   return null
 }
 
-function InteractiveLocationMap({ coordinates, onPositionChange }: InteractiveLocationMapProps) {
+function InteractiveLocationMap({ coordinates, onPositionChange, onRequestLocation, isLocating = false }: InteractiveLocationMapProps) {
   const defaultCenter = useMemo<LatLngLiteral>(() => ({ lat: -7.23056, lng: -35.88111 }), [])
   const markerIcon = useMemo(() => L.divIcon({
     className: 'cidup-map-marker',
@@ -62,6 +64,11 @@ function InteractiveLocationMap({ coordinates, onPositionChange }: InteractiveLo
           </Marker>
         )}
       </MapContainer>
+      {onRequestLocation && (
+        <button className="map-location-button" type="button" onClick={onRequestLocation} disabled={isLocating}>
+          {isLocating ? 'Obtendo localização...' : 'Usar minha localização atual'}
+        </button>
+      )}
       <p className="location-map-help">Clique no mapa ou arraste o marcador para ajustar o ponto exato da ocorrência.</p>
     </div>
   )
