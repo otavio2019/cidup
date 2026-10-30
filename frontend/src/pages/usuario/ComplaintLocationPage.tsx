@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
+import { reverseGeocode } from '../../geocoding'
 import '../../App.css'
 
 /** Segunda etapa do fluxo: confirma coordenadas e endereço antes da revisão. */
@@ -57,47 +58,25 @@ function ComplaintLocationPage() {
   )
 
   // ===== GEOCODIFICAÇÃO REVERSA =====
-  // Consulta o endpoint público Nominatim para obter endereço a partir das coordenadas.
   // Consulta o serviço de geocodificação reversa para sugerir campos do endereço.
   const fillAddressFromCoordinates = useCallback(async (latitude: number, longitude: number) => {
     setIsAddressLoading(true)
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`,
-        { headers: { Accept: 'application/json' } },
-      )
-      if (!response.ok) throw new Error('Não foi possível converter a localização em endereço.')
-
-      const data = await response.json() as {
-        display_name?: string
-        address?: {
-          road?: string
-          pedestrian?: string
-          residential?: string
-          house_number?: string
-          neighbourhood?: string
-          suburb?: string
-          city_district?: string
-          city?: string
-          town?: string
-          village?: string
-          postcode?: string
-        }
-      }
-      const reverseAddress = data.address ?? {}
-      const street = reverseAddress.road ?? reverseAddress.pedestrian ?? reverseAddress.residential
-      const neighborhoodName = reverseAddress.neighbourhood ?? reverseAddress.suburb ?? reverseAddress.city_district
+      const reverseAddress = await reverseGeocode(latitude, longitude)
+      const street = reverseAddress.street
+      const neighborhoodName = reverseAddress.neighborhood
       if (street) setAddress(street)
-      else if (address.includes(',')) setAddress('')
-      if (reverseAddress.house_number) setNumber(reverseAddress.house_number)
+      if (reverseAddress.houseNumber) setNumber(reverseAddress.houseNumber)
       if (neighborhoodName) setNeighborhood(neighborhoodName)
-      if (!street) setError('A localização foi obtida, mas o mapa retornou apenas a região. Informe a rua e o número manualmente.')
-    } catch {
-      setError('Localização obtida. Não foi possível preencher o endereço automaticamente; confira os campos.')
+      if (!street) setError('As coordenadas foram obtidas, mas o OpenStreetMap não tem uma rua cadastrada neste ponto. Confira o bairro e informe a rua manualmente.')
+    } catch (error) {
+      setError(error instanceof Error
+        ? `Coordenadas obtidas, mas não foi possível consultar o endereço: ${error.message}`
+        : 'Coordenadas obtidas, mas não foi possível consultar o endereço. Confira os campos.')
     } finally {
       setIsAddressLoading(false)
     }
-  }, [address])
+  }, [])
 
   // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
   const requestLocation = useCallback(() => {
@@ -119,7 +98,7 @@ function ComplaintLocationPage() {
         setIsLocating(false)
         setError('Não foi possível obter sua localização. Autorize o acesso ou tente novamente.')
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
   }, [fillAddressFromCoordinates])
 

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
+import { reverseGeocode } from '../../geocoding'
 import '../../App.css'
 
 /** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
@@ -89,52 +90,30 @@ function CreateComplaintPage() {
   const [draftMessage, setDraftMessage] = useState('')
 
   // ===== LOCALIZAÇÃO E GEOCODIFICAÇÃO =====
-  // Consulta o serviço Nominatim de geocodificação reversa para sugerir rua, número e bairro.
   // Usa coordenadas para sugerir endereço e bairro, sem impedir ajustes manuais.
   async function fillAddressFromCoordinates(latitude: number, longitude: number) {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`,
-        { headers: { Accept: 'application/json' } },
-      )
-      if (!response.ok) throw new Error('reverse geocoding failed')
-
-      const data = await response.json() as {
-        display_name?: string
-        address?: {
-          road?: string
-          pedestrian?: string
-          residential?: string
-          house_number?: string
-          neighbourhood?: string
-          suburb?: string
-          city_district?: string
-          city?: string
-          town?: string
-          village?: string
-          postcode?: string
-        }
-      }
-      const found = data.address ?? {}
-      const street = found.road ?? found.pedestrian ?? found.residential
-      const neighborhood = found.neighbourhood ?? found.suburb ?? found.city_district
+      const found = await reverseGeocode(latitude, longitude)
+      const street = found.street
+      const neighborhood = found.neighborhood
 
       setForm((current) => ({
         ...current,
-        // Nunca usamos display_name como rua: ele pode ser apenas cidade, estado e CEP.
-        address: street ?? (current.address.includes(',') ? '' : current.address),
-        number: found.house_number ?? current.number,
+        address: street || current.address,
+        number: found.houseNumber || current.number,
         neighborhood: neighborhood ?? current.neighborhood,
       }))
       if (street) {
         setErrors((current) => ({ ...current, address: undefined, number: undefined, neighborhood: undefined }))
         setLocationMessage(`Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Confira a rua e o número.`)
       } else {
-        setErrors((current) => ({ ...current, address: 'Não encontramos uma rua precisa. Informe a rua manualmente.', number: undefined }))
-        setLocationMessage('A localização foi obtida, mas o mapa retornou apenas a região. Informe a rua e o número manualmente.')
+        setErrors((current) => ({ ...current, address: 'Não encontramos uma rua mapeada neste ponto. Informe a rua manualmente.', number: undefined }))
+        setLocationMessage('As coordenadas foram obtidas, mas o OpenStreetMap não tem uma rua cadastrada neste ponto. Confira o bairro e informe a rua manualmente.')
       }
-    } catch {
-      setLocationMessage('Localização obtida, mas não foi possível preencher o endereço automaticamente. Confira os campos.')
+    } catch (error) {
+      setLocationMessage(error instanceof Error
+        ? `Coordenadas obtidas, mas não foi possível consultar o endereço: ${error.message}`
+        : 'Coordenadas obtidas, mas não foi possível consultar o endereço. Informe-o manualmente.')
     }
   }
 
@@ -157,7 +136,7 @@ function CreateComplaintPage() {
         setIsLocating(false)
         setLocationMessage('Não foi possível obter sua localização. Autorize o acesso ou informe o endereço manualmente.')
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
   }
 
