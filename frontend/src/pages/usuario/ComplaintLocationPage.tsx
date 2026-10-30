@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { getActiveDraftId, saveDraft } from '../../drafts'
+import { reverseGeocode } from '../../geocoding'
 import '../../App.css'
+
+const InteractiveLocationMap = lazy(() => import('../../components/usuario/InteractiveLocationMap'))
+
+/** Segunda etapa do fluxo: confirma coordenadas e endereço antes da revisão. */
 
 type ComplaintData = {
   type?: string
@@ -17,6 +23,7 @@ type ComplaintData = {
   longitude?: number
 }
 
+// ===== RASCUNHO E ESTADO DA LOCALIZAÇÃO =====
 // Confirma endereço e coordenadas para compor o rascunho da denúncia.
 function ComplaintLocationPage() {
   const navigate = useNavigate()
@@ -52,8 +59,36 @@ function ComplaintLocationPage() {
       : null,
   )
 
+  // ===== GEOCODIFICAÇÃO REVERSA =====
+  // Consulta o serviço de geocodificação reversa para sugerir campos do endereço.
+  const fillAddressFromCoordinates = useCallback(async (latitude: number, longitude: number) => {
+    setIsAddressLoading(true)
+    try {
+      const reverseAddress = await reverseGeocode(latitude, longitude)
+      const street = reverseAddress.street
+      const neighborhoodName = reverseAddress.neighborhood
+      if (street) setAddress(street)
+      if (reverseAddress.houseNumber) setNumber(reverseAddress.houseNumber)
+      if (neighborhoodName) setNeighborhood(neighborhoodName)
+      if (!street) setError('As coordenadas foram obtidas, mas o OpenStreetMap não tem uma rua cadastrada neste ponto. Confira o bairro e informe a rua manualmente.')
+    } catch (error) {
+      setError(error instanceof Error
+        ? `Coordenadas obtidas, mas não foi possível consultar o endereço: ${error.message}`
+        : 'Coordenadas obtidas, mas não foi possível consultar o endereço. Confira os campos.')
+    } finally {
+      setIsAddressLoading(false)
+    }
+  }, [])
+
+  const handleMapPositionChange = useCallback((latitude: number, longitude: number) => {
+    const nextCoordinates = { latitude, longitude }
+    setCoordinates(nextCoordinates)
+    setError('')
+    void fillAddressFromCoordinates(latitude, longitude)
+  }, [fillAddressFromCoordinates])
+
   // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
-  function requestLocation() {
+  const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setError('Este navegador não oferece geolocalização. Informe a localização manualmente.')
       return
@@ -66,56 +101,15 @@ function ComplaintLocationPage() {
         const nextCoordinates = { latitude: coords.latitude, longitude: coords.longitude }
         setCoordinates(nextCoordinates)
         setIsLocating(false)
-        fillAddressFromCoordinates(nextCoordinates.latitude, nextCoordinates.longitude)
+        void fillAddressFromCoordinates(nextCoordinates.latitude, nextCoordinates.longitude)
       },
       () => {
         setIsLocating(false)
         setError('Não foi possível obter sua localização. Autorize o acesso ou tente novamente.')
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
-  }
-
-  // Consulta o serviço de geocodificação reversa para sugerir campos do endereço.
-  async function fillAddressFromCoordinates(latitude: number, longitude: number) {
-    setIsAddressLoading(true)
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`,
-        { headers: { Accept: 'application/json' } },
-      )
-      if (!response.ok) throw new Error('Não foi possível converter a localização em endereço.')
-
-      const data = await response.json() as {
-        display_name?: string
-        address?: {
-          road?: string
-          pedestrian?: string
-          residential?: string
-          house_number?: string
-          neighbourhood?: string
-          suburb?: string
-          city_district?: string
-          city?: string
-          town?: string
-          village?: string
-          postcode?: string
-        }
-      }
-      const reverseAddress = data.address ?? {}
-      const street = reverseAddress.road ?? reverseAddress.pedestrian ?? reverseAddress.residential
-      const neighborhoodName = reverseAddress.neighbourhood ?? reverseAddress.suburb ?? reverseAddress.city_district
-      if (street) setAddress(street)
-      else if (address.includes(',')) setAddress('')
-      if (reverseAddress.house_number) setNumber(reverseAddress.house_number)
-      if (neighborhoodName) setNeighborhood(neighborhoodName)
-      if (!street) setError('A localização foi obtida, mas o mapa retornou apenas a região. Informe a rua e o número manualmente.')
-    } catch {
-      setError('Localização obtida. Não foi possível preencher o endereço automaticamente; confira os campos.')
-    } finally {
-      setIsAddressLoading(false)
-    }
-  }
+  }, [fillAddressFromCoordinates])
 
   // Solicita localização automaticamente quando a etapa ainda não tem coordenadas.
   useEffect(() => {
@@ -124,8 +118,9 @@ function ComplaintLocationPage() {
       requestLocation()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [coordinates])
+  }, [coordinates, requestLocation])
 
+  // ===== VALIDAÇÃO E AVANÇO PARA REVISÃO =====
   // Valida os dados da localização e guarda a etapa seguinte no rascunho da sessão.
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -166,11 +161,13 @@ function ComplaintLocationPage() {
       ...coordinates,
     }
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(locationData))
+    saveDraft(locationData, getActiveDraftId())
     navigate('/denuncia/revisar', { state: locationData })
   }
 
   return (
     <main className="location-page">
+      {/* ===== TELA (JSX): confirmação do local antes de ComplaintReviewPage. ===== */}
       <CitizenHeader active="create" />
 
       <section className="location-shell" aria-labelledby="location-title">
@@ -186,6 +183,7 @@ function ComplaintLocationPage() {
         </div>
 
         <form className="location-form" onSubmit={handleSubmit}>
+          {/* Campos revisam o endereço sugerido e coordenadas obtidas pelo navegador. */}
           <section className="location-card">
             <div className="form-section-title">
               <span>01</span>
@@ -263,13 +261,23 @@ function ComplaintLocationPage() {
                 <small>Localização obtida automaticamente: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}. Você pode editar os campos acima.</small>
               )}
             </div>
-          </section>
-
-          <section className="map-placeholder" aria-label="Mapa da localização">
-            <div className="map-placeholder-icon" aria-hidden="true">⌖</div>
-              <h2>Confira a denúncia</h2>
-              <p>Na próxima etapa você revisa o relato completo antes de enviar.</p>
-              <span className="map-status">Localização informada manualmente</span>
+            <div className="interactive-map-card" aria-label="Mapa da localização">
+              <div className="map-placeholder-heading">
+                <div>
+                  <h2>Confira a localização no mapa</h2>
+                  <p>O marcador representa o ponto da ocorrência. Você pode arrastá-lo ou clicar em outro ponto.</p>
+                </div>
+                <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
+              </div>
+              <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
+              <InteractiveLocationMap
+                coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
+                onPositionChange={({ lat, lng }) => handleMapPositionChange(lat, lng)}
+                onRequestLocation={requestLocation}
+                isLocating={isLocating}
+              />
+              </Suspense>
+            </div>
           </section>
 
           {error && <p className="form-message complaint-submit-error" role="alert">{error}</p>}

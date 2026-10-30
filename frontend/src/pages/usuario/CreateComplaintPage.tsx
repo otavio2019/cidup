@@ -1,12 +1,20 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { getActiveDraftId, saveDraft } from '../../drafts'
+import { reverseGeocode } from '../../geocoding'
 import '../../App.css'
 
+const InteractiveLocationMap = lazy(() => import('../../components/usuario/InteractiveLocationMap'))
+
+/** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
+
+// ===== TIPOS E OPÇÕES DO FORMULÁRIO =====
 type ComplaintFormData = {
   type: string
+  categories: string[]
   description: string
   address: string
   number: string
@@ -18,6 +26,7 @@ type ComplaintErrors = Partial<Record<keyof ComplaintFormData | 'photo', string>
 
 const initialForm: ComplaintFormData = {
   type: '',
+  categories: [],
   description: '',
   address: '',
   number: '',
@@ -38,18 +47,25 @@ const complaintTypes = [
 
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024
 
+function normalizeComplaintForm(source: unknown): ComplaintFormData {
+  if (!source || typeof source !== 'object') return initialForm
+  const draft = source as Partial<ComplaintFormData>
+  const categories = Array.isArray(draft.categories)
+    ? [...new Set(draft.categories.filter((category): category is string => typeof category === 'string'))]
+    : draft.type ? [draft.type] : []
+  return { ...initialForm, ...draft, categories, type: categories[0] ?? '' }
+}
+
+// ===== ESTADO E RASCUNHO DA DENÚNCIA =====
 // Coleta os dados iniciais da ocorrência e preserva rascunho e localização entre etapas.
 function CreateComplaintPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
   const [form, setForm] = useState<ComplaintFormData>(() => {
-    const routeDraft = routeLocation.state as Partial<ComplaintFormData> | null
-    if (routeDraft) return { ...initialForm, ...routeDraft }
+    if (routeLocation.state) return normalizeComplaintForm(routeLocation.state)
     try {
       const savedDraft = sessionStorage.getItem('cidup-complaint-draft')
-      return savedDraft
-        ? { ...initialForm, ...JSON.parse(savedDraft) as Partial<ComplaintFormData> }
-        : initialForm
+      return savedDraft ? normalizeComplaintForm(JSON.parse(savedDraft)) : initialForm
     } catch {
       return initialForm
     }
@@ -73,52 +89,33 @@ function CreateComplaintPage() {
   })
   const [isLocating, setIsLocating] = useState(false)
   const [locationMessage, setLocationMessage] = useState('')
+  const [draftMessage, setDraftMessage] = useState('')
 
+  // ===== LOCALIZAÇÃO E GEOCODIFICAÇÃO =====
   // Usa coordenadas para sugerir endereço e bairro, sem impedir ajustes manuais.
   async function fillAddressFromCoordinates(latitude: number, longitude: number) {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=pt-BR`,
-        { headers: { Accept: 'application/json' } },
-      )
-      if (!response.ok) throw new Error('reverse geocoding failed')
-
-      const data = await response.json() as {
-        display_name?: string
-        address?: {
-          road?: string
-          pedestrian?: string
-          residential?: string
-          house_number?: string
-          neighbourhood?: string
-          suburb?: string
-          city_district?: string
-          city?: string
-          town?: string
-          village?: string
-          postcode?: string
-        }
-      }
-      const found = data.address ?? {}
-      const street = found.road ?? found.pedestrian ?? found.residential
-      const neighborhood = found.neighbourhood ?? found.suburb ?? found.city_district
+      const found = await reverseGeocode(latitude, longitude)
+      const street = found.street
+      const neighborhood = found.neighborhood
 
       setForm((current) => ({
         ...current,
-        // Nunca usamos display_name como rua: ele pode ser apenas cidade, estado e CEP.
-        address: street ?? (current.address.includes(',') ? '' : current.address),
-        number: found.house_number ?? current.number,
+        address: street || current.address,
+        number: found.houseNumber || current.number,
         neighborhood: neighborhood ?? current.neighborhood,
       }))
       if (street) {
         setErrors((current) => ({ ...current, address: undefined, number: undefined, neighborhood: undefined }))
         setLocationMessage(`Localização obtida: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Confira a rua e o número.`)
       } else {
-        setErrors((current) => ({ ...current, address: 'Não encontramos uma rua precisa. Informe a rua manualmente.', number: undefined }))
-        setLocationMessage('A localização foi obtida, mas o mapa retornou apenas a região. Informe a rua e o número manualmente.')
+        setErrors((current) => ({ ...current, address: 'Não encontramos uma rua mapeada neste ponto. Informe a rua manualmente.', number: undefined }))
+        setLocationMessage('As coordenadas foram obtidas, mas o OpenStreetMap não tem uma rua cadastrada neste ponto. Confira o bairro e informe a rua manualmente.')
       }
-    } catch {
-      setLocationMessage('Localização obtida, mas não foi possível preencher o endereço automaticamente. Confira os campos.')
+    } catch (error) {
+      setLocationMessage(error instanceof Error
+        ? `Coordenadas obtidas, mas não foi possível consultar o endereço: ${error.message}`
+        : 'Coordenadas obtidas, mas não foi possível consultar o endereço. Informe-o manualmente.')
     }
   }
 
@@ -141,7 +138,7 @@ function CreateComplaintPage() {
         setIsLocating(false)
         setLocationMessage('Não foi possível obter sua localização. Autorize o acesso ou informe o endereço manualmente.')
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
   }
 
@@ -151,6 +148,7 @@ function CreateComplaintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ===== EDIÇÃO, ANEXO E VALIDAÇÃO =====
   // Atualiza o campo alterado e limpa a validação antiga daquele campo.
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -166,6 +164,17 @@ function CreateComplaintPage() {
       ...current,
       [name]: undefined,
     }))
+    setSubmitError('')
+  }
+
+  function handleCategoryChange(category: string, checked: boolean) {
+    setForm((current) => {
+      const categories = checked
+        ? [...new Set([...current.categories, category])]
+        : current.categories.filter((item) => item !== category)
+      return { ...current, categories, type: categories[0] ?? '' }
+    })
+    setErrors((current) => ({ ...current, type: undefined }))
     setSubmitError('')
   }
 
@@ -212,8 +221,8 @@ function CreateComplaintPage() {
       nextErrors.photo = errors.photo
     }
 
-    if (!form.type) {
-      nextErrors.type = 'Selecione o tipo do problema.'
+    if (form.categories.length === 0) {
+      nextErrors.type = 'Selecione ao menos uma ocorrência.'
     }
 
     if (!trimmedDescription) {
@@ -244,6 +253,20 @@ function CreateComplaintPage() {
     }
 
     return nextErrors
+  }
+
+  // ===== VALIDAÇÃO E PRÓXIMA ETAPA =====
+  // Salva o que já foi preenchido (sem validar) para o cidadão continuar depois em /rascunhos.
+  function handleSaveDraft() {
+    const hasContent = Object.values(form).some((value) => typeof value === 'string' && value.trim()) || form.categories.length > 0 || photo
+    if (!hasContent) {
+      setDraftMessage('Preencha ao menos um campo para salvar o rascunho.')
+      return
+    }
+    const draft = { ...form, photoName: photo?.name ?? null, ...(coordinates ?? {}) }
+    sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(draft))
+    saveDraft(draft, getActiveDraftId())
+    setDraftMessage('Rascunho salvo. Você pode continuar depois em “Rascunhos”.')
   }
 
   // Persiste o rascunho validado e encaminha o cidadão à confirmação da localização.
@@ -280,12 +303,14 @@ function CreateComplaintPage() {
     }
 
     sessionStorage.setItem('cidup-complaint-draft', JSON.stringify(complaintDraft))
+    saveDraft(complaintDraft, getActiveDraftId())
     setSubmitError('')
     navigate('/registrar-denuncia/localizacao', { state: complaintDraft })
   }
 
   return (
     <main className="complaint-page">
+      {/* ===== TELA (JSX): formulário inicial; continuar segue para ComplaintLocationPage. ===== */}
       <CitizenHeader active="create" />
       <section className="complaint-shell" aria-labelledby="complaint-title">
         <div className="complaint-heading">
@@ -299,6 +324,7 @@ function CreateComplaintPage() {
         </div>
 
         <form className="complaint-form" onSubmit={handleSubmit} noValidate>
+          {/* Relato e tipo compõem o rascunho que será revisado nas etapas seguintes. */}
           <div className="form-section">
             <div className="form-section-title">
               <span>01</span>
@@ -309,22 +335,19 @@ function CreateComplaintPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="type">Tipo do problema <span>*</span></label>
-              <select
-                id="type"
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.type)}
-                aria-describedby={errors.type ? 'type-error' : undefined}
-              >
-                <option value="">Selecione uma opção</option>
+              <span className="complaint-category-label">Ocorrências identificadas <span>*</span></span>
+              <div className="complaint-category-options" role="group" aria-label="Selecione uma ou mais ocorrências">
                 {complaintTypes.map((complaintType) => (
-                  <option key={complaintType} value={complaintType}>
-                    {complaintType}
-                  </option>
+                  <label className="complaint-category-option" key={complaintType}>
+                    <input
+                      type="checkbox"
+                      checked={form.categories.includes(complaintType)}
+                      onChange={(event) => handleCategoryChange(complaintType, event.target.checked)}
+                    />
+                    <span>{complaintType}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
               {errors.type && <p className="field-error" id="type-error">{errors.type}</p>}
             </div>
 
@@ -348,6 +371,7 @@ function CreateComplaintPage() {
             </div>
           </div>
 
+          {/* Endereço e coordenadas seguem para confirmação na ComplaintLocationPage. */}
           <div className="form-section">
             <div className="form-section-title">
               <span>02</span>
@@ -434,8 +458,30 @@ function CreateComplaintPage() {
               </button>
               {locationMessage && <small>{locationMessage}</small>}
             </div>
+            <div className="interactive-map-card" aria-label="Mapa da localização da denúncia">
+              <div className="map-placeholder-heading">
+                <div>
+                  <h2>Confira o local no mapa</h2>
+                  <p>Clique no mapa ou arraste o marcador para ajustar o ponto da ocorrência.</p>
+                </div>
+                <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
+              </div>
+              <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
+                <InteractiveLocationMap
+                  coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
+                onPositionChange={({ lat, lng }) => {
+                  setCoordinates({ latitude: lat, longitude: lng })
+                  setLocationMessage('')
+                  void fillAddressFromCoordinates(lat, lng)
+                }}
+                onRequestLocation={requestLocation}
+                isLocating={isLocating}
+              />
+              </Suspense>
+            </div>
           </div>
 
+          {/* Anexo opcional é convertido para o rascunho antes de avançar. */}
           <div className="form-section">
             <div className="form-section-title">
               <span>03</span>
@@ -466,6 +512,8 @@ function CreateComplaintPage() {
 
           <div className="complaint-actions">
             <Link className="secondary-action" to="/dashboard">Cancelar</Link>
+            <button className="secondary-action" type="button" onClick={handleSaveDraft}>Salvar rascunho</button>
+            {draftMessage && <p className="form-message" role="status">{draftMessage}</p>}
             <button className="primary-action" type="submit">
               Continuar para localização <span aria-hidden="true">→</span>
             </button>

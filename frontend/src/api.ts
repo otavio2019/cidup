@@ -1,3 +1,4 @@
+/** Cliente HTTP do frontend: mantém o contrato da API e a sessão por cookie. */
 // Em produção, usa o proxy da Vercel para manter o cookie de sessão no mesmo domínio.
 const API_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL ?? 'http://localhost:3000')
 // Evita configurar uma API sem HTTPS em produção.
@@ -22,6 +23,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   return data
 }
 
+// Estruturas retornadas por /api/complaints, compartilhadas entre o dashboard e as telas de denúncias.
 export type Complaint = {
   id: number
   protocol: string
@@ -35,10 +37,17 @@ export type Complaint = {
   registeredAt: string
   type: { name: string }
   history: ComplaintHistory[]
+  categories: string[]
+  latitude: number
+  longitude: number
+  photo: string | null
+  updatedAt: string
 }
 
 export type ComplaintHistory = {
   id: number
   description: string
   observation: string
+  createdAt: string
+  photo: string
 }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-type CitizenSection = 'home' | 'create' | 'complaints' | 'profile'
+type CitizenSection = 'home' | 'create' | 'complaints' | 'drafts' | 'profile'
 
 // Renderiza a navegação principal do cidadão e destaca a seção em que ele está.
 function CitizenHeader({ active }: { active: CitizenSection }) {
@@ -13,11 +13,12 @@ function CitizenHeader({ active }: { active: CitizenSection }) {
         </span>
       </Link>
 
+      {/* Atalhos para dashboard, criação e listagem de denúncias; o perfil tem acesso próprio ao lado. */}
       <nav className="dashboard-nav" aria-label="Navegação principal">
         <Link className={active === 'home' ? 'active' : undefined} to="/dashboard">Início</Link>
         <Link className={active === 'create' ? 'active' : undefined} to="/registrar-denuncia">Registrar denúncia</Link>
         <Link className={active === 'complaints' ? 'active' : undefined} to="/minhas-denuncias">Minhas denúncias</Link>
-      </nav>
+                <Link className={active === 'drafts' ? 'active' : undefined} to="/rascunhos">Rascunhos</Link>      </nav>
 
       <Link className={`profile-button${active === 'profile' ? ' is-current' : ''}`} to="/perfil">
         <span className="profile-icon" aria-hidden="true">●</span>

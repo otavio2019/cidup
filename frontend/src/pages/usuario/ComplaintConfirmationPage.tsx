@@ -4,6 +4,9 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Confirma o registro, exibe o protocolo retornado pela API e oferece impressão. */
+
+// ===== DADOS DO REGISTRO CONFIRMADO =====
 type ComplaintData = {
   protocol?: string
   registeredAt?: string
@@ -15,8 +18,11 @@ type ComplaintData = {
   photoName?: string | null
   number?: string
   type?: string | { name: string }
+  categories?: string[]
 }
 
+// ===== RECUPERAÇÃO DO PROTOCOLO =====
+// Usa o resultado de POST /api/complaints guardado pela ComplaintReviewPage; sem protocolo, retorna ao painel.
 // Apresenta o protocolo criado pela API e o resumo da denúncia registrada.
 function ComplaintConfirmationPage() {
   const location = useLocation()
@@ -43,12 +49,14 @@ function ComplaintConfirmationPage() {
     ? complaint.type
     : complaint.type?.name ?? 'Não informado'
 
+  // ===== AÇÕES DO PROTOCOLO =====
   function exportProtocolPdf() {
     window.print()
   }
 
   return (
     <main className="confirmation-page">
+      {/* ===== TELA (JSX): apresenta o protocolo criado na etapa de revisão. ===== */}
       <CitizenHeader active="complaints" />
       <section className="confirmation-card" aria-labelledby="confirmation-title">
         <div className="success-icon" aria-hidden="true">✓</div>
@@ -63,11 +71,12 @@ function ComplaintConfirmationPage() {
           <strong>{protocol}</strong>
         </div>
 
+        {/* Resumo reaproveita os dados confirmados e encaminha à lista de denúncias. */}
         <div className="complaint-summary">
           <h2>Resumo da denúncia</h2>
           <div className="summary-item">
-            <span>Tipo</span>
-            <strong>{complaintType}</strong>
+            <span>Ocorrências</span>
+            <strong>{complaint.categories?.join(', ') || complaintType}</strong>
           </div>
           <div className="summary-item">
             <span>Descrição</span>

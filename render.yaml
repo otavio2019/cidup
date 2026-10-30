@@ -16,7 +16,23 @@ services:
       - key: AUTH_TOKEN_SECRET
         generateValue: true
       - key: FRONTEND_ORIGINS
+        value: https://cidup.vercel.app,https://otavio2019.github.io
+      - key: FRONTEND_URL
+        value: https://cidup.vercel.app
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
         sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: EMAIL_DISABLED
+        value: "false"
       - key: RESPONSAVEL_NAME
         sync: false
       - key: RESPONSAVEL_EMAIL

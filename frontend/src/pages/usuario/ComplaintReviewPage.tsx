@@ -4,10 +4,15 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { deleteDraft, getActiveDraftId } from '../../drafts'
 import '../../App.css'
 
+/** Última etapa do cidadão: revisa o rascunho e cria a denúncia somente após confirmação. */
+
+// ===== MODELO DO RASCUNHO E ORGANIZAÇÃO RESPONSÁVEL =====
 type ComplaintDraft = {
   type?: string
+  categories?: string[]
   description?: string
   address?: string
   number?: string
@@ -41,6 +46,12 @@ function findResponsibleOrganization(type: string, organizations: Organization[]
   })?.nome
 }
 
+function findResponsibleOrganizations(types: string[], organizations: Organization[]) {
+  return [...new Set(types
+    .map((type) => findResponsibleOrganization(type, organizations))
+    .filter((name): name is string => Boolean(name)))]
+}
+
 // Recupera o rascunho da navegação ou do armazenamento temporário da sessão.
 function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   if (state) return state
@@ -52,6 +63,7 @@ function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   }
 }
 
+// ===== ESTADO E CONSULTA DE ÓRGÃOS =====
 // Revisa a denúncia e só a envia à API após o cidadão confirmar os dados.
 function ComplaintReviewPage() {
   const location = useLocation()
@@ -62,23 +74,29 @@ function ComplaintReviewPage() {
   )
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [organizationName, setOrganizationName] = useState('')
+  const [organizationNames, setOrganizationNames] = useState<string[]>([])
 
   useEffect(() => {
     if (!draft?.type) return undefined
     let active = true
+    // Consulta GET /api/orgaos para exibir o órgão sugerido conforme o tipo da ocorrência.
     apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
       .then(({ orgaos }) => {
-        if (active) setOrganizationName(findResponsibleOrganization(draft.type!, orgaos) ?? '')
+        if (active) {
+          const types = draft.categories?.length ? draft.categories : [draft.type!]
+          setOrganizationNames(findResponsibleOrganizations(types, orgaos))
+        }
       })
       .catch(() => undefined)
     return () => { active = false }
-  }, [draft?.type])
+  }, [draft?.type, draft?.categories])
 
   if (!draft?.type || !draft.description || !draft.address || !draft.number || !draft.neighborhood) {
     return <Navigate to="/registrar-denuncia" replace />
   }
 
+  // ===== ENVIO E CONFIRMAÇÃO =====
+  // Envia POST /api/complaints e, com o protocolo retornado, segue para ComplaintConfirmationPage.
   // Registra a denúncia, converte os dados recebidos e abre a tela de confirmação.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -93,6 +111,7 @@ function ComplaintReviewPage() {
           createdAt: string
           status: string
           type: { name: string }
+          categories: string[]
         }
       }>('/api/complaints', {
         method: 'POST',
@@ -102,6 +121,7 @@ function ComplaintReviewPage() {
       const registeredComplaint = {
         ...draft,
         type: data.complaint.type.name,
+        categories: data.complaint.categories,
         protocol: data.complaint.protocol,
         registeredAt: data.complaint.createdAt,
         status: ({
@@ -115,6 +135,8 @@ function ComplaintReviewPage() {
         id: data.complaint.id,
       }
       sessionStorage.setItem('cidup-complaint-confirmation', JSON.stringify(registeredComplaint))
+      const activeDraftId = getActiveDraftId()
+      if (activeDraftId) deleteDraft(activeDraftId)
       sessionStorage.removeItem('cidup-complaint-draft')
       navigate('/denuncia/confirmacao', { state: registeredComplaint })
     } catch (submitError) {
@@ -126,6 +148,7 @@ function ComplaintReviewPage() {
 
   return (
     <main className="review-page">
+      {/* ===== TELA (JSX): conferência do rascunho antes do POST /api/complaints. ===== */}
       <CitizenHeader active="create" />
 
       <section className="review-shell" aria-labelledby="review-title">
@@ -137,13 +160,15 @@ function ComplaintReviewPage() {
         </div>
 
         <form className="review-form" onSubmit={handleSubmit}>
+          {/* Resume relato e anexo recebidos da etapa de criação. */}
           <section className="review-card">
             <h2>Sobre o problema</h2>
-            <ReviewField label="Tipo de ocorrência" value={draft.type} />
+            <ReviewField label="Ocorrências" value={(draft.categories?.length ? draft.categories : [draft.type]).filter(Boolean).join(', ')} />
             <ReviewField label="Descrição" value={draft.description} />
             {draft.photoName && <ReviewField label="Foto anexada" value={draft.photoName} />}
           </section>
 
+          {/* Exibe endereço, coordenadas e órgão sugerido pela consulta à API. */}
           <section className="review-card">
             <h2>Local da ocorrência</h2>
             <ReviewField label="Endereço" value={`${draft.address}, ${draft.number}`} />
@@ -152,7 +177,7 @@ function ComplaintReviewPage() {
             {typeof draft.latitude === 'number' && typeof draft.longitude === 'number' && (
               <ReviewField label="Coordenadas" value={`${draft.latitude.toFixed(5)}, ${draft.longitude.toFixed(5)}`} />
             )}
-            <ReviewField label="Órgão responsável" value={organizationName || 'Encaminhamento automático conforme o tipo da ocorrência'} />
+            <ReviewField label="Órgãos responsáveis" value={organizationNames.join(', ') || 'Encaminhamento automático conforme as ocorrências'} />
           </section>
 
           <section className="review-card review-photo-card">
@@ -179,6 +204,7 @@ function ComplaintReviewPage() {
   )
 }
 
+// ===== CAMPO REUTILIZÁVEL DA REVISÃO =====
 // Exibe um rótulo e seu valor como uma linha reutilizável da revisão.
 function ReviewField({ label, value }: { label: string; value: string }) {
   return <div className="review-field"><dt>{label}</dt><dd>{value}</dd></div>

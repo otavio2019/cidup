@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import './ResponsiblePanelPage.css'
 
+/** Área administrativa: consulta a API, atualiza denúncias e calcula relatórios locais. */
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Encaminhada' | 'Em atendimento' | 'Resolvida' | 'Negada'
 
 type AdminComplaint = {
@@ -15,7 +16,12 @@ type AdminComplaint = {
   createdAt: string
   status: ComplaintStatus
   category: string
+  categories: string[]
+  responsibleOrganizations?: string[]
   address: string
+  latitude: number
+  longitude: number
+  updatedAt: string
   photo?: string | null
   citizen: string
   email: string
@@ -27,10 +33,21 @@ type AdminComplaint = {
   history: ComplaintHistory[]
 }
 
+type PasswordRecoveryRequest = {
+  id: number
+  requestedAt: string
+  citizen: string
+  email: string
+  phone: string | null
+  cpf: string | null
+}
+
 type ComplaintHistory = {
   id: number
   description: string
   observation: string
+  createdAt: string
+  photo: string
 }
 
 type ApiComplaint = {
@@ -41,8 +58,13 @@ type ApiComplaint = {
   address: string
   status: string
   createdAt: string
+  updatedAt: string
+  latitude: number
+  longitude: number
   photo?: string | null
   type: { name: string }
+  categories: string[]
+  responsibleOrganizations?: string[]
   orgao?: { id_orgao: number; nome: string } | null
   citizen?: string
   citizenEmail?: string
@@ -86,10 +108,56 @@ function percent(part: number, total: number) {
   return total === 0 ? 0 : (part / total) * 100
 }
 
+const NEARBY_RADIUS_METERS = 50
+
+function distanceInMeters(first: AdminComplaint, second: AdminComplaint) {
+  const earthRadius = 6371000
+  const radians = (value: number) => value * Math.PI / 180
+  const latitudeDelta = radians(second.latitude - first.latitude)
+  const longitudeDelta = radians(second.longitude - first.longitude)
+  const firstLatitude = radians(first.latitude)
+  const secondLatitude = radians(second.latitude)
+  const value = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2
+  return 2 * earthRadius * Math.asin(Math.sqrt(value))
+}
+
+function shareCategory(first: AdminComplaint, second: AdminComplaint) {
+  return first.categories.some((category) => second.categories.includes(category))
+}
+
+function groupNearbyComplaints(records: AdminComplaint[]) {
+  const groups: AdminComplaint[][] = []
+  const assigned = new Set<number>()
+
+  records.forEach((record, index) => {
+    if (assigned.has(index)) return
+    const group = [record]
+    assigned.add(index)
+    let changed = true
+    while (changed) {
+      changed = false
+      records.forEach((candidate, candidateIndex) => {
+        if (assigned.has(candidateIndex)) return
+        if (group.some((member) => shareCategory(member, candidate)
+          && distanceInMeters(member, candidate) <= NEARBY_RADIUS_METERS)) {
+          group.push(candidate)
+          assigned.add(candidateIndex)
+          changed = true
+        }
+      })
+    }
+    groups.push(group)
+  })
+
+  return groups
+}
+
 const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhada', 'Em atendimento', 'Resolvida', 'Negada']
 const navigation = [
   { path: '/responsavel/dashboard', label: 'Painel' },
   { path: '/responsavel/denuncias', label: 'Denúncias' },
+  { path: '/responsavel/recuperacao-senha', label: 'Recuperação de senha' },
   { path: '/responsavel/tipos', label: 'Tipos de ocorrência' },
   { path: '/responsavel/relatorios', label: 'Relatórios' },
   { path: '/responsavel/configuracoes', label: 'Configurações' },
@@ -132,22 +200,29 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
     neighborhood: '',
     date: new Date(complaint.createdAt).toLocaleDateString('pt-BR'),
     createdAt: complaint.createdAt,
+    updatedAt: complaint.updatedAt ?? complaint.createdAt,
     status: apiStatusToLabel(complaint.status),
     category: complaint.type.name,
+    categories: complaint.categories?.length ? complaint.categories : [complaint.type.name],
+    responsibleOrganizations: complaint.responsibleOrganizations,
     address: complaint.address,
+    latitude: complaint.latitude,
+    longitude: complaint.longitude,
     photo: complaint.photo ?? null,
     citizen: complaint.citizen || 'Cidadão não informado',
     email: complaint.citizenEmail || 'E-mail não informado',
     phone: complaint.citizenPhone || 'Telefone não informado',
     cpf: complaint.citizenCpf || 'CPF não informado',
     citizenPhoto: complaint.citizenPhoto ?? null,
-    sector: complaint.orgao?.nome ?? 'Não encaminhada',
+    sector: complaint.responsibleOrganizations?.length
+      ? complaint.responsibleOrganizations.join(', ')
+      : complaint.orgao?.nome ?? 'Não encaminhada',
     sectorId: complaint.orgao?.id_orgao,
     history: complaint.history ?? [],
   }
 }
 
-// Reúne o painel administrativo e mantém em estado local os filtros e dados demonstrativos.
+// Reúne o painel administrativo e mantém em estado local os filtros e dados carregados da API.
 function ResponsiblePanelPage() {
   const location = useLocation()
   const section = location.pathname.split('/')[2] || 'dashboard'
@@ -156,6 +231,9 @@ function ResponsiblePanelPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [profile, setProfile] = useState<ResponsibleProfile | null>(null)
+  const [recoveryRequests, setRecoveryRequests] = useState<PasswordRecoveryRequest[]>([])
+  const [temporaryPasswords, setTemporaryPasswords] = useState<Record<number, string>>({})
+  const [recoveryMessage, setRecoveryMessage] = useState('')
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
@@ -167,16 +245,19 @@ function ResponsiblePanelPage() {
 
   useEffect(() => {
     let active = true
+    // Reúne denúncias, órgãos de encaminhamento e sessão do responsável para montar o painel.
     Promise.all([
       apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
       apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
       apiRequest<{ user: ResponsibleProfile }>('/api/auth/session'),
+      apiRequest<{ requests: PasswordRecoveryRequest[] }>('/api/admin/password-recovery-requests'),
     ])
-      .then(([complaintData, organizationData, sessionData]) => {
+      .then(([complaintData, organizationData, sessionData, recoveryData]) => {
         if (!active) return
         setComplaints(complaintData.complaints.map(mapApiComplaint))
         setOrganizations(organizationData.orgaos)
         setProfile(sessionData.user)
+        setRecoveryRequests(recoveryData.requests)
       })
       .catch((error) => {
         if (!active) return
@@ -199,7 +280,9 @@ function ResponsiblePanelPage() {
   )
   const categories = useMemo(() => {
     const counts = new Map<string, number>()
-    periodComplaints.forEach((complaint) => counts.set(complaint.category, (counts.get(complaint.category) ?? 0) + 1))
+    periodComplaints.forEach((complaint) => {
+      complaint.categories.forEach((category) => counts.set(category, (counts.get(category) ?? 0) + 1))
+    })
     return [...counts.entries()].sort((a, b) => b[1] - a[1])
   }, [periodComplaints])
   // Filtra denúncias pelo texto de busca, pelo status e pelo período selecionados.
@@ -221,6 +304,10 @@ function ResponsiblePanelPage() {
       return matchesQuery && (statusFilter === 'Todos' || complaint.status === statusFilter)
     })
   }, [periodComplaints, query, statusFilter])
+  const visibleComplaintGroups = useMemo(
+    () => groupNearbyComplaints(visibleComplaints),
+    [visibleComplaints],
+  )
 
   const heading = selectedComplaint && section === 'denuncias'
     ? 'Detalhes da denúncia'
@@ -263,13 +350,95 @@ function ResponsiblePanelPage() {
     }
   }
 
+  async function setTemporaryPassword(event: React.FormEvent<HTMLFormElement>, requestId: number) {
+    event.preventDefault()
+    setRecoveryMessage('')
+    try {
+      await apiRequest(`/api/admin/password-recovery-requests/${requestId}/temporary-password`, {
+        method: 'POST',
+        body: JSON.stringify({ temporaryPassword: temporaryPasswords[requestId] ?? '' }),
+      })
+      const refreshed = await apiRequest<{ requests: PasswordRecoveryRequest[] }>('/api/admin/password-recovery-requests')
+      setRecoveryRequests(refreshed.requests)
+      setTemporaryPasswords((current) => {
+        const next = { ...current }
+        delete next[requestId]
+        return next
+      })
+      setRecoveryMessage('Senha temporária definida. Entregue-a ao cidadão por um canal confiável.')
+    } catch (error) {
+      setRecoveryMessage(error instanceof Error ? error.message : 'Não foi possível definir a senha temporária.')
+    }
+  }
+
+  function renderPasswordRecovery() {
+    return (
+      <>
+        <div className="rp-page-heading"><div><h1>Recuperação de senha</h1><p>Analise solicitações e defina uma senha temporária para o cidadão.</p></div></div>
+        {recoveryMessage && <p className="rp-success-message" role="status">{recoveryMessage}</p>}
+        <section className="rp-panel rp-recovery-list" aria-label="Solicitações de recuperação pendentes">
+          {recoveryRequests.length === 0 && <p className="rp-empty-state">Nenhuma solicitação pendente.</p>}
+          {recoveryRequests.map((item) => (
+            <article className="rp-recovery-request" key={item.id}>
+              <div className="rp-recovery-citizen">
+                <h2>{item.citizen}</h2>
+                <p>{item.email} · {item.phone ?? 'Telefone não informado'} · CPF {item.cpf ?? 'não informado'}</p>
+                <small>Solicitada em {new Date(item.requestedAt).toLocaleString('pt-BR')}</small>
+              </div>
+              <form className="rp-recovery-form" onSubmit={(event) => void setTemporaryPassword(event, item.id)}>
+                <label htmlFor={`temporary-password-${item.id}`}>Senha temporária</label>
+                <input
+                  id={`temporary-password-${item.id}`}
+                  type="text"
+                  autoComplete="off"
+                  minLength={8}
+                  maxLength={1024}
+                  required
+                  value={temporaryPasswords[item.id] ?? ''}
+                  onChange={(event) => setTemporaryPasswords((current) => ({ ...current, [item.id]: event.target.value }))}
+                />
+                <button className="rp-primary-button" type="submit">Definir senha</button>
+              </form>
+            </article>
+          ))}
+        </section>
+      </>
+    )
+  }
+
   // Gera um arquivo CSV com os dados atualmente disponíveis na lista.
   function exportReport() {
     const rows = [
-      ['Protocolo', 'Denúncia', 'Bairro', 'Data', 'Status', 'Categoria'],
-      ...periodComplaints.map((complaint) => [complaint.protocol, complaint.title, complaint.neighborhood, complaint.date, complaint.status, complaint.category]),
+      [
+        'Protocolo', 'Denúncia', 'Nome do cidadão', 'CPF', 'E-mail', 'Telefone',
+        'Descrição completa', 'Endereço', 'Latitude', 'Longitude', 'Órgão responsável',
+        'Status', 'Categorias', 'Histórico e observações', 'Data da última atualização', 'Foto / link',
+      ],
+      ...periodComplaints.map((complaint) => [
+        complaint.protocol,
+        complaint.title,
+        complaint.citizen,
+        complaint.cpf,
+        complaint.email,
+        complaint.phone,
+        complaint.description,
+        complaint.address,
+        String(complaint.latitude),
+        String(complaint.longitude),
+        complaint.sector,
+        complaint.status,
+        complaint.categories.join(', '),
+        complaint.history.map((item) => [
+          new Date(item.createdAt).toLocaleString('pt-BR'),
+          item.description,
+          item.observation,
+          item.photo && item.photo !== 'sem-foto' ? `Foto: ${item.photo}` : '',
+        ].filter(Boolean).join(' — ')).join('\n'),
+        new Date(complaint.updatedAt).toLocaleString('pt-BR'),
+        complaint.photo ?? '',
+      ]),
     ]
-    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(';')).join('\n')
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(';')).join('\n')
     const file = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(file)
     const link = document.createElement('a')
@@ -348,7 +517,7 @@ function ResponsiblePanelPage() {
               <Info label="E-mail" value={selectedComplaint.email} />
               <Info label="Telefone" value={selectedComplaint.phone} />
               <Info label="CPF" value={selectedComplaint.cpf} />
-              <Info label="Categoria" value={selectedComplaint.category} />
+              <Info label="Categorias" value={selectedComplaint.categories.join(', ')} />
               {selectedComplaint.photo && <div className="rp-photo-field"><strong>Foto anexada</strong><img src={selectedComplaint.photo} alt="Foto anexada pelo cidadão à denúncia" /></div>}
             </section>
             <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
@@ -392,10 +561,27 @@ function ResponsiblePanelPage() {
         </section>
         <section className="rp-panel rp-table-panel">
           <div className="rp-table-scroll"><table className="rp-table"><thead><tr><th>Protocolo</th><th>Descrição</th><th>Bairro</th><th>Data</th><th>Status</th><th>Ação</th></tr></thead>
-              <tbody>{visibleComplaints.map((complaint) => <tr key={complaint.protocol}><td className="rp-protocol">{complaint.protocol}</td><td><strong>{complaint.title}</strong><small>{complaint.category}</small></td><td>{complaint.neighborhood || '—'}</td><td>{complaint.date}</td><td><StatusBadge status={complaint.status} /></td><td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
+              <tbody>{visibleComplaintGroups.map((group) => {
+                const complaint = group[0]!
+                const statuses = new Set(group.map((item) => item.status))
+                return <tr key={complaint.protocol} className={group.length > 1 ? 'rp-group-row' : undefined}>
+                  <td className="rp-protocol">
+                    <strong>{group.length > 1 ? `${group.length} denúncias agrupadas` : complaint.protocol}</strong>
+                    {group.length > 1 && <details className="rp-group-details">
+                      <summary>Ver protocolos</summary>
+                      <div>{group.map((item) => <button className="rp-group-protocol" type="button" key={item.protocol} onClick={() => { setSelectedProtocol(item.protocol); setStatus(item.status); setSector(item.sectorId ? item.sector : ''); setSavedUpdate(false) }}>{item.protocol}</button>)}</div>
+                    </details>}
+                  </td>
+                  <td><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
+                  <td>{complaint.neighborhood || '—'}</td>
+                  <td>{complaint.date}</td>
+                  <td>{statuses.size === 1 ? <StatusBadge status={complaint.status} /> : <span className="rp-status rp-status-mixed">Vários status</span>}</td>
+                  <td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td>
+                </tr>
+              })}</tbody>
           </table></div>
           {visibleComplaints.length === 0 && <p className="rp-empty-state">Nenhuma denúncia encontrada com esses filtros.</p>}
-          <div className="rp-table-footer"><span>{visibleComplaints.length} de {complaints.length} denúncias</span></div>
+          <div className="rp-table-footer"><span>{visibleComplaintGroups.length} grupos / {visibleComplaints.length} denúncias</span></div>
         </section>
       </>
     )
@@ -456,7 +642,9 @@ function ResponsiblePanelPage() {
     )
   }
 
+  // Seleciona o conteúdo conforme a rota /responsavel/*, incluindo relatórios e configurações.
   const body = section === 'denuncias' ? renderComplaints()
+    : section === 'recuperacao-senha' ? renderPasswordRecovery()
     : section === 'tipos' ? renderTypes()
       : section === 'relatorios' ? renderReports()
         : section === 'configuracoes' ? renderSettings()
@@ -472,6 +660,7 @@ function ResponsiblePanelPage() {
       <div className="rp-main-column">
         <header className="rp-topbar"><h2>{heading}</h2><button type="button" className="rp-profile-button">{profile?.name ?? ''}</button></header>
         <main className="rp-content">
+          {/* Exibe o estado de carregamento/erro ou a seção selecionada com dados da API. */}
           {loadError && <p className="rp-error-message" role="alert">{loadError}</p>}
           {loading ? <p className="rp-empty-state" aria-busy="true">Carregando dados do painel...</p> : body}
         </main>

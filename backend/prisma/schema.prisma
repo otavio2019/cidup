@@ -8,13 +8,16 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+/// Registro de uma ocorrência cidadã, incluindo localização, foto, órgão e status.
 model denuncia {
   id_denuncia   Int         @id @default(autoincrement())
   titulo        String      @db.VarChar(200)
   descricao     String
   tipo          String      @db.VarChar(100)
+  categorias    String[]    @default([])
   status        String      @db.VarChar(50)
   data_registro DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  atualizada_em DateTime    @default(now()) @updatedAt @db.Timestamp(3)
   endereco      String
   latitude      Float
   longitude     Float
@@ -27,11 +30,13 @@ model denuncia {
   historico     historico[]
 }
 
+/// Atualização ou observação de atendimento vinculada a uma denúncia.
 model historico {
   id_historico   Int          @id @default(autoincrement())
   descricao      String
   foto           String
   observacao     String
+  data_criacao   DateTime     @default(now()) @db.Timestamp(3)
   id_usuario     Int?
   id_responsavel Int?
   id_denuncia    Int
@@ -40,6 +45,7 @@ model historico {
   responsavel    responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// Órgão público que recebe e atende denúncias.
 model orgao {
   id_orgao         Int           @id @default(autoincrement())
   nome             String        @db.VarChar(150)
@@ -51,6 +57,7 @@ model orgao {
   responsaveis     responsavel[]
 }
 
+/// Conta administrativa vinculada a um órgão.
 model responsavel {
   id_responsavel Int         @id @default(autoincrement())
   nome           String      @db.VarChar(150)
@@ -60,8 +67,10 @@ model responsavel {
   id_orgao       Int
   orgao          orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
   historicos     historico[]
+  recovery_requests_resolved password_recovery_request[] @relation("RecoveryRequestResolvedBy")
 }
 
+/// Conta do cidadão que registra e acompanha denúncias.
 model usuario {
   id_usuario Int         @id @default(autoincrement())
   cpf        String?     @unique @db.VarChar(11)
@@ -71,6 +80,36 @@ model usuario {
   cep        String?     @db.VarChar(8)
   foto       String?     @db.Text
   senha      String      @db.VarChar(255)
+  must_change_password Boolean @default(false)
   denuncia   denuncia[]
   historico  historico[]
+  passwordResetTokens password_reset_token[]
+  passwordRecoveryRequest password_recovery_request?
+}
+
+/// Solicitação de recuperação analisada manualmente por um responsável.
+model password_recovery_request {
+  id             Int          @id @default(autoincrement())
+  status         String       @default("PENDING") @db.VarChar(20)
+  requested_at   DateTime     @default(now()) @db.Timestamp(3)
+  resolved_at    DateTime?    @db.Timestamp(3)
+  id_usuario     Int          @unique
+  id_responsavel Int?
+  usuario        usuario      @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: Cascade)
+  responsavel    responsavel? @relation("RecoveryRequestResolvedBy", fields: [id_responsavel], references: [id_responsavel], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([status, requested_at])
+}
+
+/// Token temporário armazenado somente como hash para recuperação de senha.
+model password_reset_token {
+  id           Int       @id @default(autoincrement())
+  token_hash   String    @unique @db.VarChar(64)
+  expires_at   DateTime  @db.Timestamp(3)
+  used_at      DateTime? @db.Timestamp(3)
+  created_at   DateTime  @default(now()) @db.Timestamp(3)
+  id_usuario   Int
+  usuario      usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([id_usuario, expires_at])
 }

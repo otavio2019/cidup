@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
@@ -12,8 +12,11 @@ import type { PrismaClient } from '@prisma/client'
 import { AUTH_COOKIE_NAME, AUTH_TOKEN_TTL_SECONDS, createAuthToken, readAuthPrincipalType, readAuthUserId, requireAuthentication } from './auth.js'
 import { prisma } from './lib/prisma.js'
 import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
+import { sendComplaintReceivedEmail, sendComplaintStatusEmail, sendPasswordResetEmail } from './email.js'
 
+/** API HTTP do CidUp: autenticação, usuários, órgãos, denúncias, históricos e integrações opcionais. */
 const scrypt = promisify(scryptCallback)
+// ===== CONFIGURAÇÃO E LIMITAÇÃO DE REQUISIÇÕES =====
 // Limita tentativas de login e cadastro para dificultar abuso dos endpoints de autenticação.
 const authenticationRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -22,8 +25,16 @@ const authenticationRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: 'Muitas tentativas. Aguarde antes de tentar novamente.' },
 })
+const passwordResetRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas solicitações. Aguarde antes de tentar novamente.' },
+})
 
 // Converte um valor numérico em ID positivo ou retorna null quando ele for inválido.
+// ===== VALIDAÇÃO E ADAPTAÇÃO DE DADOS =====
 function readPositiveInt(value: unknown) {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
@@ -34,10 +45,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+// Remove caracteres não numéricos para validar CPF, CEP e outros campos numéricos.
 function digits(value: unknown) {
   return typeof value === 'string' ? value.replace(/\D/g, '') : ''
 }
 
+// Confere o formato e os dígitos verificadores antes do cadastro ou da atualização do perfil.
 function isValidCpf(value: unknown) {
   const cpf = digits(value)
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false
@@ -53,17 +66,18 @@ function isValidCpf(value: unknown) {
   return digit === Number(cpf[10])
 }
 
+// Confere se o CEP informado pelo frontend contém exatamente oito dígitos.
 function isValidCep(value: unknown) {
   return /^\d{8}$/.test(digits(value))
 }
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
+// Valida o formato e o tamanho das imagens recebidas nas rotas de perfil e denúncia.
 function isValidImageData(value: unknown) {
   if (typeof value !== 'string') return false
   const match = value.match(/^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/)
-  if (!match) return false
-  const encodedImage = match[1]
+  const encodedImage = match?.[1]
   if (!encodedImage) return false
   try {
     return Buffer.from(encodedImage, 'base64').length <= MAX_IMAGE_BYTES
@@ -84,6 +98,18 @@ const organizationRoutingRules = [
   { typeKeywords: ['arvore', 'area verde', 'meio ambiente'], organizationKeywords: ['meio ambiente', 'ambiental'] },
   { typeKeywords: ['alagamento', 'drenagem', 'esgoto', 'saneamento'], organizationKeywords: ['saneamento', 'drenagem'] },
 ]
+const supportedComplaintCategories = [
+  'Buraco ou problema na via',
+  'Iluminação pública',
+  'Lixo ou descarte irregular',
+  'Calçada ou acessibilidade',
+  'Árvore ou área verde',
+  'Alagamento ou drenagem',
+  'Sinalização de trânsito',
+  'Outro problema urbano',
+]
+const NEARBY_COMPLAINT_RADIUS_METERS = 50
+const EARTH_RADIUS_METERS = 6_371_000
 
 // Encontra o órgão responsável exclusivamente com base no tipo informado pelo cidadão.
 function findOrganizationByComplaintType(type: string, organizations: Array<{ id_orgao: number; nome: string }>) {
@@ -141,8 +167,10 @@ function complaintResponse(complaint: {
   titulo: string
   descricao: string
   tipo: string
+  categorias?: string[]
   status: string
   data_registro: Date
+  atualizada_em?: Date
   endereco: string
   latitude: number
   longitude: number
@@ -150,9 +178,16 @@ function complaintResponse(complaint: {
   id_usuario: number
   id_orgao: number
   orgao?: { id_orgao: number; nome: string } | null
+  orgaos_extras?: Array<{ id_orgao: number; nome: string }>
   usuario?: { id_usuario: number; nome: string; email: string; telefone?: string | null; cpf?: string | null; foto?: string | null } | null
-  historico?: Array<{ id_historico: number; descricao: string; observacao: string }>
+  historico?: Array<{ id_historico: number; descricao: string; observacao: string; foto?: string; data_criacao?: Date }>
 }) {
+  const updatedAtValues = [
+    complaint.data_registro,
+    complaint.atualizada_em,
+    ...(complaint.historico ?? []).map((item) => item.data_criacao),
+  ].filter((date): date is Date => date instanceof Date && Number.isFinite(date.getTime()))
+  const updatedAt = new Date(Math.max(...updatedAtValues.map((date) => date.getTime()))).toISOString()
   return {
     ...complaint,
     id: complaint.id_denuncia,
@@ -167,6 +202,14 @@ function complaintResponse(complaint: {
     createdAt: complaint.data_registro.toISOString(),
     registeredAt: complaint.data_registro.toISOString(),
     type: { name: complaint.tipo },
+    categories: complaint.categorias?.length ? complaint.categorias : [complaint.tipo],
+    responsibleOrganizations: [
+      ...(complaint.orgao ? [complaint.orgao.nome] : []),
+      ...(complaint.orgaos_extras ?? []).map((organization) => organization.nome),
+    ],
+    latitude: complaint.latitude,
+    longitude: complaint.longitude,
+    updatedAt,
     citizen: complaint.usuario?.nome ?? '',
     citizenEmail: complaint.usuario?.email ?? '',
     citizenPhone: complaint.usuario?.telefone ?? '',
@@ -176,10 +219,22 @@ function complaintResponse(complaint: {
       id: item.id_historico,
       description: item.descricao,
       observation: item.observacao,
+      photo: item.foto ?? '',
+      createdAt: item.data_criacao?.toISOString() ?? complaint.data_registro.toISOString(),
     })),
   }
 }
 
+function distanceInMeters(latitudeA: number, longitudeA: number, latitudeB: number, longitudeB: number) {
+  const toRadians = (degrees: number) => degrees * Math.PI / 180
+  const latitudeDelta = toRadians(latitudeB - latitudeA)
+  const longitudeDelta = toRadians(longitudeB - longitudeA)
+  const haversine = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(toRadians(latitudeA)) * Math.cos(toRadians(latitudeB)) * Math.sin(longitudeDelta / 2) ** 2
+  return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(haversine))
+}
+
+// ===== CONFIGURAÇÃO DA API E MIDDLEWARES =====
 // Monta a API com banco e opções injetáveis, validando as configurações antes de expor rotas.
 export function createApp(
   database: PrismaClient = prisma,
@@ -203,9 +258,37 @@ const authCookieSameSite = production ? 'none' : 'lax'
 if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 'https:')) {
   throw new Error('FRONTEND_ORIGINS deve usar HTTPS em produção.')
 }
-const authenticate = requireAuthentication(secret)
+const verifyAuthentication = requireAuthentication(secret)
+const authenticate: express.RequestHandler = (request, response, next) => {
+  verifyAuthentication(request, response, (error?: unknown) => {
+    if (error) {
+      next(error)
+      return
+    }
+    if (readAuthPrincipalType(request) === 'RESPONSIBLE' ||
+        request.path === '/api/auth/session' ||
+        request.path === '/api/auth/change-temporary-password') {
+      next()
+      return
+    }
+    void database.usuario.findUnique({
+      where: { id_usuario: readAuthUserId(request) ?? -1 },
+      select: { must_change_password: true },
+    }).then((user) => {
+      if (user?.must_change_password) {
+        response.status(403).json({
+          error: 'Troque sua senha temporária para continuar.',
+          code: 'PASSWORD_CHANGE_REQUIRED',
+        })
+        return
+      }
+      next()
+    }).catch((error) => handlePrismaError(error, response, 'require-password-change'))
+  })
+}
 const app = express()
 
+// Configura cabeçalhos, origem permitida, JSON e cookie usados pelas rotas abaixo.
 app.disable('x-powered-by')
 app.set('trust proxy', production ? 1 : false)
 if (production) {
@@ -272,6 +355,22 @@ async function verifyPassword(password: string, storedHash: string) {
   return storedKey.length === derivedKey.length && timingSafeEqual(storedKey, derivedKey)
 }
 
+function hashResetToken(token: string) {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+function frontendUrl() {
+  return (process.env.FRONTEND_URL ?? process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173').split(',')[0]!.trim().replace(/\/$/, '')
+}
+
+async function notifySafely(action: () => Promise<unknown>) {
+  try {
+    await action()
+  } catch (error) {
+    console.error('Falha ao enviar e-mail transacional:', error instanceof Error ? error.message : 'erro desconhecido')
+  }
+}
+
 // Disponibiliza uma verificação simples de disponibilidade sem exigir sessão.
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' })
@@ -292,6 +391,7 @@ app.get('/api/supabase/status', authenticate, async (_request, response) => {
   }
 })
 
+// ===== AUTENTICAÇÃO: CADASTRO, LOGIN E SESSÃO =====
 // Valida os campos do cadastro e cria um usuário sem expor a senha armazenada.
 async function registerUser(request: express.Request, response: express.Response) {
   const body = isRecord(request.body) ? request.body : {}
@@ -327,7 +427,208 @@ async function registerUser(request: express.Request, response: express.Response
   }
 }
 
+// Recebe o cadastro iniciado pelo formulário do frontend e encaminha os dados ao Prisma.
 app.post(['/api/auth/register', '/api/users', '/api/usuarios'], authenticationRateLimit, registerUser)
+
+app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, response) => {
+  const body = isRecord(request.body) ? request.body : {}
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const genericResponse = { message: 'Se os dados informados estiverem cadastrados, enviaremos as instruções de recuperação por e-mail.' }
+  if ('cpf' in body) {
+    const cpf = digits(body.cpf)
+    try {
+      if (isValidCpf(cpf)) {
+        const user = await database.usuario.findUnique({
+          where: { cpf },
+          select: { id_usuario: true },
+        })
+        if (user) {
+          await database.password_recovery_request.upsert({
+            where: { id_usuario: user.id_usuario },
+            create: { id_usuario: user.id_usuario },
+            update: {
+              status: 'PENDING',
+              requested_at: new Date(),
+              resolved_at: null,
+              id_responsavel: null,
+            },
+          })
+        }
+      }
+      response.status(202).json({
+        message: 'Se os dados corresponderem a uma conta, a solicitação será encaminhada ao responsável.',
+      })
+    } catch (error) {
+      handlePrismaError(error, response, 'create-password-recovery-request')
+    }
+    return
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
+    response.json(genericResponse)
+    return
+  }
+  try {
+    const user = await database.usuario.findUnique({ where: { email }, select: { id_usuario: true, email: true } })
+    if (user) {
+      await database.password_reset_token.deleteMany({ where: { id_usuario: user.id_usuario } })
+      const rawToken = randomBytes(32).toString('hex')
+      await database.password_reset_token.create({
+        data: {
+          token_hash: hashResetToken(rawToken),
+          id_usuario: user.id_usuario,
+          expires_at: new Date(Date.now() + 30 * 60 * 1000),
+        },
+      })
+      const resetUrl = `${frontendUrl()}/recuperar-senha/nova?token=${encodeURIComponent(rawToken)}`
+      await notifySafely(() => sendPasswordResetEmail(user.email, resetUrl))
+    }
+    response.json(genericResponse)
+  } catch (error) {
+    handlePrismaError(error, response, 'forgot-password')
+  }
+})
+
+app.post('/api/auth/reset-password', passwordResetRateLimit, async (request, response) => {
+  const body = isRecord(request.body) ? request.body : {}
+  const token = typeof body.token === 'string' ? body.token.trim() : ''
+  const password = body.password
+  if (!/^[a-f0-9]{64}$/i.test(token) || typeof password !== 'string' || password.length < 6 || password.length > 1024) {
+    response.status(400).json({ error: 'O link de recuperação é inválido ou a senha não atende aos requisitos.' })
+    return
+  }
+  try {
+    const resetToken = await database.password_reset_token.findUnique({ where: { token_hash: hashResetToken(token) } })
+    if (!resetToken || resetToken.used_at || resetToken.expires_at <= new Date()) {
+      response.status(400).json({ error: 'O link de recuperação é inválido ou expirou.' })
+      return
+    }
+    const result = await database.$transaction(async (transaction) => {
+      const claimed = await transaction.password_reset_token.updateMany({
+        where: { id: resetToken.id, used_at: null, expires_at: { gt: new Date() } },
+        data: { used_at: new Date() },
+      })
+      if (claimed.count !== 1) return false
+      await transaction.usuario.update({ where: { id_usuario: resetToken.id_usuario }, data: { senha: await hashPassword(password) } })
+      return true
+    })
+    if (!result) {
+      response.status(400).json({ error: 'O link de recuperação é inválido ou expirou.' })
+      return
+    }
+    response.json({ message: 'Senha atualizada com sucesso. Você já pode entrar na sua conta.' })
+  } catch (error) {
+    handlePrismaError(error, response, 'reset-password')
+  }
+})
+
+app.post('/api/auth/change-temporary-password', authenticate, async (request, response) => {
+  const userId = readAuthUserId(request)
+  const newPassword = isRecord(request.body) ? request.body.newPassword : undefined
+  if (!userId || readAuthPrincipalType(request) === 'RESPONSIBLE') {
+    response.status(401).json({ error: 'Autenticação de cidadão necessária.' })
+    return
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 1024) {
+    response.status(400).json({ error: 'A nova senha deve ter entre 6 e 1024 caracteres.' })
+    return
+  }
+  try {
+    const user = await database.usuario.findUnique({
+      where: { id_usuario: userId },
+      select: { must_change_password: true, senha: true },
+    })
+    if (!user?.must_change_password) {
+      response.status(400).json({ error: 'Não há troca de senha temporária pendente.' })
+      return
+    }
+    if (await verifyPassword(newPassword, user.senha)) {
+      response.status(400).json({ error: 'A senha definitiva deve ser diferente da senha temporária.' })
+      return
+    }
+    await database.usuario.update({
+      where: { id_usuario: userId },
+      data: { senha: await hashPassword(newPassword), must_change_password: false },
+    })
+    const token = await createAuthToken(userId, secret, 'CITIZEN')
+    response.cookie(AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: production,
+      sameSite: 'strict',
+      maxAge: AUTH_TOKEN_TTL_SECONDS * 1000,
+      path: '/',
+    })
+    response.json({ message: 'Senha atualizada. Você já pode continuar usando sua conta.' })
+  } catch (error) {
+    handlePrismaError(error, response, 'change-temporary-password')
+  }
+})
+
+app.get('/api/admin/password-recovery-requests', authenticate, requireAdministrator, async (_request, response) => {
+  try {
+    const requests = await database.password_recovery_request.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { requested_at: 'asc' },
+      select: {
+        id: true,
+        requested_at: true,
+        usuario: { select: { nome: true, email: true, telefone: true, cpf: true } },
+      },
+    })
+    response.json({
+      requests: requests.map((item) => ({
+        id: item.id,
+        requestedAt: item.requested_at,
+        citizen: item.usuario.nome,
+        email: item.usuario.email,
+        phone: item.usuario.telefone,
+        cpf: item.usuario.cpf,
+      })),
+    })
+  } catch (error) {
+    handlePrismaError(error, response, 'list-password-recovery-requests')
+  }
+})
+
+app.post('/api/admin/password-recovery-requests/:id/temporary-password', authenticate, requireAdministrator, async (request, response) => {
+  const requestId = readPositiveInt(request.params.id)
+  const responsibleId = readAuthUserId(request)
+  const temporaryPassword = isRecord(request.body) ? request.body.temporaryPassword : undefined
+  if (!requestId || !responsibleId) {
+    response.status(400).json({ error: 'Solicitação inválida.' })
+    return
+  }
+  if (typeof temporaryPassword !== 'string' || temporaryPassword.length < 8 || temporaryPassword.length > 1024) {
+    response.status(400).json({ error: 'A senha temporária deve ter pelo menos 8 caracteres.' })
+    return
+  }
+  try {
+    const completed = await database.$transaction(async (transaction) => {
+      const requestUpdate = await transaction.password_recovery_request.updateMany({
+        where: { id: requestId, status: 'PENDING' },
+        data: { status: 'COMPLETED', resolved_at: new Date(), id_responsavel: responsibleId },
+      })
+      if (requestUpdate.count !== 1) return false
+      const recoveryRequest = await transaction.password_recovery_request.findUnique({
+        where: { id: requestId },
+        select: { id_usuario: true },
+      })
+      if (!recoveryRequest) return false
+      await transaction.usuario.update({
+        where: { id_usuario: recoveryRequest.id_usuario },
+        data: { senha: await hashPassword(temporaryPassword), must_change_password: true },
+      })
+      return true
+    })
+    if (!completed) {
+      response.status(404).json({ error: 'Solicitação não encontrada ou já atendida.' })
+      return
+    }
+    response.json({ message: 'Senha temporária definida. Entregue-a ao cidadão por um canal confiável.' })
+  } catch (error) {
+    handlePrismaError(error, response, 'set-temporary-password')
+  }
+})
 
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
 app.post('/api/auth/login', authenticationRateLimit, async (request, response) => {
@@ -374,7 +675,12 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
       response.status(401).json({ error: 'E-mail ou senha inválidos.' })
       return
     }
-    const token = await createAuthToken(user.id_usuario, secret, 'CITIZEN')
+    const mustChangePassword = user.must_change_password
+    const token = await createAuthToken(
+      user.id_usuario,
+      secret,
+      mustChangePassword ? 'PASSWORD_CHANGE_REQUIRED' : 'CITIZEN',
+    )
     response.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
       secure: production,
@@ -392,6 +698,7 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
         cep: user.cep,
         photo: user.foto,
         role: 'CITIZEN',
+        mustChangePassword,
       },
     })
   } catch (error) {
@@ -448,7 +755,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
     const id_usuario = principalId
     const user = await database.usuario.findUnique({
       where: { id_usuario },
-      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true, must_change_password: true },
     })
     if (!user) {
       response.status(401).json({ error: 'Credencial inválida ou expirada.' })
@@ -461,6 +768,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
         email: user.email,
         phone: user.telefone,
         role: 'CITIZEN',
+        mustChangePassword: user.must_change_password,
       },
     })
   } catch (error) {
@@ -468,6 +776,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
   }
 })
 
+// ===== USUÁRIOS: PERFIL E GERENCIAMENTO DA PRÓPRIA CONTA =====
 // Retorna somente o perfil do usuário autenticado.
 app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
@@ -644,6 +953,7 @@ app.delete(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request
   }
 })
 
+// ===== ÓRGÃOS: CONSULTA E ADMINISTRAÇÃO =====
 // Lista apenas os campos públicos dos órgãos responsáveis.
 app.get(['/api/orgaos', '/api/organs'], async (_request, response) => {
   try {
@@ -759,6 +1069,7 @@ app.delete(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdminist
   }
 })
 
+// ===== DENÚNCIAS: CONSULTA, CRIAÇÃO E ATUALIZAÇÃO =====
 // Lista as denúncias próprias; administradores autorizados podem consultar todas.
 app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
@@ -772,10 +1083,11 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
       where: responsibleUser ? {} : { id_usuario },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
+        orgaos_extras: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
-          select: { id_historico: true, descricao: true, observacao: true },
+          select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true },
         },
       },
       orderBy: { data_registro: 'desc' },
@@ -807,10 +1119,11 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
       },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
+        orgaos_extras: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
-          select: { id_historico: true, descricao: true, observacao: true },
+          select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true },
         },
       },
     })
@@ -824,17 +1137,91 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
   }
 })
 
+// Encontra denúncias próximas que compartilham ao menos uma categoria, mantendo protocolos separados.
+app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], authenticate, async (request, response) => {
+  const id_usuario = readAuthUserId(request)
+  const id_denuncia = readPositiveInt(request.params.id)
+  if (!id_usuario) {
+    response.status(401).json({ error: 'Autenticação necessária.' })
+    return
+  }
+  if (!id_denuncia) {
+    response.status(400).json({ error: 'Identificação inválida.' })
+    return
+  }
+
+  try {
+    const complaint = await database.denuncia.findFirst({
+      where: {
+        id_denuncia,
+        ...(isResponsibleRequest(request) ? {} : { id_usuario }),
+      },
+      select: { id_denuncia: true, categorias: true, tipo: true, latitude: true, longitude: true },
+    })
+    if (!complaint) {
+      response.status(404).json({ error: 'Denúncia não encontrada.' })
+      return
+    }
+
+    const categories = complaint.categorias?.length ? complaint.categorias : [complaint.tipo]
+    const latitudeDelta = NEARBY_COMPLAINT_RADIUS_METERS / 111_320
+    const longitudeDelta = Math.min(
+      180,
+      NEARBY_COMPLAINT_RADIUS_METERS / (111_320 * Math.max(Math.abs(Math.cos(complaint.latitude * Math.PI / 180)), 0.000001)),
+    )
+    const candidates = await database.denuncia.findMany({
+      where: {
+        id_denuncia: { not: id_denuncia },
+        categorias: { hasSome: categories },
+        latitude: { gte: Math.max(-90, complaint.latitude - latitudeDelta), lte: Math.min(90, complaint.latitude + latitudeDelta) },
+        longitude: { gte: Math.max(-180, complaint.longitude - longitudeDelta), lte: Math.min(180, complaint.longitude + longitudeDelta) },
+      },
+      select: {
+        id_denuncia: true,
+        tipo: true,
+        categorias: true,
+        status: true,
+        latitude: true,
+        longitude: true,
+      },
+    })
+    const related = candidates
+      .map((candidate) => ({
+        id: candidate.id_denuncia,
+        protocol: `CIDUP-${candidate.id_denuncia}`,
+        categories: candidate.categorias?.length ? candidate.categorias : [candidate.tipo],
+        status: candidate.status,
+        distanceMeters: Math.round(distanceInMeters(complaint.latitude, complaint.longitude, candidate.latitude, candidate.longitude)),
+      }))
+      .filter((candidate) => candidate.id !== id_denuncia
+        && candidate.categories.some((category) => categories.includes(category))
+        && candidate.distanceMeters <= NEARBY_COMPLAINT_RADIUS_METERS)
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, 10)
+    response.json({ related })
+  } catch (error) {
+    handlePrismaError(error, response, 'find-related-complaints')
+  }
+})
+
 // Valida e registra a denúncia, encaminhando-a automaticamente pelo tipo informado.
 app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const id_usuario = readAuthUserId(request)
   const tipoValue = body.tipo ?? body.type
+  const categoriesValue = body.categorias ?? body.categories
+  const hasExplicitCategories = categoriesValue !== undefined
   const tituloValue = body.titulo ?? body.title ?? tipoValue
   const descricaoValue = body.descricao ?? body.description
   const enderecoValue = body.endereco ?? body.address
   const latitude = body.latitude
   const longitude = body.longitude
   const photoValue = body.foto ?? body.photo
+  const categories = categoriesValue === undefined
+    ? (typeof tipoValue === 'string' ? [tipoValue.trim()] : [])
+    : Array.isArray(categoriesValue)
+      ? [...new Set(categoriesValue.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))]
+      : []
 
   if (!id_usuario) {
     response.status(401).json({ error: 'Autenticação necessária.' })
@@ -843,11 +1230,14 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   if (typeof tipoValue !== 'string' || !tipoValue.trim() || tipoValue.trim().length > 100 ||
       typeof tituloValue !== 'string' || !tituloValue.trim() || tituloValue.trim().length > 200 ||
       typeof descricaoValue !== 'string' || !descricaoValue.trim() ||
+      categories.length === 0 || categories.length > supportedComplaintCategories.length ||
+      (hasExplicitCategories && categories.some((category) => !supportedComplaintCategories.includes(category))) ||
+      (typeof tipoValue === 'string' && categories[0] !== tipoValue.trim()) ||
       typeof latitude !== 'number' || !Number.isFinite(latitude) ||
       latitude < -90 || latitude > 90 ||
       typeof longitude !== 'number' || !Number.isFinite(longitude) ||
       longitude < -180 || longitude > 180) {
-    response.status(400).json({ error: 'Informe tipo, descrição, latitude e longitude válidos.' })
+    response.status(400).json({ error: 'Informe uma ou mais categorias, descrição, latitude e longitude válidas.' })
     return
   }
   if (photoValue !== undefined && photoValue !== null && !isValidImageData(photoValue)) {
@@ -870,10 +1260,13 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
 
   try {
     const organizations = await database.orgao.findMany({
-      select: { id_orgao: true, nome: true },
+      select: { id_orgao: true, nome: true, email: true },
       orderBy: { nome: 'asc' },
     })
-    const organization = findOrganizationByComplaintType(tipoValue.trim(), organizations)
+    const routedOrganizations = categories
+      .map((category) => findOrganizationByComplaintType(category, organizations))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    const organization = routedOrganizations[0]
     if (!organization) {
       response.status(503).json({ error: 'Nenhum órgão disponível para encaminhar esta denúncia.' })
       return
@@ -881,7 +1274,8 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
     const denuncia = await database.denuncia.create({
       data: {
         titulo: tituloValue.trim(),
-        tipo: tipoValue.trim(),
+        tipo: categories[0]!,
+        categorias: categories,
         descricao: descricaoValue.trim(),
         status: 'RECEIVED',
         endereco,
@@ -890,9 +1284,24 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
         foto: photoValue === undefined || photoValue === null ? null : String(photoValue),
         usuario: { connect: { id_usuario } },
         orgao: { connect: { id_orgao: organization.id_orgao } },
+        orgaos_extras: {
+          connect: [...new Map(routedOrganizations
+            .filter((item) => item.id_orgao !== organization.id_orgao)
+            .map((item) => [item.id_orgao, { id_orgao: item.id_orgao }])).values()],
+        },
       },
-      include: { orgao: { select: { id_orgao: true, nome: true } }, orgaos_extras: { select: { id_orgao: true, nome: true } } },
+      include: {
+        orgao: { select: { id_orgao: true, nome: true, email: true } },
+        orgaos_extras: { select: { id_orgao: true, nome: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
+      },
     })
+    if (denuncia.usuario?.email) {
+      void notifySafely(() => sendComplaintReceivedEmail(denuncia.usuario.email, `CIDUP-${denuncia.id_denuncia}`, denuncia.status))
+    }
+    if (denuncia.orgao?.email) {
+      void notifySafely(() => sendComplaintReceivedEmail(denuncia.orgao.email, `CIDUP-${denuncia.id_denuncia}`, denuncia.status))
+    }
     response.status(201).json({ denuncia, complaint: complaintResponse(denuncia) })
   } catch (error) {
     handlePrismaError(error, response, 'create-complaint')
@@ -962,6 +1371,9 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
         id_denuncia,
         ...(responsibleUser ? {} : { id_usuario }),
       },
+      include: {
+        usuario: { select: { email: true } },
+      },
     })
     if (!existing) {
       response.status(404).json({ error: 'Denúncia não encontrada.' })
@@ -979,6 +1391,15 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
         },
       },
     })
+    const statusChanged = typeof data.status === 'string' && data.status !== existing.status
+    if (statusChanged && denuncia.usuario?.email) {
+      void notifySafely(() => sendComplaintStatusEmail(
+        denuncia.usuario.email,
+        `CIDUP-${denuncia.id_denuncia}`,
+        denuncia.status,
+        typeof body.observacao === 'string' ? body.observacao.trim() : undefined,
+      ))
+    }
     response.json({ denuncia, complaint: complaintResponse(denuncia) })
   } catch (error) {
     handlePrismaError(error, response, 'update-complaint')
@@ -1042,6 +1463,7 @@ app.get(['/api/historicos', '/api/histories'], authenticate, async (request, res
   }
 })
 
+// ===== HISTÓRICO: ACOMPANHAMENTO DAS DENÚNCIAS =====
 // Consulta um histórico apenas se estiver ligado a uma denúncia acessível ao usuário.
 app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
@@ -1230,6 +1652,7 @@ app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (r
   }
 })
 
+// ===== IA: SUGESTÃO DE RASCUNHO PARA O FRONTEND =====
 // Solicita à IA um rascunho estruturado, sem criar ou enviar a denúncia automaticamente.
 app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
   const description =
@@ -1310,6 +1733,7 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
   }
 })
 
+// ===== TRATAMENTO DE ERROS DA API =====
 // Converte erros inesperados e JSON malformado em respostas seguras para o cliente.
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   if (isRecord(error) && (error.type === 'entity.too.large' || error.name === 'PayloadTooLargeError')) {
@@ -1330,6 +1754,7 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
 return app
 }
 
+// ===== INICIALIZAÇÃO DO SERVIDOR =====
 // Inicia o servidor apenas quando este arquivo é executado diretamente.
 const isMainModule = process.argv[1] !== undefined &&
   pathToFileURL(resolve(process.argv[1])).href === import.meta.url

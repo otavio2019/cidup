@@ -31,6 +31,7 @@ function LoginPage() {
           email: string
           phone: string
           role: 'CITIZEN' | 'RESPONSIBLE'
+          mustChangePassword?: boolean
         }
       }>('/api/auth/login', {
         method: 'POST',
@@ -38,7 +39,9 @@ function LoginPage() {
       })
       localStorage.removeItem('cidup-complaints')
       localStorage.setItem('cidup-profile', JSON.stringify(data.user))
-      navigate(data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
+      navigate(data.user.mustChangePassword
+        ? '/trocar-senha-temporaria'
+        : data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
     } catch (error) {
       setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')
     } finally {
@@ -80,6 +83,7 @@ function LoginPage() {
             <p>Acesse o CidUp para registrar e acompanhar suas denúncias.</p>
           </div>
 
+          {/* O envio autentica em POST /api/auth/login e encaminha ao dashboard conforme o papel retornado. */}
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="email">E-mail</label>
@@ -99,9 +103,9 @@ function LoginPage() {
             <div className="form-group">
               <div className="label-row">
                 <label htmlFor="senha">Senha</label>
-                <a className="forgot-link" href="#recuperar-senha">
+                <Link className="forgot-link" to="/recuperar-senha">
                   Esqueci minha senha
-                </a>
+                </Link>
               </div>
               <div className="input-wrap">
                 <span className="input-icon" aria-hidden="true">*</span>

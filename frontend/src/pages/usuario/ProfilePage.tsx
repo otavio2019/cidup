@@ -6,6 +6,7 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Perfil do cidadão: fonte remota na API, com cache visual local e logout seguro. */
 type CitizenProfile = {
   id?: number
   name?: string
@@ -89,6 +90,7 @@ function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [logoutError, setLogoutError] = useState('')
 
+  // Sincroniza o cache local com a sessão autenticada consultada em /api/auth/session.
   useEffect(() => {
     apiRequest<{ user: CitizenProfile }>('/api/auth/session')
       .then(({ user }) => {
@@ -115,6 +117,7 @@ function ProfilePage() {
     setPhoto(await readFileAsDataUrl(file))
   }
 
+  // Atualiza os dados editáveis do cidadão em PATCH /api/users/:id e mantém o cache local alinhado.
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -138,6 +141,7 @@ function ProfilePage() {
     }
   }
 
+  // Encerra a sessão no backend e retorna à página de login após limpar os dados locais.
   async function handleLogout() {
     setLogoutError('')
     try {
@@ -152,6 +156,7 @@ function ProfilePage() {
     localStorage.removeItem('cidup-profile')
     sessionStorage.removeItem('cidup-complaint-draft')
     sessionStorage.removeItem('cidup-complaint-confirmation')
+    sessionStorage.removeItem('cidup-active-draft-id')
     navigate('/login', { replace: true })
   }
 
@@ -164,6 +169,7 @@ function ProfilePage() {
           <h2 id="profile-title">Meu perfil</h2>
         </div>
         <div className="profile-panel">
+          {/* Alterna entre edição e consulta dos dados sincronizados com a conta do cidadão. */}
           <div className="profile-avatar-block">
             {profile.photo ? <img className="profile-avatar" src={profile.photo} alt={`Foto de perfil de ${profile.name ?? 'usuário'}`} /> : <div className="profile-avatar profile-avatar-placeholder" aria-hidden="true">{(profile.name ?? 'C').slice(0, 1).toUpperCase()}</div>}
             {isEditing && <label className="secondary-action profile-photo-button" htmlFor="profile-photo">Escolher foto<input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} /></label>}
