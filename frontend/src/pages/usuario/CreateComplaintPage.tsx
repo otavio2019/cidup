@@ -7,6 +7,7 @@ import '../../App.css'
 
 /** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
 
+// ===== TIPOS E OPÇÕES DO FORMULÁRIO =====
 type ComplaintFormData = {
   type: string
   description: string
@@ -40,6 +41,7 @@ const complaintTypes = [
 
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024
 
+// ===== ESTADO E RASCUNHO DA DENÚNCIA =====
 // Coleta os dados iniciais da ocorrência e preserva rascunho e localização entre etapas.
 function CreateComplaintPage() {
   const navigate = useNavigate()
@@ -76,6 +78,8 @@ function CreateComplaintPage() {
   const [isLocating, setIsLocating] = useState(false)
   const [locationMessage, setLocationMessage] = useState('')
 
+  // ===== LOCALIZAÇÃO E GEOCODIFICAÇÃO =====
+  // Consulta o serviço Nominatim de geocodificação reversa para sugerir rua, número e bairro.
   // Usa coordenadas para sugerir endereço e bairro, sem impedir ajustes manuais.
   async function fillAddressFromCoordinates(latitude: number, longitude: number) {
     try {
@@ -153,6 +157,7 @@ function CreateComplaintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ===== EDIÇÃO, ANEXO E VALIDAÇÃO =====
   // Atualiza o campo alterado e limpa a validação antiga daquele campo.
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -248,6 +253,7 @@ function CreateComplaintPage() {
     return nextErrors
   }
 
+  // ===== VALIDAÇÃO E PRÓXIMA ETAPA =====
   // Persiste o rascunho validado e encaminha o cidadão à confirmação da localização.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -288,6 +294,7 @@ function CreateComplaintPage() {
 
   return (
     <main className="complaint-page">
+      {/* ===== TELA (JSX): formulário inicial; continuar segue para ComplaintLocationPage. ===== */}
       <CitizenHeader active="create" />
       <section className="complaint-shell" aria-labelledby="complaint-title">
         <div className="complaint-heading">
@@ -301,6 +308,7 @@ function CreateComplaintPage() {
         </div>
 
         <form className="complaint-form" onSubmit={handleSubmit} noValidate>
+          {/* Relato e tipo compõem o rascunho que será revisado nas etapas seguintes. */}
           <div className="form-section">
             <div className="form-section-title">
               <span>01</span>
@@ -350,6 +358,7 @@ function CreateComplaintPage() {
             </div>
           </div>
 
+          {/* Endereço e coordenadas seguem para confirmação na ComplaintLocationPage. */}
           <div className="form-section">
             <div className="form-section-title">
               <span>02</span>
@@ -438,6 +447,7 @@ function CreateComplaintPage() {
             </div>
           </div>
 
+          {/* Anexo opcional é convertido para o rascunho antes de avançar. */}
           <div className="form-section">
             <div className="form-section-title">
               <span>03</span>

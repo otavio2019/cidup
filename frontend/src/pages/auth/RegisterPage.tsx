@@ -82,6 +82,7 @@ function RegisterPage() {
     }
 
     try {
+      // Cria a conta no backend; após sucesso, a tela encaminha a pessoa para /login.
       await apiRequest('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name: nome, email, phone: telefone, cpf, cep, password: senha }),
@@ -135,6 +136,7 @@ function RegisterPage() {
             <p>Cadastre-se para ajudar a transformar a sua cidade.</p>
           </div>
 
+          {/* Formulário que reúne os dados validados antes do POST /api/auth/register. */}
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="nome">Nome completo</label>

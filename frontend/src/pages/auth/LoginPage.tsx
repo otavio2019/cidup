@@ -80,6 +80,7 @@ function LoginPage() {
             <p>Acesse o CidUp para registrar e acompanhar suas denúncias.</p>
           </div>
 
+          {/* O envio autentica em POST /api/auth/login e encaminha ao dashboard conforme o papel retornado. */}
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="email">E-mail</label>

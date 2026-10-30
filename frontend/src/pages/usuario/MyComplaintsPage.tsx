@@ -6,6 +6,7 @@ import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
 /** Lista as denúncias da sessão e liga cada protocolo à tela de detalhes. */
+// ===== APRESENTAÇÃO DOS STATUS =====
 const statusClasses: Record<string, string> = {
 	'Recebida': 'status-received',
 	'Em análise': 'status-analysis',
@@ -24,6 +25,7 @@ const statusLabels: Record<string, string> = {
 	NOT_SERVED: 'Negada',
 }
 
+// ===== FORMATAÇÃO E CARREGAMENTO DA LISTA =====
 // Formata datas para exibição local e oferece uma mensagem para valores inválidos.
 function formatDate(value?: string) {
 	if (!value) return 'Data não informada'
@@ -38,6 +40,8 @@ function MyComplaintsPage() {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
+	// ===== CHAMADA À API =====
+	// GET /api/complaints carrega os registros do cidadão e alimenta os links para ComplaintDetailsPage.
 	// Carrega a lista da API e impede atualizações de estado após sair da página.
 	useEffect(() => {
 		let active = true
@@ -56,6 +60,7 @@ function MyComplaintsPage() {
 
 	return (
 		<main className="my-complaints-page">
+			{/* ===== TELA (JSX): lista retornada por GET /api/complaints. ===== */}
 			<CitizenHeader active="complaints" />
 			<section className="complaints-page-content" aria-labelledby="my-complaints-title">
 				<div className="my-complaints-heading">
@@ -69,6 +74,7 @@ function MyComplaintsPage() {
 					</Link>
 				</div>
 
+				{/* Estados de carregamento/erro/vazio e cartões levam ao detalhe de cada denúncia. */}
 				{loading ? (
 					<p aria-busy="true">Carregando denúncias...</p>
 				) : error ? (

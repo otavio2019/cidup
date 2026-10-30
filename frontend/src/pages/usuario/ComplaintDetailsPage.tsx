@@ -8,6 +8,7 @@ import '../../App.css'
 /** Detalha uma denúncia autorizada e apresenta seu histórico de atendimento. */
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Negada' | 'Cancelada'
 
+// ===== STATUS E ETAPAS DO ATENDIMENTO =====
 const statusSteps: ComplaintStatus[] = ['Recebida', 'Em análise', 'Em atendimento', 'Resolvida']
 const statusClasses: Record<ComplaintStatus, string> = {
 	Recebida: 'status-received',
@@ -39,6 +40,8 @@ function Header() {
 	return <CitizenHeader active="complaints" />
 }
 
+	// ===== ESTADO E CONSULTA DE DETALHES =====
+	// Usa o identificador da rota em GET /api/complaints/{id}; a lista de origem é MyComplaintsPage.
 	// Carrega uma denúncia do protocolo informado e monta sua linha do tempo de status.
 	function ComplaintDetailsPage() {
 		const { protocol } = useParams()
@@ -52,6 +55,7 @@ function Header() {
 		useEffect(() => {
 			let active = true
 			if (!hasValidProtocol) return () => { active = false }
+			// GET /api/complaints/{id} retorna o registro e o histórico de atendimento.
 			apiRequest<{ complaint: Complaint }>(`/api/complaints/${complaintId}`)
 				.then(({ complaint: record }) => {
 					if (active) setComplaint(record)
@@ -65,6 +69,7 @@ function Header() {
 			return () => { active = false }
 		}, [complaintId, hasValidProtocol])
 
+	// ===== STATUS ATUAL E PROGRESSO =====
 	const status = complaint
 		? statusLabels[complaint.status] ?? complaint.status as ComplaintStatus
 		: 'Recebida'
@@ -101,6 +106,7 @@ function Header() {
 								</div>
 							</div>
 
+						{/* Linha do tempo traduz o status retornado pela API em etapas visuais. */}
 						<section className="complaint-timeline" aria-labelledby="timeline-title">
 							<h3 id="timeline-title">Acompanhamento</h3>
 							{currentStep === -1 ? (
@@ -137,6 +143,7 @@ function Header() {
 								<div><dt>Endereço</dt><dd>{complaint.address || 'Não informado'}</dd></div>
 								<div><dt>Data de registro</dt><dd>{formatDate(complaint.registeredAt)}</dd></div>
 							</dl>
+							{/* Atualizações exibem as observações incluídas no histórico do registro. */}
 							<section className="complaint-observations" aria-labelledby="observations-title">
 								<h3 id="observations-title">Atualizações da prefeitura</h3>
 								{complaint.history.length === 0 ? (

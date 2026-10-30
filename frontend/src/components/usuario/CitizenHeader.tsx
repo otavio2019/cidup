@@ -13,6 +13,7 @@ function CitizenHeader({ active }: { active: CitizenSection }) {
         </span>
       </Link>
 
+      {/* Atalhos para dashboard, criação e listagem de denúncias; o perfil tem acesso próprio ao lado. */}
       <nav className="dashboard-nav" aria-label="Navegação principal">
         <Link className={active === 'home' ? 'active' : undefined} to="/dashboard">Início</Link>
         <Link className={active === 'create' ? 'active' : undefined} to="/registrar-denuncia">Registrar denúncia</Link>

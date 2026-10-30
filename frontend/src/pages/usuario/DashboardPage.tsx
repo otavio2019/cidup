@@ -155,6 +155,7 @@ function DashboardPage() {
             <span className="report-arrow">→</span>
           </Link>
 
+          {/* O rascunho é solicitado a /api/ai/complaint-draft e deve ser revisado antes do fluxo de registro. */}
           <section className="ai-report-section" id="denuncia">
             <div className="section-heading">
               <div>
@@ -199,6 +200,7 @@ function DashboardPage() {
             )}
           </section>
 
+          {/* Os cartões resumem os status das denúncias carregadas de /api/complaints. */}
           <div className="summary-grid">
             <article className="summary-card progress-card">
               <span className="summary-icon">●</span>

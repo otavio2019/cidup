@@ -23,6 +23,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   return data
 }
 
+// Estruturas retornadas por /api/complaints, compartilhadas entre o dashboard e as telas de denúncias.
 export type Complaint = {
   id: number
   protocol: string

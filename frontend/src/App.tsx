@@ -77,6 +77,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Login e cadastro são públicos; as rotas do cidadão exigem sessão e /responsavel/* também valida o papel. */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<RegisterPage />} />
       <Route

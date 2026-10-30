@@ -1,3 +1,4 @@
+// ===== INTEGRAÇÃO OPCIONAL COM O SUPABASE =====
 /** Integração REST opcional; o banco principal continua sendo PostgreSQL via Prisma. */
 // Indica se as duas configurações necessárias para acessar o Supabase estão presentes.
 export function isSupabaseConfigured() {

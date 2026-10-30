@@ -1,6 +1,7 @@
 import { jwtVerify, SignJWT } from 'jose'
 import type { NextFunction, Request, Response } from 'express'
 
+// ===== CONTRATO DE AUTENTICAÇÃO E IDENTIDADE DA SESSÃO =====
 /** Contrato de sessão compartilhado entre o login, o middleware e o logout. */
 export const AUTH_COOKIE_NAME = 'cidup_session'
 export const AUTH_TOKEN_TTL_SECONDS = 15 * 60
@@ -17,6 +18,7 @@ declare global {
   }
 }
 
+// ===== CHAVES E EMISSÃO DE TOKEN =====
 // Valida o tamanho mínimo do segredo e o converte para o formato usado pelo JWT.
 function secretKey(secret: string) {
   if (Buffer.byteLength(secret, 'utf8') < 32) {
@@ -41,6 +43,7 @@ export async function createAuthToken(userId: number, secret: string, principalT
     .sign(secretKey(secret))
 }
 
+// ===== VALIDAÇÃO DA SESSÃO NAS ROTAS =====
 // Gera o middleware que valida o cookie e associa o usuário autenticado à requisição.
 export function requireAuthentication(secret: string) {
   const key = secretKey(secret)
@@ -72,12 +75,14 @@ export function requireAuthentication(secret: string) {
   }
 }
 
+// ===== ACESSO À IDENTIDADE VALIDADA =====
 // Recupera somente IDs positivos e seguros previamente definidos pelo middleware.
 export function readAuthUserId(request: Request) {
   const userId = request.authUserId
   return Number.isSafeInteger(userId) && userId && userId > 0 ? userId : null
 }
 
+// Informa se a rota autenticada está sendo acessada por cidadão ou responsável.
 export function readAuthPrincipalType(request: Request): AuthPrincipalType {
   return request.authPrincipalType ?? 'CITIZEN'
 }

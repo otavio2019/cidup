@@ -168,6 +168,7 @@ function ResponsiblePanelPage() {
 
   useEffect(() => {
     let active = true
+    // Reúne denúncias, órgãos de encaminhamento e sessão do responsável para montar o painel.
     Promise.all([
       apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
       apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
@@ -457,6 +458,7 @@ function ResponsiblePanelPage() {
     )
   }
 
+  // Seleciona o conteúdo conforme a rota /responsavel/*, incluindo relatórios e configurações.
   const body = section === 'denuncias' ? renderComplaints()
     : section === 'tipos' ? renderTypes()
       : section === 'relatorios' ? renderReports()
@@ -473,6 +475,7 @@ function ResponsiblePanelPage() {
       <div className="rp-main-column">
         <header className="rp-topbar"><h2>{heading}</h2><button type="button" className="rp-profile-button">{profile?.name ?? ''}</button></header>
         <main className="rp-content">
+          {/* Exibe o estado de carregamento/erro ou a seção selecionada com dados da API. */}
           {loadError && <p className="rp-error-message" role="alert">{loadError}</p>}
           {loading ? <p className="rp-empty-state" aria-busy="true">Carregando dados do painel...</p> : body}
         </main>

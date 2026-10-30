@@ -9,6 +9,7 @@ function CitizenMobileNav() {
 
   return (
     <nav className="citizen-mobile-nav" aria-label="Navegação mobile">
+      {/* Mantém no mobile os mesmos destinos do cabeçalho: início, denúncias e perfil. */}
       <NavLink to="/dashboard" end className={({ isActive }) => `citizen-mobile-link${isActive ? ' is-active' : ''}`}>
         <span className="citizen-mobile-icon" aria-hidden="true">⌂</span>
         <span>Início</span>

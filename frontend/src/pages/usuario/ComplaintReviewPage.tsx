@@ -8,6 +8,7 @@ import '../../App.css'
 
 /** Última etapa do cidadão: revisa o rascunho e cria a denúncia somente após confirmação. */
 
+// ===== MODELO DO RASCUNHO E ORGANIZAÇÃO RESPONSÁVEL =====
 type ComplaintDraft = {
   type?: string
   description?: string
@@ -54,6 +55,7 @@ function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   }
 }
 
+// ===== ESTADO E CONSULTA DE ÓRGÃOS =====
 // Revisa a denúncia e só a envia à API após o cidadão confirmar os dados.
 function ComplaintReviewPage() {
   const location = useLocation()
@@ -69,6 +71,7 @@ function ComplaintReviewPage() {
   useEffect(() => {
     if (!draft?.type) return undefined
     let active = true
+    // Consulta GET /api/orgaos para exibir o órgão sugerido conforme o tipo da ocorrência.
     apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
       .then(({ orgaos }) => {
         if (active) setOrganizationName(findResponsibleOrganization(draft.type!, orgaos) ?? '')
@@ -81,6 +84,8 @@ function ComplaintReviewPage() {
     return <Navigate to="/registrar-denuncia" replace />
   }
 
+  // ===== ENVIO E CONFIRMAÇÃO =====
+  // Envia POST /api/complaints e, com o protocolo retornado, segue para ComplaintConfirmationPage.
   // Registra a denúncia, converte os dados recebidos e abre a tela de confirmação.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -128,6 +133,7 @@ function ComplaintReviewPage() {
 
   return (
     <main className="review-page">
+      {/* ===== TELA (JSX): conferência do rascunho antes do POST /api/complaints. ===== */}
       <CitizenHeader active="create" />
 
       <section className="review-shell" aria-labelledby="review-title">
@@ -139,6 +145,7 @@ function ComplaintReviewPage() {
         </div>
 
         <form className="review-form" onSubmit={handleSubmit}>
+          {/* Resume relato e anexo recebidos da etapa de criação. */}
           <section className="review-card">
             <h2>Sobre o problema</h2>
             <ReviewField label="Tipo de ocorrência" value={draft.type} />
@@ -146,6 +153,7 @@ function ComplaintReviewPage() {
             {draft.photoName && <ReviewField label="Foto anexada" value={draft.photoName} />}
           </section>
 
+          {/* Exibe endereço, coordenadas e órgão sugerido pela consulta à API. */}
           <section className="review-card">
             <h2>Local da ocorrência</h2>
             <ReviewField label="Endereço" value={`${draft.address}, ${draft.number}`} />
@@ -181,6 +189,7 @@ function ComplaintReviewPage() {
   )
 }
 
+// ===== CAMPO REUTILIZÁVEL DA REVISÃO =====
 // Exibe um rótulo e seu valor como uma linha reutilizável da revisão.
 function ReviewField({ label, value }: { label: string; value: string }) {
   return <div className="review-field"><dt>{label}</dt><dd>{value}</dd></div>

@@ -19,6 +19,7 @@ type ComplaintData = {
   longitude?: number
 }
 
+// ===== RASCUNHO E ESTADO DA LOCALIZAÇÃO =====
 // Confirma endereço e coordenadas para compor o rascunho da denúncia.
 function ComplaintLocationPage() {
   const navigate = useNavigate()
@@ -54,6 +55,8 @@ function ComplaintLocationPage() {
       : null,
   )
 
+  // ===== GEOCODIFICAÇÃO REVERSA =====
+  // Consulta o endpoint público Nominatim para obter endereço a partir das coordenadas.
   // Consulta o serviço de geocodificação reversa para sugerir campos do endereço.
   const fillAddressFromCoordinates = useCallback(async (latitude: number, longitude: number) => {
     setIsAddressLoading(true)
@@ -128,6 +131,7 @@ function ComplaintLocationPage() {
     return () => window.clearTimeout(timer)
   }, [coordinates, requestLocation])
 
+  // ===== VALIDAÇÃO E AVANÇO PARA REVISÃO =====
   // Valida os dados da localização e guarda a etapa seguinte no rascunho da sessão.
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -173,6 +177,7 @@ function ComplaintLocationPage() {
 
   return (
     <main className="location-page">
+      {/* ===== TELA (JSX): confirmação do local antes de ComplaintReviewPage. ===== */}
       <CitizenHeader active="create" />
 
       <section className="location-shell" aria-labelledby="location-title">
@@ -188,6 +193,7 @@ function ComplaintLocationPage() {
         </div>
 
         <form className="location-form" onSubmit={handleSubmit}>
+          {/* Campos revisam o endereço sugerido e coordenadas obtidas pelo navegador. */}
           <section className="location-card">
             <div className="form-section-title">
               <span>01</span>
@@ -267,6 +273,7 @@ function ComplaintLocationPage() {
             </div>
           </section>
 
+          {/* Resumo indica que o relato completo será conferido na etapa seguinte. */}
           <section className="map-placeholder" aria-label="Mapa da localização">
             <div className="map-placeholder-icon" aria-hidden="true">⌖</div>
               <h2>Confira a denúncia</h2>

@@ -15,6 +15,7 @@ import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
 
 /** API HTTP do CidUp: autenticação, usuários, órgãos, denúncias, históricos e integrações opcionais. */
 const scrypt = promisify(scryptCallback)
+// ===== CONFIGURAÇÃO E LIMITAÇÃO DE REQUISIÇÕES =====
 // Limita tentativas de login e cadastro para dificultar abuso dos endpoints de autenticação.
 const authenticationRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -25,6 +26,7 @@ const authenticationRateLimit = rateLimit({
 })
 
 // Converte um valor numérico em ID positivo ou retorna null quando ele for inválido.
+// ===== VALIDAÇÃO E ADAPTAÇÃO DE DADOS =====
 function readPositiveInt(value: unknown) {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
@@ -35,10 +37,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+// Remove caracteres não numéricos para validar CPF, CEP e outros campos numéricos.
 function digits(value: unknown) {
   return typeof value === 'string' ? value.replace(/\D/g, '') : ''
 }
 
+// Confere o formato e os dígitos verificadores antes do cadastro ou da atualização do perfil.
 function isValidCpf(value: unknown) {
   const cpf = digits(value)
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false
@@ -54,12 +58,14 @@ function isValidCpf(value: unknown) {
   return digit === Number(cpf[10])
 }
 
+// Confere se o CEP informado pelo frontend contém exatamente oito dígitos.
 function isValidCep(value: unknown) {
   return /^\d{8}$/.test(digits(value))
 }
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
+// Valida o formato e o tamanho das imagens recebidas nas rotas de perfil e denúncia.
 function isValidImageData(value: unknown) {
   if (typeof value !== 'string') return false
   const match = value.match(/^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/)
@@ -180,6 +186,7 @@ function complaintResponse(complaint: {
   }
 }
 
+// ===== CONFIGURAÇÃO DA API E MIDDLEWARES =====
 // Monta a API com banco e opções injetáveis, validando as configurações antes de expor rotas.
 export function createApp(
   database: PrismaClient = prisma,
@@ -206,6 +213,7 @@ if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 
 const authenticate = requireAuthentication(secret)
 const app = express()
 
+// Configura cabeçalhos, origem permitida, JSON e cookie usados pelas rotas abaixo.
 app.disable('x-powered-by')
 app.set('trust proxy', production ? 1 : false)
 if (production) {
@@ -292,6 +300,7 @@ app.get('/api/supabase/status', authenticate, async (_request, response) => {
   }
 })
 
+// ===== AUTENTICAÇÃO: CADASTRO, LOGIN E SESSÃO =====
 // Valida os campos do cadastro e cria um usuário sem expor a senha armazenada.
 async function registerUser(request: express.Request, response: express.Response) {
   const body = isRecord(request.body) ? request.body : {}
@@ -327,6 +336,7 @@ async function registerUser(request: express.Request, response: express.Response
   }
 }
 
+// Recebe o cadastro iniciado pelo formulário do frontend e encaminha os dados ao Prisma.
 app.post(['/api/auth/register', '/api/users', '/api/usuarios'], authenticationRateLimit, registerUser)
 
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
@@ -468,6 +478,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
   }
 })
 
+// ===== USUÁRIOS: PERFIL E GERENCIAMENTO DA PRÓPRIA CONTA =====
 // Retorna somente o perfil do usuário autenticado.
 app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
@@ -644,6 +655,7 @@ app.delete(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request
   }
 })
 
+// ===== ÓRGÃOS: CONSULTA E ADMINISTRAÇÃO =====
 // Lista apenas os campos públicos dos órgãos responsáveis.
 app.get(['/api/orgaos', '/api/organs'], async (_request, response) => {
   try {
@@ -759,6 +771,7 @@ app.delete(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdminist
   }
 })
 
+// ===== DENÚNCIAS: CONSULTA, CRIAÇÃO E ATUALIZAÇÃO =====
 // Lista as denúncias próprias; administradores autorizados podem consultar todas.
 app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
@@ -1042,6 +1055,7 @@ app.get(['/api/historicos', '/api/histories'], authenticate, async (request, res
   }
 })
 
+// ===== HISTÓRICO: ACOMPANHAMENTO DAS DENÚNCIAS =====
 // Consulta um histórico apenas se estiver ligado a uma denúncia acessível ao usuário.
 app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
@@ -1230,6 +1244,7 @@ app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (r
   }
 })
 
+// ===== IA: SUGESTÃO DE RASCUNHO PARA O FRONTEND =====
 // Solicita à IA um rascunho estruturado, sem criar ou enviar a denúncia automaticamente.
 app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
   const description =
@@ -1310,6 +1325,7 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
   }
 })
 
+// ===== TRATAMENTO DE ERROS DA API =====
 // Converte erros inesperados e JSON malformado em respostas seguras para o cliente.
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   if (isRecord(error) && (error.type === 'entity.too.large' || error.name === 'PayloadTooLargeError')) {
@@ -1330,6 +1346,7 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
 return app
 }
 
+// ===== INICIALIZAÇÃO DO SERVIDOR =====
 // Inicia o servidor apenas quando este arquivo é executado diretamente.
 const isMainModule = process.argv[1] !== undefined &&
   pathToFileURL(resolve(process.argv[1])).href === import.meta.url
