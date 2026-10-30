@@ -33,6 +33,15 @@ type AdminComplaint = {
   history: ComplaintHistory[]
 }
 
+type PasswordRecoveryRequest = {
+  id: number
+  requestedAt: string
+  citizen: string
+  email: string
+  phone: string | null
+  cpf: string | null
+}
+
 type ComplaintHistory = {
   id: number
   description: string
@@ -148,6 +157,7 @@ const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhad
 const navigation = [
   { path: '/responsavel/dashboard', label: 'Painel' },
   { path: '/responsavel/denuncias', label: 'Denúncias' },
+  { path: '/responsavel/recuperacao-senha', label: 'Recuperação de senha' },
   { path: '/responsavel/tipos', label: 'Tipos de ocorrência' },
   { path: '/responsavel/relatorios', label: 'Relatórios' },
   { path: '/responsavel/configuracoes', label: 'Configurações' },
@@ -221,6 +231,9 @@ function ResponsiblePanelPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [profile, setProfile] = useState<ResponsibleProfile | null>(null)
+  const [recoveryRequests, setRecoveryRequests] = useState<PasswordRecoveryRequest[]>([])
+  const [temporaryPasswords, setTemporaryPasswords] = useState<Record<number, string>>({})
+  const [recoveryMessage, setRecoveryMessage] = useState('')
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
@@ -237,12 +250,14 @@ function ResponsiblePanelPage() {
       apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
       apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
       apiRequest<{ user: ResponsibleProfile }>('/api/auth/session'),
+      apiRequest<{ requests: PasswordRecoveryRequest[] }>('/api/admin/password-recovery-requests'),
     ])
-      .then(([complaintData, organizationData, sessionData]) => {
+      .then(([complaintData, organizationData, sessionData, recoveryData]) => {
         if (!active) return
         setComplaints(complaintData.complaints.map(mapApiComplaint))
         setOrganizations(organizationData.orgaos)
         setProfile(sessionData.user)
+        setRecoveryRequests(recoveryData.requests)
       })
       .catch((error) => {
         if (!active) return
@@ -333,6 +348,62 @@ function ResponsiblePanelPage() {
       setSavedUpdate(false)
       setLoadError(error instanceof Error ? error.message : 'Não foi possível salvar a atualização.')
     }
+  }
+
+  async function setTemporaryPassword(event: React.FormEvent<HTMLFormElement>, requestId: number) {
+    event.preventDefault()
+    setRecoveryMessage('')
+    try {
+      await apiRequest(`/api/admin/password-recovery-requests/${requestId}/temporary-password`, {
+        method: 'POST',
+        body: JSON.stringify({ temporaryPassword: temporaryPasswords[requestId] ?? '' }),
+      })
+      const refreshed = await apiRequest<{ requests: PasswordRecoveryRequest[] }>('/api/admin/password-recovery-requests')
+      setRecoveryRequests(refreshed.requests)
+      setTemporaryPasswords((current) => {
+        const next = { ...current }
+        delete next[requestId]
+        return next
+      })
+      setRecoveryMessage('Senha temporária definida. Entregue-a ao cidadão por um canal confiável.')
+    } catch (error) {
+      setRecoveryMessage(error instanceof Error ? error.message : 'Não foi possível definir a senha temporária.')
+    }
+  }
+
+  function renderPasswordRecovery() {
+    return (
+      <>
+        <div className="rp-page-heading"><div><h1>Recuperação de senha</h1><p>Analise solicitações e defina uma senha temporária para o cidadão.</p></div></div>
+        {recoveryMessage && <p className="rp-success-message" role="status">{recoveryMessage}</p>}
+        <section className="rp-panel rp-recovery-list" aria-label="Solicitações de recuperação pendentes">
+          {recoveryRequests.length === 0 && <p className="rp-empty-state">Nenhuma solicitação pendente.</p>}
+          {recoveryRequests.map((item) => (
+            <article className="rp-recovery-request" key={item.id}>
+              <div className="rp-recovery-citizen">
+                <h2>{item.citizen}</h2>
+                <p>{item.email} · {item.phone ?? 'Telefone não informado'} · CPF {item.cpf ?? 'não informado'}</p>
+                <small>Solicitada em {new Date(item.requestedAt).toLocaleString('pt-BR')}</small>
+              </div>
+              <form className="rp-recovery-form" onSubmit={(event) => void setTemporaryPassword(event, item.id)}>
+                <label htmlFor={`temporary-password-${item.id}`}>Senha temporária</label>
+                <input
+                  id={`temporary-password-${item.id}`}
+                  type="text"
+                  autoComplete="off"
+                  minLength={8}
+                  maxLength={1024}
+                  required
+                  value={temporaryPasswords[item.id] ?? ''}
+                  onChange={(event) => setTemporaryPasswords((current) => ({ ...current, [item.id]: event.target.value }))}
+                />
+                <button className="rp-primary-button" type="submit">Definir senha</button>
+              </form>
+            </article>
+          ))}
+        </section>
+      </>
+    )
   }
 
   // Gera um arquivo CSV com os dados atualmente disponíveis na lista.
@@ -573,6 +644,7 @@ function ResponsiblePanelPage() {
 
   // Seleciona o conteúdo conforme a rota /responsavel/*, incluindo relatórios e configurações.
   const body = section === 'denuncias' ? renderComplaints()
+    : section === 'recuperacao-senha' ? renderPasswordRecovery()
     : section === 'tipos' ? renderTypes()
       : section === 'relatorios' ? renderReports()
         : section === 'configuracoes' ? renderSettings()

@@ -4,7 +4,7 @@ services:
     runtime: node
     rootDir: backend
     buildCommand: npm ci && npx prisma generate
-    startCommand: npm run start
+    startCommand: npx prisma migrate deploy && npm run start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

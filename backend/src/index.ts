@@ -258,7 +258,34 @@ const authCookieSameSite = production ? 'none' : 'lax'
 if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 'https:')) {
   throw new Error('FRONTEND_ORIGINS deve usar HTTPS em produção.')
 }
-const authenticate = requireAuthentication(secret)
+const verifyAuthentication = requireAuthentication(secret)
+const authenticate: express.RequestHandler = (request, response, next) => {
+  verifyAuthentication(request, response, (error?: unknown) => {
+    if (error) {
+      next(error)
+      return
+    }
+    if (readAuthPrincipalType(request) === 'RESPONSIBLE' ||
+        request.path === '/api/auth/session' ||
+        request.path === '/api/auth/change-temporary-password') {
+      next()
+      return
+    }
+    void database.usuario.findUnique({
+      where: { id_usuario: readAuthUserId(request) ?? -1 },
+      select: { must_change_password: true },
+    }).then((user) => {
+      if (user?.must_change_password) {
+        response.status(403).json({
+          error: 'Troque sua senha temporária para continuar.',
+          code: 'PASSWORD_CHANGE_REQUIRED',
+        })
+        return
+      }
+      next()
+    }).catch((error) => handlePrismaError(error, response, 'require-password-change'))
+  })
+}
 const app = express()
 
 // Configura cabeçalhos, origem permitida, JSON e cookie usados pelas rotas abaixo.
@@ -407,6 +434,36 @@ app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, re
   const body = isRecord(request.body) ? request.body : {}
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const genericResponse = { message: 'Se os dados informados estiverem cadastrados, enviaremos as instruções de recuperação por e-mail.' }
+  if ('cpf' in body) {
+    const cpf = digits(body.cpf)
+    try {
+      if (isValidCpf(cpf)) {
+        const user = await database.usuario.findUnique({
+          where: { cpf },
+          select: { id_usuario: true },
+        })
+        if (user) {
+          await database.password_recovery_request.upsert({
+            where: { id_usuario: user.id_usuario },
+            create: { id_usuario: user.id_usuario },
+            update: {
+              status: 'PENDING',
+              requested_at: new Date(),
+              resolved_at: null,
+              id_responsavel: null,
+            },
+          })
+        }
+      }
+      response.status(202).json({
+        message: 'Se os dados corresponderem a uma conta, a solicitação será encaminhada ao responsável.',
+      })
+    } catch (error) {
+      handlePrismaError(error, response, 'create-password-recovery-request')
+    }
+    return
+  }
+
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
     response.json(genericResponse)
     return
@@ -465,6 +522,114 @@ app.post('/api/auth/reset-password', passwordResetRateLimit, async (request, res
   }
 })
 
+app.post('/api/auth/change-temporary-password', authenticate, async (request, response) => {
+  const userId = readAuthUserId(request)
+  const newPassword = isRecord(request.body) ? request.body.newPassword : undefined
+  if (!userId || readAuthPrincipalType(request) === 'RESPONSIBLE') {
+    response.status(401).json({ error: 'Autenticação de cidadão necessária.' })
+    return
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 1024) {
+    response.status(400).json({ error: 'A nova senha deve ter entre 6 e 1024 caracteres.' })
+    return
+  }
+  try {
+    const user = await database.usuario.findUnique({
+      where: { id_usuario: userId },
+      select: { must_change_password: true, senha: true },
+    })
+    if (!user?.must_change_password) {
+      response.status(400).json({ error: 'Não há troca de senha temporária pendente.' })
+      return
+    }
+    if (await verifyPassword(newPassword, user.senha)) {
+      response.status(400).json({ error: 'A senha definitiva deve ser diferente da senha temporária.' })
+      return
+    }
+    await database.usuario.update({
+      where: { id_usuario: userId },
+      data: { senha: await hashPassword(newPassword), must_change_password: false },
+    })
+    const token = await createAuthToken(userId, secret, 'CITIZEN')
+    response.cookie(AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: production,
+      sameSite: 'strict',
+      maxAge: AUTH_TOKEN_TTL_SECONDS * 1000,
+      path: '/',
+    })
+    response.json({ message: 'Senha atualizada. Você já pode continuar usando sua conta.' })
+  } catch (error) {
+    handlePrismaError(error, response, 'change-temporary-password')
+  }
+})
+
+app.get('/api/admin/password-recovery-requests', authenticate, requireAdministrator, async (_request, response) => {
+  try {
+    const requests = await database.password_recovery_request.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { requested_at: 'asc' },
+      select: {
+        id: true,
+        requested_at: true,
+        usuario: { select: { nome: true, email: true, telefone: true, cpf: true } },
+      },
+    })
+    response.json({
+      requests: requests.map((item) => ({
+        id: item.id,
+        requestedAt: item.requested_at,
+        citizen: item.usuario.nome,
+        email: item.usuario.email,
+        phone: item.usuario.telefone,
+        cpf: item.usuario.cpf,
+      })),
+    })
+  } catch (error) {
+    handlePrismaError(error, response, 'list-password-recovery-requests')
+  }
+})
+
+app.post('/api/admin/password-recovery-requests/:id/temporary-password', authenticate, requireAdministrator, async (request, response) => {
+  const requestId = readPositiveInt(request.params.id)
+  const responsibleId = readAuthUserId(request)
+  const temporaryPassword = isRecord(request.body) ? request.body.temporaryPassword : undefined
+  if (!requestId || !responsibleId) {
+    response.status(400).json({ error: 'Solicitação inválida.' })
+    return
+  }
+  if (typeof temporaryPassword !== 'string' || temporaryPassword.length < 8 || temporaryPassword.length > 1024) {
+    response.status(400).json({ error: 'A senha temporária deve ter pelo menos 8 caracteres.' })
+    return
+  }
+  try {
+    const completed = await database.$transaction(async (transaction) => {
+      const requestUpdate = await transaction.password_recovery_request.updateMany({
+        where: { id: requestId, status: 'PENDING' },
+        data: { status: 'COMPLETED', resolved_at: new Date(), id_responsavel: responsibleId },
+      })
+      if (requestUpdate.count !== 1) return false
+      const recoveryRequest = await transaction.password_recovery_request.findUnique({
+        where: { id: requestId },
+        select: { id_usuario: true },
+      })
+      if (!recoveryRequest) return false
+      await transaction.usuario.update({
+        where: { id_usuario: recoveryRequest.id_usuario },
+        data: { senha: await hashPassword(temporaryPassword), must_change_password: true },
+      })
+      return true
+    })
+    if (!completed) {
+      response.status(404).json({ error: 'Solicitação não encontrada ou já atendida.' })
+      return
+    }
+    response.json({ message: 'Senha temporária definida. Entregue-a ao cidadão por um canal confiável.' })
+  } catch (error) {
+    handlePrismaError(error, response, 'set-temporary-password')
+  }
+})
+
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
 app.post('/api/auth/login', authenticationRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
@@ -510,7 +675,12 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
       response.status(401).json({ error: 'E-mail ou senha inválidos.' })
       return
     }
-    const token = await createAuthToken(user.id_usuario, secret, 'CITIZEN')
+    const mustChangePassword = user.must_change_password
+    const token = await createAuthToken(
+      user.id_usuario,
+      secret,
+      mustChangePassword ? 'PASSWORD_CHANGE_REQUIRED' : 'CITIZEN',
+    )
     response.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
       secure: production,
@@ -528,6 +698,7 @@ app.post('/api/auth/login', authenticationRateLimit, async (request, response) =
         cep: user.cep,
         photo: user.foto,
         role: 'CITIZEN',
+        mustChangePassword,
       },
     })
   } catch (error) {
@@ -584,7 +755,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
     const id_usuario = principalId
     const user = await database.usuario.findUnique({
       where: { id_usuario },
-      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true },
+      select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, cep: true, foto: true, must_change_password: true },
     })
     if (!user) {
       response.status(401).json({ error: 'Credencial inválida ou expirada.' })
@@ -597,6 +768,7 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
         email: user.email,
         phone: user.telefone,
         role: 'CITIZEN',
+        mustChangePassword: user.must_change_password,
       },
     })
   } catch (error) {

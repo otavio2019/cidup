@@ -31,6 +31,7 @@ function LoginPage() {
           email: string
           phone: string
           role: 'CITIZEN' | 'RESPONSIBLE'
+          mustChangePassword?: boolean
         }
       }>('/api/auth/login', {
         method: 'POST',
@@ -38,7 +39,9 @@ function LoginPage() {
       })
       localStorage.removeItem('cidup-complaints')
       localStorage.setItem('cidup-profile', JSON.stringify(data.user))
-      navigate(data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
+      navigate(data.user.mustChangePassword
+        ? '/trocar-senha-temporaria'
+        : data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
     } catch (error) {
       setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')
     } finally {

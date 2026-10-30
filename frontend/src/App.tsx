@@ -12,6 +12,7 @@ import DraftsPage from './pages/usuario/DraftsPage'
 import LoginPage from './pages/auth/LoginPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
+import ChangeTemporaryPasswordPage from './pages/auth/ChangeTemporaryPasswordPage'
 import MyComplaintsPage from './pages/usuario/MyComplaintsPage'
 import ProfilePage from './pages/usuario/ProfilePage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -21,6 +22,7 @@ import './citizen-redesign.css'
 /** Entrada da aplicação: confirma a sessão antes de renderizar cada área protegida. */
 type SessionUser = {
   role: 'CITIZEN' | 'RESPONSIBLE'
+  mustChangePassword?: boolean
 }
 
 // Consulta a sessão do servidor uma vez e ignora respostas após a desmontagem do componente.
@@ -56,6 +58,19 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" replace />
   }
+  if (user.mustChangePassword) {
+    return <Navigate to="/trocar-senha-temporaria" replace />
+  }
+
+  return children
+}
+
+export function TemporaryPasswordRoute({ children }: { children: ReactNode }) {
+  const { loading, user } = useSession()
+
+  if (loading) return <main aria-busy="true">Verificando sessão...</main>
+  if (!user) return <Navigate to="/login" replace />
+  if (!user.mustChangePassword || user.role !== 'CITIZEN') return <Navigate to="/dashboard" replace />
 
   return children
 }
@@ -85,6 +100,10 @@ function App() {
       <Route path="/cadastro" element={<RegisterPage />} />
       <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
       <Route path="/recuperar-senha/nova" element={<ResetPasswordPage />} />
+      <Route
+        path="/trocar-senha-temporaria"
+        element={<TemporaryPasswordRoute><ChangeTemporaryPasswordPage /></TemporaryPasswordRoute>}
+      />
       <Route
         path="/responsavel/*"
         element={

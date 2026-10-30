@@ -7,7 +7,7 @@ export const AUTH_COOKIE_NAME = 'cidup_session'
 export const AUTH_TOKEN_TTL_SECONDS = 15 * 60
 const AUTH_ISSUER = 'cidup-api'
 const AUTH_AUDIENCE = 'cidup-web'
-export type AuthPrincipalType = 'CITIZEN' | 'RESPONSIBLE'
+export type AuthPrincipalType = 'CITIZEN' | 'RESPONSIBLE' | 'PASSWORD_CHANGE_REQUIRED'
 
 declare global {
   namespace Express {
@@ -67,7 +67,11 @@ export function requireAuthentication(secret: string) {
         return
       }
       request.authUserId = userId
-      request.authPrincipalType = payload.principalType === 'RESPONSIBLE' ? 'RESPONSIBLE' : 'CITIZEN'
+      request.authPrincipalType = payload.principalType === 'RESPONSIBLE'
+        ? 'RESPONSIBLE'
+        : payload.principalType === 'PASSWORD_CHANGE_REQUIRED'
+          ? 'PASSWORD_CHANGE_REQUIRED'
+          : 'CITIZEN'
       next()
     } catch {
       response.status(401).json({ error: 'Credencial inválida ou expirada.' })

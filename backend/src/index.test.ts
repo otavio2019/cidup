@@ -38,7 +38,26 @@ type StoredUser = {
   nome: string
   email: string
   telefone: string
+  cpf: string
   senha: string
+  must_change_password: boolean
+}
+
+type StoredRecoveryRequest = {
+  id: number
+  id_usuario: number
+  status: string
+  requested_at: Date
+  resolved_at: Date | null
+  id_responsavel: number | null
+}
+
+type StoredResetToken = {
+  id: number
+  token_hash: string
+  id_usuario: number
+  expires_at: Date
+  used_at: Date | null
 }
 
 type StoredResponsible = {
@@ -68,12 +87,16 @@ type StoredComplaint = {
 }
 
 const users = new Map<number, StoredUser>()
+const resetTokens = new Map<number, StoredResetToken>()
+const recoveryRequests = new Map<number, StoredRecoveryRequest>()
 const responsibleAccounts = new Map<number, StoredResponsible>()
 const complaints = new Map<number, StoredComplaint>()
 const histories = new Map<number, RecordValue>()
 const calls: Array<{ model: string; method: string; args: RecordValue }> = []
 let nextUserId = 3
 let nextHistoryId = 1
+let nextResetTokenId = 1
+let nextRecoveryRequestId = 1
 let client: PrismaClient
 let baseUrl: string
 let server: ReturnType<ReturnType<typeof createApp>['listen']>
@@ -116,7 +139,9 @@ function installDatabaseMocks(database: PrismaClient) {
         nome: String(data.nome),
         email: String(data.email),
         telefone: String(data.telefone),
+        cpf: String(data.cpf),
         senha: String(data.senha),
+        must_change_password: Boolean(data.must_change_password ?? false),
       }
       users.set(user.id_usuario, user)
       return selectedUser(user, args)
@@ -129,7 +154,8 @@ function installDatabaseMocks(database: PrismaClient) {
       const where = record(args.where)
       const user = [...users.values()].find((candidate) =>
         ('id_usuario' in where && candidate.id_usuario === where.id_usuario) ||
-        ('email' in where && candidate.email === where.email),
+        ('email' in where && candidate.email === where.email) ||
+        ('cpf' in where && candidate.cpf === where.cpf),
       )
       return user ? selectedUser(user, args) : null
     },
@@ -154,6 +180,97 @@ function installDatabaseMocks(database: PrismaClient) {
       remember('orgao', 'findMany', args)
       return routingOrganizations
     },
+  })
+
+  installDelegate(database, 'password_reset_token', {
+    async deleteMany(args) {
+      remember('password_reset_token', 'deleteMany', args)
+      const where = record(args.where)
+      for (const [id, token] of resetTokens) {
+        if (!('id_usuario' in where) || token.id_usuario === where.id_usuario) resetTokens.delete(id)
+      }
+      return { count: 1 }
+    },
+    async create(args) {
+      remember('password_reset_token', 'create', args)
+      const data = record(args.data)
+      const token: StoredResetToken = {
+        id: nextResetTokenId++,
+        token_hash: String(data.token_hash),
+        id_usuario: Number(data.id_usuario),
+        expires_at: new Date(String(data.expires_at)),
+        used_at: null,
+      }
+      resetTokens.set(token.id, token)
+      return token
+    },
+    async findUnique(args) {
+      remember('password_reset_token', 'findUnique', args)
+      const where = record(args.where)
+      return [...resetTokens.values()].find((token) => token.token_hash === where.token_hash) ?? null
+    },
+    async updateMany(args) {
+      remember('password_reset_token', 'updateMany', args)
+      const where = record(args.where)
+      const token = resetTokens.get(Number(where.id))
+      const expiry = record(where.expires_at)
+      if (!token || token.used_at || token.expires_at <= new Date(String(expiry.gt))) return { count: 0 }
+      token.used_at = new Date(String(record(args.data).used_at))
+      return { count: 1 }
+    },
+  })
+  installDelegate(database, 'password_recovery_request', {
+    async upsert(args) {
+      remember('password_recovery_request', 'upsert', args)
+      const where = record(args.where)
+      const existing = [...recoveryRequests.values()].find((item) => item.id_usuario === where.id_usuario)
+      if (existing) {
+        Object.assign(existing, record(args.update))
+        return existing
+      }
+      const data = record(args.create)
+      const created: StoredRecoveryRequest = {
+        id: nextRecoveryRequestId++,
+        id_usuario: Number(data.id_usuario),
+        status: 'PENDING',
+        requested_at: new Date(),
+        resolved_at: null,
+        id_responsavel: null,
+      }
+      recoveryRequests.set(created.id, created)
+      return created
+    },
+    async findMany(args) {
+      remember('password_recovery_request', 'findMany', args)
+      return [...recoveryRequests.values()]
+        .filter((item) => item.status === record(args.where).status)
+        .map((item) => {
+          const user = users.get(item.id_usuario)
+          return {
+            id: item.id,
+            requested_at: item.requested_at,
+            usuario: { nome: user?.nome, email: user?.email, telefone: user?.telefone, cpf: user?.cpf },
+          }
+        })
+    },
+    async findUnique(args) {
+      remember('password_recovery_request', 'findUnique', args)
+      const id = Number(record(args.where).id)
+      const item = recoveryRequests.get(id)
+      return item ? { id_usuario: item.id_usuario } : null
+    },
+    async updateMany(args) {
+      remember('password_recovery_request', 'updateMany', args)
+      const where = record(args.where)
+      const item = recoveryRequests.get(Number(where.id))
+      if (!item || item.status !== where.status) return { count: 0 }
+      Object.assign(item, record(args.data))
+      return { count: 1 }
+    },
+  })
+  Object.defineProperty(database, '$transaction', {
+    configurable: true,
+    value: (callback: (transaction: PrismaClient) => Promise<unknown>) => callback(database),
   })
 
   installDelegate(database, 'responsavel', {
@@ -312,8 +429,8 @@ before(async () => {
   client = new PrismaClient({ datasourceUrl: 'postgresql://127.0.0.1:5432/cidup_test?schema=public' })
   installDatabaseMocks(client)
   const passwordHash = `${'a'.repeat(32)}:${(await scrypt('secret-password', 'a'.repeat(32), 64) as Buffer).toString('hex')}`
-  users.set(1, { id_usuario: 1, nome: 'Pessoa Um', email: 'um@example.test', telefone: '1111111111', senha: passwordHash })
-  users.set(2, { id_usuario: 2, nome: 'Pessoa Dois', email: 'dois@example.test', telefone: '2222222222', senha: passwordHash })
+  users.set(1, { id_usuario: 1, nome: 'Pessoa Um', email: 'um@example.test', telefone: '1111111111', cpf: '52998224725', senha: passwordHash, must_change_password: false })
+  users.set(2, { id_usuario: 2, nome: 'Pessoa Dois', email: 'dois@example.test', telefone: '2222222222', cpf: '11144477735', senha: passwordHash, must_change_password: false })
   responsibleAccounts.set(99, {
     id_responsavel: 99,
     nome: 'Responsável Teste',
@@ -356,6 +473,7 @@ before(async () => {
   const app = createApp(client, {
     authTokenSecret: secret,
     frontendOrigins: 'http://localhost:5173',
+    production: false,
   })
   server = app.listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -375,6 +493,108 @@ test('o endpoint de saúde é público e responde com sucesso', async () => {
   const response = await callApi('/health')
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), { status: 'ok' })
+})
+
+test('solicitar recuperação por CPF retorna sempre a mesma resposta genérica', async () => {
+  const response = await callApi('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ cpf: '529.982.247-25' }),
+  })
+  const knownBody = await response.json()
+  assert.equal(response.status, 202)
+  assert.deepEqual(knownBody, {
+    message: 'Se os dados corresponderem a uma conta, a solicitação será encaminhada ao responsável.',
+  })
+  assert.equal(recoveryRequests.size, 1)
+
+  const missing = await callApi('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ cpf: '935.411.347-80' }),
+  })
+  assert.equal(missing.status, 202)
+  assert.deepEqual(await missing.json(), knownBody)
+  assert.equal(recoveryRequests.size, 1)
+
+  const invalid = await callApi('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ cpf: '12345678900' }),
+  })
+  assert.equal(invalid.status, 202)
+  assert.deepEqual(await invalid.json(), knownBody)
+  assert.equal(recoveryRequests.size, 1)
+
+  const duplicate = await callApi('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ cpf: '52998224725' }),
+  })
+  assert.equal(duplicate.status, 202)
+  assert.equal(recoveryRequests.size, 1)
+})
+
+test('responsável define senha temporária e cidadão precisa trocá-la antes de acessar o sistema', async () => {
+  const oldUser = { ...users.get(1)! }
+  const noSession = await callApi('/api/admin/password-recovery-requests')
+  assert.equal(noSession.status, 401)
+  const citizenSession = await cookieFor(1)
+  const forbidden = await callApi('/api/admin/password-recovery-requests', {
+    headers: { Cookie: citizenSession },
+  })
+  assert.equal(forbidden.status, 403)
+
+  const cookie = await responsibleCookieFor(99)
+  const listResponse = await callApi('/api/admin/password-recovery-requests', {
+    headers: { Cookie: cookie },
+  })
+  assert.equal(listResponse.status, 200)
+  const requests = (await listResponse.json() as { requests: Array<{ id: number; citizen: string }> }).requests
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0]?.citizen, 'Pessoa Um')
+  const requestId = requests[0]?.id
+  assert.ok(requestId)
+
+  const setPassword = await callApi(`/api/admin/password-recovery-requests/${requestId}/temporary-password`, {
+    method: 'POST',
+    headers: { Cookie: cookie },
+    body: JSON.stringify({ temporaryPassword: 'temporaria-123' }),
+  })
+  assert.equal(setPassword.status, 200)
+  assert.equal(users.get(1)?.must_change_password, true)
+  assert.notEqual(users.get(1)?.senha, 'temporaria-123')
+  assert.equal(recoveryRequests.get(requestId)?.status, 'COMPLETED')
+
+  const login = await callApi('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'um@example.test', password: 'temporaria-123' }),
+  })
+  assert.equal(login.status, 200)
+  assert.equal(record((await login.json() as RecordValue).user).mustChangePassword, true)
+  const temporaryCookie = login.headers.get('set-cookie')?.split(';')[0]
+  assert.ok(temporaryCookie)
+
+  const blocked = await callApi('/api/complaints', { headers: { Cookie: temporaryCookie } })
+  assert.equal(blocked.status, 403)
+  assert.equal((await blocked.json() as { code: string }).code, 'PASSWORD_CHANGE_REQUIRED')
+
+  const unchanged = await callApi('/api/auth/change-temporary-password', {
+    method: 'POST',
+    headers: { Cookie: temporaryCookie },
+    body: JSON.stringify({ newPassword: 'temporaria-123' }),
+  })
+  assert.equal(unchanged.status, 400)
+
+  const changed = await callApi('/api/auth/change-temporary-password', {
+    method: 'POST',
+    headers: { Cookie: temporaryCookie },
+    body: JSON.stringify({ newPassword: 'definitiva-123' }),
+  })
+  assert.equal(changed.status, 200)
+  const regularCookie = changed.headers.get('set-cookie')?.split(';')[0]
+  assert.ok(regularCookie)
+  const accessible = await callApi('/api/complaints', { headers: { Cookie: regularCookie } })
+  assert.equal(accessible.status, 200)
+
+  users.set(1, oldUser)
+  recoveryRequests.clear()
 })
 
 test('o cadastro aceita dados válidos sem retornar o hash da senha', async () => {
