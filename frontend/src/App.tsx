@@ -10,6 +10,8 @@ import CreateComplaintPage from './pages/usuario/CreateComplaintPage'
 import DashboardPage from './pages/usuario/DashboardPage'
 import DraftsPage from './pages/usuario/DraftsPage'
 import LoginPage from './pages/auth/LoginPage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import MyComplaintsPage from './pages/usuario/MyComplaintsPage'
 import ProfilePage from './pages/usuario/ProfilePage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -81,6 +83,8 @@ function App() {
       {/* Login e cadastro são públicos; as rotas do cidadão exigem sessão e /responsavel/* também valida o papel. */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<RegisterPage />} />
+      <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
+      <Route path="/recuperar-senha/nova" element={<ResetPasswordPage />} />
       <Route
         path="/responsavel/*"
         element={

@@ -7,7 +7,7 @@
     "predev": "prisma generate",
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "tsx --test src/index.test.ts",
+    "test": "tsx --test src/*.test.ts",
     "seed:responsavel": "tsx scripts/seed-responsavel.ts"
   },
   "keywords": [],

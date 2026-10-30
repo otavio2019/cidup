@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
@@ -12,6 +12,7 @@ import type { PrismaClient } from '@prisma/client'
 import { AUTH_COOKIE_NAME, AUTH_TOKEN_TTL_SECONDS, createAuthToken, readAuthPrincipalType, readAuthUserId, requireAuthentication } from './auth.js'
 import { prisma } from './lib/prisma.js'
 import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
+import { sendComplaintReceivedEmail, sendComplaintStatusEmail, sendPasswordResetEmail } from './email.js'
 
 /** API HTTP do CidUp: autenticação, usuários, órgãos, denúncias, históricos e integrações opcionais. */
 const scrypt = promisify(scryptCallback)
@@ -23,6 +24,13 @@ const authenticationRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas tentativas. Aguarde antes de tentar novamente.' },
+})
+const passwordResetRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas solicitações. Aguarde antes de tentar novamente.' },
 })
 
 // Converte um valor numérico em ID positivo ou retorna null quando ele for inválido.
@@ -320,6 +328,22 @@ async function verifyPassword(password: string, storedHash: string) {
   return storedKey.length === derivedKey.length && timingSafeEqual(storedKey, derivedKey)
 }
 
+function hashResetToken(token: string) {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+function frontendUrl() {
+  return (process.env.FRONTEND_URL ?? process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173').split(',')[0]!.trim().replace(/\/$/, '')
+}
+
+async function notifySafely(action: () => Promise<unknown>) {
+  try {
+    await action()
+  } catch (error) {
+    console.error('Falha ao enviar e-mail transacional:', error instanceof Error ? error.message : 'erro desconhecido')
+  }
+}
+
 // Disponibiliza uma verificação simples de disponibilidade sem exigir sessão.
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' })
@@ -378,6 +402,68 @@ async function registerUser(request: express.Request, response: express.Response
 
 // Recebe o cadastro iniciado pelo formulário do frontend e encaminha os dados ao Prisma.
 app.post(['/api/auth/register', '/api/users', '/api/usuarios'], authenticationRateLimit, registerUser)
+
+app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, response) => {
+  const body = isRecord(request.body) ? request.body : {}
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const genericResponse = { message: 'Se os dados informados estiverem cadastrados, enviaremos as instruções de recuperação por e-mail.' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
+    response.json(genericResponse)
+    return
+  }
+  try {
+    const user = await database.usuario.findUnique({ where: { email }, select: { id_usuario: true, email: true } })
+    if (user) {
+      await database.password_reset_token.deleteMany({ where: { id_usuario: user.id_usuario } })
+      const rawToken = randomBytes(32).toString('hex')
+      await database.password_reset_token.create({
+        data: {
+          token_hash: hashResetToken(rawToken),
+          id_usuario: user.id_usuario,
+          expires_at: new Date(Date.now() + 30 * 60 * 1000),
+        },
+      })
+      const resetUrl = `${frontendUrl()}/recuperar-senha/nova?token=${encodeURIComponent(rawToken)}`
+      await notifySafely(() => sendPasswordResetEmail(user.email, resetUrl))
+    }
+    response.json(genericResponse)
+  } catch (error) {
+    handlePrismaError(error, response, 'forgot-password')
+  }
+})
+
+app.post('/api/auth/reset-password', passwordResetRateLimit, async (request, response) => {
+  const body = isRecord(request.body) ? request.body : {}
+  const token = typeof body.token === 'string' ? body.token.trim() : ''
+  const password = body.password
+  if (!/^[a-f0-9]{64}$/i.test(token) || typeof password !== 'string' || password.length < 6 || password.length > 1024) {
+    response.status(400).json({ error: 'O link de recuperação é inválido ou a senha não atende aos requisitos.' })
+    return
+  }
+  try {
+    const resetToken = await database.password_reset_token.findUnique({ where: { token_hash: hashResetToken(token) } })
+    if (!resetToken || resetToken.used_at || resetToken.expires_at <= new Date()) {
+      response.status(400).json({ error: 'O link de recuperação é inválido ou expirou.' })
+      return
+    }
+    const result = await database.$transaction(async (transaction) => {
+      const claimed = await transaction.password_reset_token.updateMany({
+        where: { id: resetToken.id, used_at: null, expires_at: { gt: new Date() } },
+        data: { used_at: new Date() },
+      })
+      if (claimed.count !== 1) return false
+      await transaction.usuario.update({ where: { id_usuario: resetToken.id_usuario }, data: { senha: await hashPassword(password) } })
+      return true
+    })
+    if (!result) {
+      response.status(400).json({ error: 'O link de recuperação é inválido ou expirou.' })
+      return
+    }
+    response.json({ message: 'Senha atualizada com sucesso. Você já pode entrar na sua conta.' })
+  } catch (error) {
+    handlePrismaError(error, response, 'reset-password')
+  }
+})
 
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
 app.post('/api/auth/login', authenticationRateLimit, async (request, response) => {
@@ -1002,7 +1088,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
 
   try {
     const organizations = await database.orgao.findMany({
-      select: { id_orgao: true, nome: true },
+      select: { id_orgao: true, nome: true, email: true },
       orderBy: { nome: 'asc' },
     })
     const routedOrganizations = categories
@@ -1032,8 +1118,18 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
             .map((item) => [item.id_orgao, { id_orgao: item.id_orgao }])).values()],
         },
       },
-      include: { orgao: { select: { id_orgao: true, nome: true } }, orgaos_extras: { select: { id_orgao: true, nome: true } } },
+      include: {
+        orgao: { select: { id_orgao: true, nome: true, email: true } },
+        orgaos_extras: { select: { id_orgao: true, nome: true } },
+        usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
+      },
     })
+    if (denuncia.usuario?.email) {
+      void notifySafely(() => sendComplaintReceivedEmail(denuncia.usuario.email, `CIDUP-${denuncia.id_denuncia}`, denuncia.status))
+    }
+    if (denuncia.orgao?.email) {
+      void notifySafely(() => sendComplaintReceivedEmail(denuncia.orgao.email, `CIDUP-${denuncia.id_denuncia}`, denuncia.status))
+    }
     response.status(201).json({ denuncia, complaint: complaintResponse(denuncia) })
   } catch (error) {
     handlePrismaError(error, response, 'create-complaint')
@@ -1103,6 +1199,9 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
         id_denuncia,
         ...(responsibleUser ? {} : { id_usuario }),
       },
+      include: {
+        usuario: { select: { email: true } },
+      },
     })
     if (!existing) {
       response.status(404).json({ error: 'Denúncia não encontrada.' })
@@ -1120,6 +1219,15 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
         },
       },
     })
+    const statusChanged = typeof data.status === 'string' && data.status !== existing.status
+    if (statusChanged && denuncia.usuario?.email) {
+      void notifySafely(() => sendComplaintStatusEmail(
+        denuncia.usuario.email,
+        `CIDUP-${denuncia.id_denuncia}`,
+        denuncia.status,
+        typeof body.observacao === 'string' ? body.observacao.trim() : undefined,
+      ))
+    }
     response.json({ denuncia, complaint: complaintResponse(denuncia) })
   } catch (error) {
     handlePrismaError(error, response, 'update-complaint')

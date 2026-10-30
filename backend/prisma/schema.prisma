@@ -81,4 +81,18 @@ model usuario {
   senha      String      @db.VarChar(255)
   denuncia   denuncia[]
   historico  historico[]
+  passwordResetTokens password_reset_token[]
+}
+
+/// Token temporário armazenado somente como hash para recuperação de senha.
+model password_reset_token {
+  id           Int       @id @default(autoincrement())
+  token_hash   String    @unique @db.VarChar(64)
+  expires_at   DateTime  @db.Timestamp(3)
+  used_at      DateTime? @db.Timestamp(3)
+  created_at   DateTime  @default(now()) @db.Timestamp(3)
+  id_usuario   Int
+  usuario      usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([id_usuario, expires_at])
 }

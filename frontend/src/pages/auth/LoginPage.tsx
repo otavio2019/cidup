@@ -100,9 +100,9 @@ function LoginPage() {
             <div className="form-group">
               <div className="label-row">
                 <label htmlFor="senha">Senha</label>
-                <a className="forgot-link" href="#recuperar-senha">
+                <Link className="forgot-link" to="/recuperar-senha">
                   Esqueci minha senha
-                </a>
+                </Link>
               </div>
               <div className="input-wrap">
                 <span className="input-icon" aria-hidden="true">*</span>
