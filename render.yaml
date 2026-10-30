@@ -3,7 +3,7 @@ services:
     name: cidup-api
     runtime: node
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate
+    buildCommand: npm ci && npx prisma migrate deploy && npx prisma generate
     startCommand: npm run start
     healthCheckPath: /health
     envVars:

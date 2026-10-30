@@ -63,8 +63,10 @@ function isValidImageData(value: unknown) {
   if (typeof value !== 'string') return false
   const match = value.match(/^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/)
   if (!match) return false
+  const encodedImage = match[1]
+  if (!encodedImage) return false
   try {
-    return Buffer.from(match[1], 'base64').length <= MAX_IMAGE_BYTES
+    return Buffer.from(encodedImage, 'base64').length <= MAX_IMAGE_BYTES
   } catch {
     return false
   }

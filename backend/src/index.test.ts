@@ -197,6 +197,8 @@ function installDatabaseMocks(database: PrismaClient) {
       const userConnect = record(record(data.usuario).connect)
       const orgConnect = record(record(data.orgao).connect)
       const id_denuncia = Math.max(0, ...complaints.keys()) + 1
+      const routedOrganization = routingOrganizations.find((organization) => organization.id_orgao === Number(orgConnect.id_orgao))
+      if (!routedOrganization) throw new Error('Órgão de teste não encontrado.')
       const complaint: StoredComplaint = {
         id_denuncia,
         id_usuario: Number(userConnect.id_usuario),
@@ -209,7 +211,7 @@ function installDatabaseMocks(database: PrismaClient) {
         endereco: String(data.endereco),
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
-        orgao: routingOrganizations.find((organization) => organization.id_orgao === Number(orgConnect.id_orgao)) ?? routingOrganizations[0],
+        orgao: routedOrganization,
       }
       complaints.set(id_denuncia, complaint)
       return complaint
