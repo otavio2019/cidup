@@ -660,6 +660,49 @@
   font-weight: 750;
 }
 
+.rp-group-row {
+  background: #f7fbfe;
+}
+
+.rp-group-details {
+  margin-top: 6px;
+  color: var(--rp-blue);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.rp-group-details summary {
+  cursor: pointer;
+}
+
+.rp-group-details > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.rp-group-protocol {
+  padding: 3px 6px;
+  border: 1px solid #a9c9e2;
+  border-radius: 4px;
+  color: var(--rp-blue);
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.rp-group-note {
+  color: var(--rp-blue) !important;
+  font-weight: 700;
+}
+
+.rp-status-mixed {
+  color: #6a4a12;
+  background: #fff2ca;
+}
+
 .rp-text-button,
 .rp-delete-button {
   padding: 3px;

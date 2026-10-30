@@ -99,6 +99,51 @@ function percent(part: number, total: number) {
   return total === 0 ? 0 : (part / total) * 100
 }
 
+const NEARBY_RADIUS_METERS = 50
+
+function distanceInMeters(first: AdminComplaint, second: AdminComplaint) {
+  const earthRadius = 6371000
+  const radians = (value: number) => value * Math.PI / 180
+  const latitudeDelta = radians(second.latitude - first.latitude)
+  const longitudeDelta = radians(second.longitude - first.longitude)
+  const firstLatitude = radians(first.latitude)
+  const secondLatitude = radians(second.latitude)
+  const value = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2
+  return 2 * earthRadius * Math.asin(Math.sqrt(value))
+}
+
+function shareCategory(first: AdminComplaint, second: AdminComplaint) {
+  return first.categories.some((category) => second.categories.includes(category))
+}
+
+function groupNearbyComplaints(records: AdminComplaint[]) {
+  const groups: AdminComplaint[][] = []
+  const assigned = new Set<number>()
+
+  records.forEach((record, index) => {
+    if (assigned.has(index)) return
+    const group = [record]
+    assigned.add(index)
+    let changed = true
+    while (changed) {
+      changed = false
+      records.forEach((candidate, candidateIndex) => {
+        if (assigned.has(candidateIndex)) return
+        if (group.some((member) => shareCategory(member, candidate)
+          && distanceInMeters(member, candidate) <= NEARBY_RADIUS_METERS)) {
+          group.push(candidate)
+          assigned.add(candidateIndex)
+          changed = true
+        }
+      })
+    }
+    groups.push(group)
+  })
+
+  return groups
+}
+
 const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhada', 'Em atendimento', 'Resolvida', 'Negada']
 const navigation = [
   { path: '/responsavel/dashboard', label: 'Painel' },
@@ -244,6 +289,10 @@ function ResponsiblePanelPage() {
       return matchesQuery && (statusFilter === 'Todos' || complaint.status === statusFilter)
     })
   }, [periodComplaints, query, statusFilter])
+  const visibleComplaintGroups = useMemo(
+    () => groupNearbyComplaints(visibleComplaints),
+    [visibleComplaints],
+  )
 
   const heading = selectedComplaint && section === 'denuncias'
     ? 'Detalhes da denúncia'
@@ -441,10 +490,27 @@ function ResponsiblePanelPage() {
         </section>
         <section className="rp-panel rp-table-panel">
           <div className="rp-table-scroll"><table className="rp-table"><thead><tr><th>Protocolo</th><th>Descrição</th><th>Bairro</th><th>Data</th><th>Status</th><th>Ação</th></tr></thead>
-              <tbody>{visibleComplaints.map((complaint) => <tr key={complaint.protocol}><td className="rp-protocol">{complaint.protocol}</td><td><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small></td><td>{complaint.neighborhood || '—'}</td><td>{complaint.date}</td><td><StatusBadge status={complaint.status} /></td><td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
+              <tbody>{visibleComplaintGroups.map((group) => {
+                const complaint = group[0]!
+                const statuses = new Set(group.map((item) => item.status))
+                return <tr key={complaint.protocol} className={group.length > 1 ? 'rp-group-row' : undefined}>
+                  <td className="rp-protocol">
+                    <strong>{group.length > 1 ? `${group.length} denúncias agrupadas` : complaint.protocol}</strong>
+                    {group.length > 1 && <details className="rp-group-details">
+                      <summary>Ver protocolos</summary>
+                      <div>{group.map((item) => <button className="rp-group-protocol" type="button" key={item.protocol} onClick={() => { setSelectedProtocol(item.protocol); setStatus(item.status); setSector(item.sectorId ? item.sector : ''); setSavedUpdate(false) }}>{item.protocol}</button>)}</div>
+                    </details>}
+                  </td>
+                  <td><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
+                  <td>{complaint.neighborhood || '—'}</td>
+                  <td>{complaint.date}</td>
+                  <td>{statuses.size === 1 ? <StatusBadge status={complaint.status} /> : <span className="rp-status rp-status-mixed">Vários status</span>}</td>
+                  <td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td>
+                </tr>
+              })}</tbody>
           </table></div>
           {visibleComplaints.length === 0 && <p className="rp-empty-state">Nenhuma denúncia encontrada com esses filtros.</p>}
-          <div className="rp-table-footer"><span>{visibleComplaints.length} de {complaints.length} denúncias</span></div>
+          <div className="rp-table-footer"><span>{visibleComplaintGroups.length} grupos / {visibleComplaints.length} denúncias</span></div>
         </section>
       </>
     )
