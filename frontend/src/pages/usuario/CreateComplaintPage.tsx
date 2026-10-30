@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
@@ -6,6 +6,8 @@ import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
 import { reverseGeocode } from '../../geocoding'
 import '../../App.css'
+
+const InteractiveLocationMap = lazy(() => import('../../components/usuario/InteractiveLocationMap'))
 
 /** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
 
@@ -455,6 +457,25 @@ function CreateComplaintPage() {
                 {isLocating ? 'Obtendo localização...' : coordinates ? 'Atualizar localização' : 'Obter localização atual'}
               </button>
               {locationMessage && <small>{locationMessage}</small>}
+            </div>
+            <div className="interactive-map-card" aria-label="Mapa da localização da denúncia">
+              <div className="map-placeholder-heading">
+                <div>
+                  <h2>Confira o local no mapa</h2>
+                  <p>Clique no mapa ou arraste o marcador para ajustar o ponto da ocorrência.</p>
+                </div>
+                <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
+              </div>
+              <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
+                <InteractiveLocationMap
+                  coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
+                  onPositionChange={({ lat, lng }) => {
+                    setCoordinates({ latitude: lat, longitude: lng })
+                    setLocationMessage('')
+                    void fillAddressFromCoordinates(lat, lng)
+                  }}
+                />
+              </Suspense>
             </div>
           </div>
 
