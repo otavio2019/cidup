@@ -261,23 +261,21 @@ function ComplaintLocationPage() {
                 <small>Localização obtida automaticamente: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}. Você pode editar os campos acima.</small>
               )}
             </div>
-          </section>
-
-          {/* Resumo indica que o relato completo será conferido na etapa seguinte. */}
-          <section className="map-placeholder interactive-map-card" aria-label="Mapa da localização">
-            <div className="map-placeholder-heading">
-              <div>
-                <h2>Confira a localização no mapa</h2>
-                <p>O marcador representa o ponto da ocorrência. Você pode arrastá-lo ou clicar em outro ponto.</p>
+            <div className="interactive-map-card" aria-label="Mapa da localização">
+              <div className="map-placeholder-heading">
+                <div>
+                  <h2>Confira a localização no mapa</h2>
+                  <p>O marcador representa o ponto da ocorrência. Você pode arrastá-lo ou clicar em outro ponto.</p>
+                </div>
+                <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
               </div>
-              <span className="map-status">{coordinates ? 'Localização selecionada' : 'Aguardando localização'}</span>
+              <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
+                <InteractiveLocationMap
+                  coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
+                  onPositionChange={({ lat, lng }) => handleMapPositionChange(lat, lng)}
+                />
+              </Suspense>
             </div>
-            <Suspense fallback={<div className="location-map-loading">Carregando mapa...</div>}>
-              <InteractiveLocationMap
-                coordinates={coordinates ? { lat: coordinates.latitude, lng: coordinates.longitude } : null}
-                onPositionChange={({ lat, lng }) => handleMapPositionChange(lat, lng)}
-              />
-            </Suspense>
           </section>
 
           {error && <p className="form-message complaint-submit-error" role="alert">{error}</p>}
