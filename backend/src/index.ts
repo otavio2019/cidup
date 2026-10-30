@@ -90,6 +90,18 @@ const organizationRoutingRules = [
   { typeKeywords: ['arvore', 'area verde', 'meio ambiente'], organizationKeywords: ['meio ambiente', 'ambiental'] },
   { typeKeywords: ['alagamento', 'drenagem', 'esgoto', 'saneamento'], organizationKeywords: ['saneamento', 'drenagem'] },
 ]
+const supportedComplaintCategories = [
+  'Buraco ou problema na via',
+  'Iluminação pública',
+  'Lixo ou descarte irregular',
+  'Calçada ou acessibilidade',
+  'Árvore ou área verde',
+  'Alagamento ou drenagem',
+  'Sinalização de trânsito',
+  'Outro problema urbano',
+]
+const NEARBY_COMPLAINT_RADIUS_METERS = 50
+const EARTH_RADIUS_METERS = 6_371_000
 
 // Encontra o órgão responsável exclusivamente com base no tipo informado pelo cidadão.
 function findOrganizationByComplaintType(type: string, organizations: Array<{ id_orgao: number; nome: string }>) {
@@ -147,8 +159,10 @@ function complaintResponse(complaint: {
   titulo: string
   descricao: string
   tipo: string
+  categorias?: string[]
   status: string
   data_registro: Date
+  atualizada_em?: Date
   endereco: string
   latitude: number
   longitude: number
@@ -156,9 +170,16 @@ function complaintResponse(complaint: {
   id_usuario: number
   id_orgao: number
   orgao?: { id_orgao: number; nome: string } | null
+  orgaos_extras?: Array<{ id_orgao: number; nome: string }>
   usuario?: { id_usuario: number; nome: string; email: string; telefone?: string | null; cpf?: string | null; foto?: string | null } | null
-  historico?: Array<{ id_historico: number; descricao: string; observacao: string }>
+  historico?: Array<{ id_historico: number; descricao: string; observacao: string; foto?: string; data_criacao?: Date }>
 }) {
+  const updatedAtValues = [
+    complaint.data_registro,
+    complaint.atualizada_em,
+    ...(complaint.historico ?? []).map((item) => item.data_criacao),
+  ].filter((date): date is Date => date instanceof Date && Number.isFinite(date.getTime()))
+  const updatedAt = new Date(Math.max(...updatedAtValues.map((date) => date.getTime()))).toISOString()
   return {
     ...complaint,
     id: complaint.id_denuncia,
@@ -173,6 +194,14 @@ function complaintResponse(complaint: {
     createdAt: complaint.data_registro.toISOString(),
     registeredAt: complaint.data_registro.toISOString(),
     type: { name: complaint.tipo },
+    categories: complaint.categorias?.length ? complaint.categorias : [complaint.tipo],
+    responsibleOrganizations: [
+      ...(complaint.orgao ? [complaint.orgao.nome] : []),
+      ...(complaint.orgaos_extras ?? []).map((organization) => organization.nome),
+    ],
+    latitude: complaint.latitude,
+    longitude: complaint.longitude,
+    updatedAt,
     citizen: complaint.usuario?.nome ?? '',
     citizenEmail: complaint.usuario?.email ?? '',
     citizenPhone: complaint.usuario?.telefone ?? '',
@@ -182,8 +211,19 @@ function complaintResponse(complaint: {
       id: item.id_historico,
       description: item.descricao,
       observation: item.observacao,
+      photo: item.foto ?? '',
+      createdAt: item.data_criacao?.toISOString() ?? complaint.data_registro.toISOString(),
     })),
   }
+}
+
+function distanceInMeters(latitudeA: number, longitudeA: number, latitudeB: number, longitudeB: number) {
+  const toRadians = (degrees: number) => degrees * Math.PI / 180
+  const latitudeDelta = toRadians(latitudeB - latitudeA)
+  const longitudeDelta = toRadians(longitudeB - longitudeA)
+  const haversine = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(toRadians(latitudeA)) * Math.cos(toRadians(latitudeB)) * Math.sin(longitudeDelta / 2) ** 2
+  return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(haversine))
 }
 
 // ===== CONFIGURAÇÃO DA API E MIDDLEWARES =====
@@ -785,10 +825,11 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
       where: responsibleUser ? {} : { id_usuario },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
+        orgaos_extras: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
-          select: { id_historico: true, descricao: true, observacao: true },
+          select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true },
         },
       },
       orderBy: { data_registro: 'desc' },
@@ -820,10 +861,11 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
       },
       include: {
         orgao: { select: { id_orgao: true, nome: true } },
+        orgaos_extras: { select: { id_orgao: true, nome: true } },
         usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         historico: {
           orderBy: { id_historico: 'desc' },
-          select: { id_historico: true, descricao: true, observacao: true },
+          select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true },
         },
       },
     })
@@ -837,17 +879,91 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
   }
 })
 
+// Encontra denúncias próximas que compartilham ao menos uma categoria, mantendo protocolos separados.
+app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], authenticate, async (request, response) => {
+  const id_usuario = readAuthUserId(request)
+  const id_denuncia = readPositiveInt(request.params.id)
+  if (!id_usuario) {
+    response.status(401).json({ error: 'Autenticação necessária.' })
+    return
+  }
+  if (!id_denuncia) {
+    response.status(400).json({ error: 'Identificação inválida.' })
+    return
+  }
+
+  try {
+    const complaint = await database.denuncia.findFirst({
+      where: {
+        id_denuncia,
+        ...(isResponsibleRequest(request) ? {} : { id_usuario }),
+      },
+      select: { id_denuncia: true, categorias: true, tipo: true, latitude: true, longitude: true },
+    })
+    if (!complaint) {
+      response.status(404).json({ error: 'Denúncia não encontrada.' })
+      return
+    }
+
+    const categories = complaint.categorias?.length ? complaint.categorias : [complaint.tipo]
+    const latitudeDelta = NEARBY_COMPLAINT_RADIUS_METERS / 111_320
+    const longitudeDelta = Math.min(
+      180,
+      NEARBY_COMPLAINT_RADIUS_METERS / (111_320 * Math.max(Math.abs(Math.cos(complaint.latitude * Math.PI / 180)), 0.000001)),
+    )
+    const candidates = await database.denuncia.findMany({
+      where: {
+        id_denuncia: { not: id_denuncia },
+        categorias: { hasSome: categories },
+        latitude: { gte: Math.max(-90, complaint.latitude - latitudeDelta), lte: Math.min(90, complaint.latitude + latitudeDelta) },
+        longitude: { gte: Math.max(-180, complaint.longitude - longitudeDelta), lte: Math.min(180, complaint.longitude + longitudeDelta) },
+      },
+      select: {
+        id_denuncia: true,
+        tipo: true,
+        categorias: true,
+        status: true,
+        latitude: true,
+        longitude: true,
+      },
+    })
+    const related = candidates
+      .map((candidate) => ({
+        id: candidate.id_denuncia,
+        protocol: `CIDUP-${candidate.id_denuncia}`,
+        categories: candidate.categorias?.length ? candidate.categorias : [candidate.tipo],
+        status: candidate.status,
+        distanceMeters: Math.round(distanceInMeters(complaint.latitude, complaint.longitude, candidate.latitude, candidate.longitude)),
+      }))
+      .filter((candidate) => candidate.id !== id_denuncia
+        && candidate.categories.some((category) => categories.includes(category))
+        && candidate.distanceMeters <= NEARBY_COMPLAINT_RADIUS_METERS)
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, 10)
+    response.json({ related })
+  } catch (error) {
+    handlePrismaError(error, response, 'find-related-complaints')
+  }
+})
+
 // Valida e registra a denúncia, encaminhando-a automaticamente pelo tipo informado.
 app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const id_usuario = readAuthUserId(request)
   const tipoValue = body.tipo ?? body.type
+  const categoriesValue = body.categorias ?? body.categories
+  const hasExplicitCategories = categoriesValue !== undefined
   const tituloValue = body.titulo ?? body.title ?? tipoValue
   const descricaoValue = body.descricao ?? body.description
   const enderecoValue = body.endereco ?? body.address
   const latitude = body.latitude
   const longitude = body.longitude
   const photoValue = body.foto ?? body.photo
+  const categories = categoriesValue === undefined
+    ? (typeof tipoValue === 'string' ? [tipoValue.trim()] : [])
+    : Array.isArray(categoriesValue)
+      ? [...new Set(categoriesValue.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))]
+      : []
 
   if (!id_usuario) {
     response.status(401).json({ error: 'Autenticação necessária.' })
@@ -856,11 +972,14 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   if (typeof tipoValue !== 'string' || !tipoValue.trim() || tipoValue.trim().length > 100 ||
       typeof tituloValue !== 'string' || !tituloValue.trim() || tituloValue.trim().length > 200 ||
       typeof descricaoValue !== 'string' || !descricaoValue.trim() ||
+      categories.length === 0 || categories.length > supportedComplaintCategories.length ||
+      (hasExplicitCategories && categories.some((category) => !supportedComplaintCategories.includes(category))) ||
+      (typeof tipoValue === 'string' && categories[0] !== tipoValue.trim()) ||
       typeof latitude !== 'number' || !Number.isFinite(latitude) ||
       latitude < -90 || latitude > 90 ||
       typeof longitude !== 'number' || !Number.isFinite(longitude) ||
       longitude < -180 || longitude > 180) {
-    response.status(400).json({ error: 'Informe tipo, descrição, latitude e longitude válidos.' })
+    response.status(400).json({ error: 'Informe uma ou mais categorias, descrição, latitude e longitude válidas.' })
     return
   }
   if (photoValue !== undefined && photoValue !== null && !isValidImageData(photoValue)) {
@@ -886,7 +1005,10 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
       select: { id_orgao: true, nome: true },
       orderBy: { nome: 'asc' },
     })
-    const organization = findOrganizationByComplaintType(tipoValue.trim(), organizations)
+    const routedOrganizations = categories
+      .map((category) => findOrganizationByComplaintType(category, organizations))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    const organization = routedOrganizations[0]
     if (!organization) {
       response.status(503).json({ error: 'Nenhum órgão disponível para encaminhar esta denúncia.' })
       return
@@ -894,7 +1016,8 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
     const denuncia = await database.denuncia.create({
       data: {
         titulo: tituloValue.trim(),
-        tipo: tipoValue.trim(),
+        tipo: categories[0]!,
+        categorias: categories,
         descricao: descricaoValue.trim(),
         status: 'RECEIVED',
         endereco,
@@ -903,6 +1026,11 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
         foto: photoValue === undefined || photoValue === null ? null : String(photoValue),
         usuario: { connect: { id_usuario } },
         orgao: { connect: { id_orgao: organization.id_orgao } },
+        orgaos_extras: {
+          connect: [...new Map(routedOrganizations
+            .filter((item) => item.id_orgao !== organization.id_orgao)
+            .map((item) => [item.id_orgao, { id_orgao: item.id_orgao }])).values()],
+        },
       },
       include: { orgao: { select: { id_orgao: true, nome: true } }, orgaos_extras: { select: { id_orgao: true, nome: true } } },
     })

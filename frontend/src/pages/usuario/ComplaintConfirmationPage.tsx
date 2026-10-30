@@ -18,6 +18,7 @@ type ComplaintData = {
   photoName?: string | null
   number?: string
   type?: string | { name: string }
+  categories?: string[]
 }
 
 // ===== RECUPERAÇÃO DO PROTOCOLO =====
@@ -74,8 +75,8 @@ function ComplaintConfirmationPage() {
         <div className="complaint-summary">
           <h2>Resumo da denúncia</h2>
           <div className="summary-item">
-            <span>Tipo</span>
-            <strong>{complaintType}</strong>
+            <span>Ocorrências</span>
+            <strong>{complaint.categories?.join(', ') || complaintType}</strong>
           </div>
           <div className="summary-item">
             <span>Descrição</span>

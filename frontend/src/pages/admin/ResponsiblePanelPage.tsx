@@ -16,7 +16,12 @@ type AdminComplaint = {
   createdAt: string
   status: ComplaintStatus
   category: string
+  categories: string[]
+  responsibleOrganizations?: string[]
   address: string
+  latitude: number
+  longitude: number
+  updatedAt: string
   photo?: string | null
   citizen: string
   email: string
@@ -32,6 +37,8 @@ type ComplaintHistory = {
   id: number
   description: string
   observation: string
+  createdAt: string
+  photo: string
 }
 
 type ApiComplaint = {
@@ -42,8 +49,13 @@ type ApiComplaint = {
   address: string
   status: string
   createdAt: string
+  updatedAt: string
+  latitude: number
+  longitude: number
   photo?: string | null
   type: { name: string }
+  categories: string[]
+  responsibleOrganizations?: string[]
   orgao?: { id_orgao: number; nome: string } | null
   citizen?: string
   citizenEmail?: string
@@ -133,16 +145,23 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
     neighborhood: '',
     date: new Date(complaint.createdAt).toLocaleDateString('pt-BR'),
     createdAt: complaint.createdAt,
+    updatedAt: complaint.updatedAt ?? complaint.createdAt,
     status: apiStatusToLabel(complaint.status),
     category: complaint.type.name,
+    categories: complaint.categories?.length ? complaint.categories : [complaint.type.name],
+    responsibleOrganizations: complaint.responsibleOrganizations,
     address: complaint.address,
+    latitude: complaint.latitude,
+    longitude: complaint.longitude,
     photo: complaint.photo ?? null,
     citizen: complaint.citizen || 'Cidadão não informado',
     email: complaint.citizenEmail || 'E-mail não informado',
     phone: complaint.citizenPhone || 'Telefone não informado',
     cpf: complaint.citizenCpf || 'CPF não informado',
     citizenPhoto: complaint.citizenPhoto ?? null,
-    sector: complaint.orgao?.nome ?? 'Não encaminhada',
+    sector: complaint.responsibleOrganizations?.length
+      ? complaint.responsibleOrganizations.join(', ')
+      : complaint.orgao?.nome ?? 'Não encaminhada',
     sectorId: complaint.orgao?.id_orgao,
     history: complaint.history ?? [],
   }
@@ -201,7 +220,9 @@ function ResponsiblePanelPage() {
   )
   const categories = useMemo(() => {
     const counts = new Map<string, number>()
-    periodComplaints.forEach((complaint) => counts.set(complaint.category, (counts.get(complaint.category) ?? 0) + 1))
+    periodComplaints.forEach((complaint) => {
+      complaint.categories.forEach((category) => counts.set(category, (counts.get(category) ?? 0) + 1))
+    })
     return [...counts.entries()].sort((a, b) => b[1] - a[1])
   }, [periodComplaints])
   // Filtra denúncias pelo texto de busca, pelo status e pelo período selecionados.
@@ -268,10 +289,36 @@ function ResponsiblePanelPage() {
   // Gera um arquivo CSV com os dados atualmente disponíveis na lista.
   function exportReport() {
     const rows = [
-      ['Protocolo', 'Denúncia', 'Bairro', 'Data', 'Status', 'Categoria'],
-      ...periodComplaints.map((complaint) => [complaint.protocol, complaint.title, complaint.neighborhood, complaint.date, complaint.status, complaint.category]),
+      [
+        'Protocolo', 'Denúncia', 'Nome do cidadão', 'CPF', 'E-mail', 'Telefone',
+        'Descrição completa', 'Endereço', 'Latitude', 'Longitude', 'Órgão responsável',
+        'Status', 'Categorias', 'Histórico e observações', 'Data da última atualização', 'Foto / link',
+      ],
+      ...periodComplaints.map((complaint) => [
+        complaint.protocol,
+        complaint.title,
+        complaint.citizen,
+        complaint.cpf,
+        complaint.email,
+        complaint.phone,
+        complaint.description,
+        complaint.address,
+        String(complaint.latitude),
+        String(complaint.longitude),
+        complaint.sector,
+        complaint.status,
+        complaint.categories.join(', '),
+        complaint.history.map((item) => [
+          new Date(item.createdAt).toLocaleString('pt-BR'),
+          item.description,
+          item.observation,
+          item.photo && item.photo !== 'sem-foto' ? `Foto: ${item.photo}` : '',
+        ].filter(Boolean).join(' — ')).join('\n'),
+        new Date(complaint.updatedAt).toLocaleString('pt-BR'),
+        complaint.photo ?? '',
+      ]),
     ]
-    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(';')).join('\n')
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(';')).join('\n')
     const file = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(file)
     const link = document.createElement('a')
@@ -350,7 +397,7 @@ function ResponsiblePanelPage() {
               <Info label="E-mail" value={selectedComplaint.email} />
               <Info label="Telefone" value={selectedComplaint.phone} />
               <Info label="CPF" value={selectedComplaint.cpf} />
-              <Info label="Categoria" value={selectedComplaint.category} />
+              <Info label="Categorias" value={selectedComplaint.categories.join(', ')} />
               {selectedComplaint.photo && <div className="rp-photo-field"><strong>Foto anexada</strong><img src={selectedComplaint.photo} alt="Foto anexada pelo cidadão à denúncia" /></div>}
             </section>
             <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
@@ -394,7 +441,7 @@ function ResponsiblePanelPage() {
         </section>
         <section className="rp-panel rp-table-panel">
           <div className="rp-table-scroll"><table className="rp-table"><thead><tr><th>Protocolo</th><th>Descrição</th><th>Bairro</th><th>Data</th><th>Status</th><th>Ação</th></tr></thead>
-              <tbody>{visibleComplaints.map((complaint) => <tr key={complaint.protocol}><td className="rp-protocol">{complaint.protocol}</td><td><strong>{complaint.title}</strong><small>{complaint.category}</small></td><td>{complaint.neighborhood || '—'}</td><td>{complaint.date}</td><td><StatusBadge status={complaint.status} /></td><td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
+              <tbody>{visibleComplaints.map((complaint) => <tr key={complaint.protocol}><td className="rp-protocol">{complaint.protocol}</td><td><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small></td><td>{complaint.neighborhood || '—'}</td><td>{complaint.date}</td><td><StatusBadge status={complaint.status} /></td><td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td></tr>)}</tbody>
           </table></div>
           {visibleComplaints.length === 0 && <p className="rp-empty-state">Nenhuma denúncia encontrada com esses filtros.</p>}
           <div className="rp-table-footer"><span>{visibleComplaints.length} de {complaints.length} denúncias</span></div>

@@ -14,8 +14,10 @@ model denuncia {
   titulo        String      @db.VarChar(200)
   descricao     String
   tipo          String      @db.VarChar(100)
+  categorias    String[]    @default([])
   status        String      @db.VarChar(50)
   data_registro DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  atualizada_em DateTime    @default(now()) @updatedAt @db.Timestamp(3)
   endereco      String
   latitude      Float
   longitude     Float
@@ -34,6 +36,7 @@ model historico {
   descricao      String
   foto           String
   observacao     String
+  data_criacao   DateTime     @default(now()) @db.Timestamp(3)
   id_usuario     Int?
   id_responsavel Int?
   id_denuncia    Int

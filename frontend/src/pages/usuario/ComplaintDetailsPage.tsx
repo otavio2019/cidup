@@ -7,6 +7,22 @@ import '../../App.css'
 
 /** Detalha uma denúncia autorizada e apresenta seu histórico de atendimento. */
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Negada' | 'Cancelada'
+type RelatedComplaint = {
+	id: number
+	protocol: string
+	categories: string[]
+	status: string
+	distanceMeters: number
+}
+
+const relatedStatusLabels: Record<string, string> = {
+	RECEIVED: 'Recebida',
+	IN_ANALYSIS: 'Em análise',
+	FORWARDED: 'Encaminhada',
+	IN_SERVICE: 'Em atendimento',
+	RESOLVED: 'Resolvida',
+	NOT_SERVED: 'Negada',
+}
 
 // ===== STATUS E ETAPAS DO ATENDIMENTO =====
 const statusSteps: ComplaintStatus[] = ['Recebida', 'Em análise', 'Em atendimento', 'Resolvida']
@@ -46,6 +62,9 @@ function Header() {
 	function ComplaintDetailsPage() {
 		const { protocol } = useParams()
 		const [complaint, setComplaint] = useState<Complaint | null>(null)
+		const [relatedComplaints, setRelatedComplaints] = useState<RelatedComplaint[]>([])
+		const [relatedForId, setRelatedForId] = useState<number | null>(null)
+		const [relatedError, setRelatedError] = useState('')
 		const [loading, setLoading] = useState(true)
 		const [error, setError] = useState('')
 		const complaintId = Number(protocol)
@@ -68,6 +87,27 @@ function Header() {
 				})
 			return () => { active = false }
 		}, [complaintId, hasValidProtocol])
+
+		useEffect(() => {
+			let active = true
+			if (!complaint) return () => { active = false }
+			apiRequest<{ related: RelatedComplaint[] }>(`/api/complaints/${complaint.id}/related`)
+				.then(({ related }) => {
+					if (active) {
+						setRelatedComplaints(related)
+						setRelatedError('')
+						setRelatedForId(complaint.id)
+					}
+				})
+				.catch((requestError: unknown) => {
+					if (active) {
+						setRelatedError(requestError instanceof Error ? requestError.message : 'Não foi possível carregar denúncias relacionadas.')
+						setRelatedForId(complaint.id)
+					}
+				})
+			return () => { active = false }
+		}, [complaint])
+		const relatedLoading = Boolean(complaint && relatedForId !== complaint.id)
 
 	// ===== STATUS ATUAL E PROGRESSO =====
 	const status = complaint
@@ -97,6 +137,7 @@ function Header() {
 									<p className="complaint-kicker">DETALHES DA DENÚNCIA</p>
 									<h2 id="complaint-details-title">{complaint.type.name || 'Denúncia'}</h2>
 									<span className="complaint-protocol">{complaint.protocol}</span>
+									<p className="complaint-related-categories">{complaint.categories.join(', ')}</p>
 								</div>
 								<div className="complaint-detail-heading-actions">
 									<span className={`status ${statusClasses[status] ?? 'status-received'}`}>{status}</span>
@@ -143,6 +184,26 @@ function Header() {
 								<div><dt>Endereço</dt><dd>{complaint.address || 'Não informado'}</dd></div>
 								<div><dt>Data de registro</dt><dd>{formatDate(complaint.registeredAt)}</dd></div>
 							</dl>
+							<section className="complaint-observations" aria-labelledby="related-complaints-title">
+								<h3 id="related-complaints-title">Ocorrências semelhantes próximas</h3>
+								<p>Denúncias a até 50 metros, com ao menos uma categoria em comum. Cada uma mantém seu próprio protocolo.</p>
+								{relatedLoading ? (
+									<p aria-busy="true">Buscando ocorrências próximas...</p>
+								) : relatedError ? (
+									<p className="form-message" role="alert">{relatedError}</p>
+								) : relatedComplaints.length === 0 ? (
+									<p>Nenhuma ocorrência semelhante foi encontrada a até 50 metros.</p>
+								) : (
+									<div className="complaint-observation-list">
+										{relatedComplaints.map((related) => (
+											<article className="complaint-observation" key={related.id}>
+												<strong>{related.protocol}</strong>
+												<p>{related.categories.join(', ')} · {related.distanceMeters} m · {relatedStatusLabels[related.status] ?? related.status}</p>
+											</article>
+										))}
+									</div>
+								)}
+							</section>
 							{/* Atualizações exibem as observações incluídas no histórico do registro. */}
 							<section className="complaint-observations" aria-labelledby="observations-title">
 								<h3 id="observations-title">Atualizações da prefeitura</h3>

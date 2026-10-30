@@ -95,8 +95,10 @@ A rota opcional `POST /api/ai/complaint-draft` envia um relato autenticado ao en
 - `usuario`: cidadãos e seus dados de perfil;
 - `responsavel`: conta administrativa ligada a `orgao`;
 - `orgao`: órgão que recebe denúncias;
-- `denuncia`: ocorrência, localização, foto, status, cidadão e órgão principal, com relação opcional a órgãos extras;
-- `historico`: observações vinculadas à denúncia e ao usuário ou responsável que as registrou.
+- `denuncia`: ocorrência, uma ou mais categorias, localização, foto, status, cidadão, órgão principal e órgãos extras; mantém também a data da última atualização;
+- `historico`: observações vinculadas à denúncia e ao usuário ou responsável que as registrou, com data de criação.
+
+A rota autenticada `GET /api/complaints/:id/related` sugere até dez denúncias que compartilham categoria e estão a no máximo 50 metros; cada denúncia conserva seu próprio protocolo. O CSV do painel do responsável usa os dados da resposta de `/api/complaints`, incluindo dados do cidadão, coordenadas, categorias, histórico, última atualização e foto.
 
 O Prisma Client é gerado durante o desenvolvimento/deploy e instanciado uma vez em `lib/prisma.ts`. As migrations devem ser revisadas antes de aplicar em um banco existente. Os testes de `index.test.ts` usam mocks para exercitar autorização e contratos sem depender de PostgreSQL real.
 

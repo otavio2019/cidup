@@ -11,6 +11,7 @@ import '../../App.css'
 // ===== TIPOS E OPÇÕES DO FORMULÁRIO =====
 type ComplaintFormData = {
   type: string
+  categories: string[]
   description: string
   address: string
   number: string
@@ -22,6 +23,7 @@ type ComplaintErrors = Partial<Record<keyof ComplaintFormData | 'photo', string>
 
 const initialForm: ComplaintFormData = {
   type: '',
+  categories: [],
   description: '',
   address: '',
   number: '',
@@ -42,19 +44,25 @@ const complaintTypes = [
 
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024
 
+function normalizeComplaintForm(source: unknown): ComplaintFormData {
+  if (!source || typeof source !== 'object') return initialForm
+  const draft = source as Partial<ComplaintFormData>
+  const categories = Array.isArray(draft.categories)
+    ? [...new Set(draft.categories.filter((category): category is string => typeof category === 'string'))]
+    : draft.type ? [draft.type] : []
+  return { ...initialForm, ...draft, categories, type: categories[0] ?? '' }
+}
+
 // ===== ESTADO E RASCUNHO DA DENÚNCIA =====
 // Coleta os dados iniciais da ocorrência e preserva rascunho e localização entre etapas.
 function CreateComplaintPage() {
   const navigate = useNavigate()
   const routeLocation = useLocation()
   const [form, setForm] = useState<ComplaintFormData>(() => {
-    const routeDraft = routeLocation.state as Partial<ComplaintFormData> | null
-    if (routeDraft) return { ...initialForm, ...routeDraft }
+    if (routeLocation.state) return normalizeComplaintForm(routeLocation.state)
     try {
       const savedDraft = sessionStorage.getItem('cidup-complaint-draft')
-      return savedDraft
-        ? { ...initialForm, ...JSON.parse(savedDraft) as Partial<ComplaintFormData> }
-        : initialForm
+      return savedDraft ? normalizeComplaintForm(JSON.parse(savedDraft)) : initialForm
     } catch {
       return initialForm
     }
@@ -178,6 +186,17 @@ function CreateComplaintPage() {
     setSubmitError('')
   }
 
+  function handleCategoryChange(category: string, checked: boolean) {
+    setForm((current) => {
+      const categories = checked
+        ? [...new Set([...current.categories, category])]
+        : current.categories.filter((item) => item !== category)
+      return { ...current, categories, type: categories[0] ?? '' }
+    })
+    setErrors((current) => ({ ...current, type: undefined }))
+    setSubmitError('')
+  }
+
   // Aceita somente imagens dentro do limite de tamanho definido para anexos.
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedPhoto = event.target.files?.[0]
@@ -221,8 +240,8 @@ function CreateComplaintPage() {
       nextErrors.photo = errors.photo
     }
 
-    if (!form.type) {
-      nextErrors.type = 'Selecione o tipo do problema.'
+    if (form.categories.length === 0) {
+      nextErrors.type = 'Selecione ao menos uma ocorrência.'
     }
 
     if (!trimmedDescription) {
@@ -258,7 +277,7 @@ function CreateComplaintPage() {
   // ===== VALIDAÇÃO E PRÓXIMA ETAPA =====
   // Salva o que já foi preenchido (sem validar) para o cidadão continuar depois em /rascunhos.
   function handleSaveDraft() {
-    const hasContent = Object.values(form).some((value) => value.trim()) || photo
+    const hasContent = Object.values(form).some((value) => typeof value === 'string' && value.trim()) || form.categories.length > 0 || photo
     if (!hasContent) {
       setDraftMessage('Preencha ao menos um campo para salvar o rascunho.')
       return
@@ -335,22 +354,19 @@ function CreateComplaintPage() {
             </div>
 
             <div className="complaint-field">
-              <label htmlFor="type">Tipo do problema <span>*</span></label>
-              <select
-                id="type"
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.type)}
-                aria-describedby={errors.type ? 'type-error' : undefined}
-              >
-                <option value="">Selecione uma opção</option>
+              <span className="complaint-category-label">Ocorrências identificadas <span>*</span></span>
+              <div className="complaint-category-options" role="group" aria-label="Selecione uma ou mais ocorrências">
                 {complaintTypes.map((complaintType) => (
-                  <option key={complaintType} value={complaintType}>
-                    {complaintType}
-                  </option>
+                  <label className="complaint-category-option" key={complaintType}>
+                    <input
+                      type="checkbox"
+                      checked={form.categories.includes(complaintType)}
+                      onChange={(event) => handleCategoryChange(complaintType, event.target.checked)}
+                    />
+                    <span>{complaintType}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
               {errors.type && <p className="field-error" id="type-error">{errors.type}</p>}
             </div>
 

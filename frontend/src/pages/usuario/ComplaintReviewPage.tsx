@@ -12,6 +12,7 @@ import '../../App.css'
 // ===== MODELO DO RASCUNHO E ORGANIZAÇÃO RESPONSÁVEL =====
 type ComplaintDraft = {
   type?: string
+  categories?: string[]
   description?: string
   address?: string
   number?: string
@@ -45,6 +46,12 @@ function findResponsibleOrganization(type: string, organizations: Organization[]
   })?.nome
 }
 
+function findResponsibleOrganizations(types: string[], organizations: Organization[]) {
+  return [...new Set(types
+    .map((type) => findResponsibleOrganization(type, organizations))
+    .filter((name): name is string => Boolean(name)))]
+}
+
 // Recupera o rascunho da navegação ou do armazenamento temporário da sessão.
 function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   if (state) return state
@@ -67,7 +74,7 @@ function ComplaintReviewPage() {
   )
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [organizationName, setOrganizationName] = useState('')
+  const [organizationNames, setOrganizationNames] = useState<string[]>([])
 
   useEffect(() => {
     if (!draft?.type) return undefined
@@ -75,11 +82,14 @@ function ComplaintReviewPage() {
     // Consulta GET /api/orgaos para exibir o órgão sugerido conforme o tipo da ocorrência.
     apiRequest<{ orgaos: Organization[] }>('/api/orgaos')
       .then(({ orgaos }) => {
-        if (active) setOrganizationName(findResponsibleOrganization(draft.type!, orgaos) ?? '')
+        if (active) {
+          const types = draft.categories?.length ? draft.categories : [draft.type!]
+          setOrganizationNames(findResponsibleOrganizations(types, orgaos))
+        }
       })
       .catch(() => undefined)
     return () => { active = false }
-  }, [draft?.type])
+  }, [draft?.type, draft?.categories])
 
   if (!draft?.type || !draft.description || !draft.address || !draft.number || !draft.neighborhood) {
     return <Navigate to="/registrar-denuncia" replace />
@@ -101,6 +111,7 @@ function ComplaintReviewPage() {
           createdAt: string
           status: string
           type: { name: string }
+          categories: string[]
         }
       }>('/api/complaints', {
         method: 'POST',
@@ -110,6 +121,7 @@ function ComplaintReviewPage() {
       const registeredComplaint = {
         ...draft,
         type: data.complaint.type.name,
+        categories: data.complaint.categories,
         protocol: data.complaint.protocol,
         registeredAt: data.complaint.createdAt,
         status: ({
@@ -151,7 +163,7 @@ function ComplaintReviewPage() {
           {/* Resume relato e anexo recebidos da etapa de criação. */}
           <section className="review-card">
             <h2>Sobre o problema</h2>
-            <ReviewField label="Tipo de ocorrência" value={draft.type} />
+            <ReviewField label="Ocorrências" value={(draft.categories?.length ? draft.categories : [draft.type]).filter(Boolean).join(', ')} />
             <ReviewField label="Descrição" value={draft.description} />
             {draft.photoName && <ReviewField label="Foto anexada" value={draft.photoName} />}
           </section>
@@ -165,7 +177,7 @@ function ComplaintReviewPage() {
             {typeof draft.latitude === 'number' && typeof draft.longitude === 'number' && (
               <ReviewField label="Coordenadas" value={`${draft.latitude.toFixed(5)}, ${draft.longitude.toFixed(5)}`} />
             )}
-            <ReviewField label="Órgão responsável" value={organizationName || 'Encaminhamento automático conforme o tipo da ocorrência'} />
+            <ReviewField label="Órgãos responsáveis" value={organizationNames.join(', ') || 'Encaminhamento automático conforme as ocorrências'} />
           </section>
 
           <section className="review-card review-photo-card">

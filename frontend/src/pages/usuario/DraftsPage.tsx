@@ -47,11 +47,12 @@ function DraftsPage() {
         ) : (
           <div className="my-complaints-list">
             {drafts.map((draft) => {
-              const { type, description, address, number } = draft.data as Record<string, string | undefined>
+              const { type, description, address, number, categories } = draft.data as Record<string, string | string[] | undefined>
+              const categoryLabels = Array.isArray(categories) && categories.length ? categories.join(', ') : type
               return (
                 <article className="my-complaint-item" key={draft.id}>
                   <div className="my-complaint-main">
-                    <h3>{type || 'Tipo não informado'}</h3>
+                    <h3>{categoryLabels || 'Tipo não informado'}</h3>
                     <p className="my-complaint-description">{description || 'Sem descrição.'}</p>
                     <p className="my-complaint-address">
                       <span aria-hidden="true">⌖</span>

@@ -98,6 +98,7 @@ function MyComplaintsPage() {
 									<div className="my-complaint-main">
 										<span className="complaint-protocol">{complaint.protocol}</span>
 										<h3>{complaint.type.name || 'Tipo não informado'}</h3>
+										<small>{complaint.categories.join(', ')}</small>
 										<p className="my-complaint-description">
 											{complaint.description || 'Sem descrição.'}
 										</p>
