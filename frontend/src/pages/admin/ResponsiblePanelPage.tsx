@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import './ResponsiblePanelPage.css'
 
+/** Área administrativa: consulta a API, atualiza denúncias e calcula relatórios locais. */
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Encaminhada' | 'Em atendimento' | 'Resolvida' | 'Negada'
 
 type AdminComplaint = {
@@ -147,7 +148,7 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
   }
 }
 
-// Reúne o painel administrativo e mantém em estado local os filtros e dados demonstrativos.
+// Reúne o painel administrativo e mantém em estado local os filtros e dados carregados da API.
 function ResponsiblePanelPage() {
   const location = useLocation()
   const section = location.pathname.split('/')[2] || 'dashboard'

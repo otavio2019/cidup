@@ -6,6 +6,7 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Perfil do cidadão: fonte remota na API, com cache visual local e logout seguro. */
 type CitizenProfile = {
   id?: number
   name?: string

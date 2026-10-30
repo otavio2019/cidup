@@ -5,6 +5,7 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Detalha uma denúncia autorizada e apresenta seu histórico de atendimento. */
 type ComplaintStatus = 'Recebida' | 'Em análise' | 'Em atendimento' | 'Resolvida' | 'Negada' | 'Cancelada'
 
 const statusSteps: ComplaintStatus[] = ['Recebida', 'Em análise', 'Em atendimento', 'Resolvida']

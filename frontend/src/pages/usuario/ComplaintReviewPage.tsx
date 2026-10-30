@@ -6,6 +6,8 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Última etapa do cidadão: revisa o rascunho e cria a denúncia somente após confirmação. */
+
 type ComplaintDraft = {
   type?: string
   description?: string

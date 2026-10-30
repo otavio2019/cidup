@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
+
+/** Segunda etapa do fluxo: confirma coordenadas e endereço antes da revisão. */
 
 type ComplaintData = {
   type?: string
@@ -52,32 +54,8 @@ function ComplaintLocationPage() {
       : null,
   )
 
-  // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
-  function requestLocation() {
-    if (!navigator.geolocation) {
-      setError('Este navegador não oferece geolocalização. Informe a localização manualmente.')
-      return
-    }
-
-    setError('')
-    setIsLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const nextCoordinates = { latitude: coords.latitude, longitude: coords.longitude }
-        setCoordinates(nextCoordinates)
-        setIsLocating(false)
-        fillAddressFromCoordinates(nextCoordinates.latitude, nextCoordinates.longitude)
-      },
-      () => {
-        setIsLocating(false)
-        setError('Não foi possível obter sua localização. Autorize o acesso ou tente novamente.')
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
-    )
-  }
-
   // Consulta o serviço de geocodificação reversa para sugerir campos do endereço.
-  async function fillAddressFromCoordinates(latitude: number, longitude: number) {
+  const fillAddressFromCoordinates = useCallback(async (latitude: number, longitude: number) => {
     setIsAddressLoading(true)
     try {
       const response = await fetch(
@@ -115,7 +93,31 @@ function ComplaintLocationPage() {
     } finally {
       setIsAddressLoading(false)
     }
-  }
+  }, [address])
+
+  // Obtém as coordenadas do dispositivo e inicia a busca reversa do endereço.
+  const requestLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError('Este navegador não oferece geolocalização. Informe a localização manualmente.')
+      return
+    }
+
+    setError('')
+    setIsLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const nextCoordinates = { latitude: coords.latitude, longitude: coords.longitude }
+        setCoordinates(nextCoordinates)
+        setIsLocating(false)
+        void fillAddressFromCoordinates(nextCoordinates.latitude, nextCoordinates.longitude)
+      },
+      () => {
+        setIsLocating(false)
+        setError('Não foi possível obter sua localização. Autorize o acesso ou tente novamente.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    )
+  }, [fillAddressFromCoordinates])
 
   // Solicita localização automaticamente quando a etapa ainda não tem coordenadas.
   useEffect(() => {
@@ -124,7 +126,7 @@ function ComplaintLocationPage() {
       requestLocation()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [coordinates])
+  }, [coordinates, requestLocation])
 
   // Valida os dados da localização e guarda a etapa seguinte no rascunho da sessão.
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

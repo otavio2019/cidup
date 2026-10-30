@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+/** Cadastro do cidadão: formata documentos no navegador e persiste a conta pela API. */
+
 function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }

@@ -5,6 +5,7 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Lista as denúncias da sessão e liga cada protocolo à tela de detalhes. */
 const statusClasses: Record<string, string> = {
 	'Recebida': 'status-received',
 	'Em análise': 'status-analysis',

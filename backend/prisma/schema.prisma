@@ -8,6 +8,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+/// Registro de uma ocorrência cidadã, incluindo localização, foto, órgão e status.
 model denuncia {
   id_denuncia   Int         @id @default(autoincrement())
   titulo        String      @db.VarChar(200)
@@ -27,6 +28,7 @@ model denuncia {
   historico     historico[]
 }
 
+/// Atualização ou observação de atendimento vinculada a uma denúncia.
 model historico {
   id_historico   Int          @id @default(autoincrement())
   descricao      String
@@ -40,6 +42,7 @@ model historico {
   responsavel    responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// Órgão público que recebe e atende denúncias.
 model orgao {
   id_orgao         Int           @id @default(autoincrement())
   nome             String        @db.VarChar(150)
@@ -51,6 +54,7 @@ model orgao {
   responsaveis     responsavel[]
 }
 
+/// Conta administrativa vinculada a um órgão.
 model responsavel {
   id_responsavel Int         @id @default(autoincrement())
   nome           String      @db.VarChar(150)
@@ -62,6 +66,7 @@ model responsavel {
   historicos     historico[]
 }
 
+/// Conta do cidadão que registra e acompanha denúncias.
 model usuario {
   id_usuario Int         @id @default(autoincrement())
   cpf        String?     @unique @db.VarChar(11)

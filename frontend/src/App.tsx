@@ -15,6 +15,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 import ResponsiblePanelPage from './pages/admin/ResponsiblePanelPage'
 import './citizen-redesign.css'
 
+/** Entrada da aplicação: confirma a sessão antes de renderizar cada área protegida. */
 type SessionUser = {
   role: 'CITIZEN' | 'RESPONSIBLE'
 }

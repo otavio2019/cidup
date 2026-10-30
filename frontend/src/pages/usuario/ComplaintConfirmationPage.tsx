@@ -4,6 +4,8 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Confirma o registro, exibe o protocolo retornado pela API e oferece impressão. */
+
 type ComplaintData = {
   protocol?: string
   registeredAt?: string

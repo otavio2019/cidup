@@ -1,6 +1,7 @@
 import { jwtVerify, SignJWT } from 'jose'
 import type { NextFunction, Request, Response } from 'express'
 
+/** Contrato de sessão compartilhado entre o login, o middleware e o logout. */
 export const AUTH_COOKIE_NAME = 'cidup_session'
 export const AUTH_TOKEN_TTL_SECONDS = 15 * 60
 const AUTH_ISSUER = 'cidup-api'

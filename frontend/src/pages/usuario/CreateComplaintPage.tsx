@@ -5,6 +5,8 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
+
 type ComplaintFormData = {
   type: string
   description: string

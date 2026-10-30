@@ -5,6 +5,7 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
+/** Painel do cidadão: indicadores, atalhos, denúncias recentes e rascunho opcional por IA. */
 const complaintStatusLabels: Record<string, string> = {
   RECEIVED: 'Recebida',
   IN_ANALYSIS: 'Em análise',

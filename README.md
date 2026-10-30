@@ -12,7 +12,7 @@ Permitir que o cidadão registre problemas urbanos, informe a localização, rec
 cidup/
 ├── backend/              # API, regras de negócio e integração com o banco
 ├── frontend/             # Interface React do cidadão
-├── docs/                 # Documentação do projeto
+├── docs/                 # Documentação do projeto (consulte docs/CODEBASE.md)
 └── docker-compose.yml    # Orquestração dos serviços locais
 ```
 
@@ -283,7 +283,7 @@ Já estão disponíveis:
 - estrutura inicial para integração com a API;
 - configuração inicial para execução com Docker.
 
-As telas ainda utilizam alguns dados simulados enquanto a autenticação, o banco e os CRUDs são integrados.
+A autenticação, o banco, os CRUDs de usuários/órgãos/denúncias/históricos e o painel do responsável já usam a API; os mocks existentes ficam restritos aos testes automatizados. Para navegar pelo código, consulte [docs/CODEBASE.md](docs/CODEBASE.md).
 
 ## Assistente de IA
 

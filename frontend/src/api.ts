@@ -1,3 +1,4 @@
+/** Cliente HTTP do frontend: mantém o contrato da API e a sessão por cookie. */
 // Em produção, usa o proxy da Vercel para manter o cookie de sessão no mesmo domínio.
 const API_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL ?? 'http://localhost:3000')
 // Evita configurar uma API sem HTTPS em produção.

@@ -1,3 +1,4 @@
+/** Único ponto de criação do Prisma Client usado pelas rotas da API. */
 import prismaPackage from '@prisma/client'
 
 const { PrismaClient } = prismaPackage
