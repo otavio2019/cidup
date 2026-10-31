@@ -1,9 +1,20 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
+import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
 
 /** Cadastro do cidadão: formata documentos no navegador e persiste a conta pela API. */
+
+// Ícone de olho (aberto ou riscado) usado no botão de mostrar/ocultar senha.
+function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      {visible && <path d="M4 4l16 16" />}
+    </svg>
+  )
+}
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
@@ -56,10 +67,16 @@ function RegisterPage() {
   const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  // Evita cadastros duplicados por cliques repetidos antes de o botão ser desabilitado na tela.
+  const submittingRef = useRef(false)
 
   // Valida os dados, cria a conta e encaminha o usuário para a tela de login.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submittingRef.current) return
 
     if (!nome || !email || !telefone || !cpf || !cep || !senha || !confirmarSenha) {
       setMensagem('Preencha todos os campos para continuar.')
@@ -81,6 +98,8 @@ function RegisterPage() {
       return
     }
 
+    submittingRef.current = true
+    setIsSubmitting(true)
     try {
       // Cria a conta no backend; após sucesso, a tela encaminha a pessoa para /login.
       await apiRequest('/api/auth/register', {
@@ -98,7 +117,10 @@ function RegisterPage() {
       setMensagem('Cadastro realizado! Redirecionando para o login...')
       window.setTimeout(() => navigate('/login'), 900)
     } catch (error) {
-      setMensagem(error instanceof Error ? error.message : 'Não foi possível criar o cadastro.')
+      if (error instanceof ApiError && error.status === 429) setMensagem(formatRateLimitMessage(error))
+      else setMensagem(error instanceof Error ? error.message : 'Não foi possível criar o cadastro.')
+      submittingRef.current = false
+      setIsSubmitting(false)
     }
   }
 
@@ -206,12 +228,20 @@ function RegisterPage() {
                 <span className="input-icon" aria-hidden="true">*</span>
                 <input
                   id="cadastro-senha"
-                  type="password"
+                  type={isPasswordVisible ? 'text' : 'password'}
                   placeholder="Crie uma senha segura"
                   value={senha}
                   onChange={(event) => setSenha(event.target.value)}
                   autoComplete="new-password"
                 />
+                <button
+                  className="password-toggle"
+                  type="button"
+                  onClick={() => setIsPasswordVisible((visible) => !visible)}
+                  aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  <PasswordVisibilityIcon visible={isPasswordVisible} />
+                </button>
               </div>
             </div>
 
@@ -221,12 +251,20 @@ function RegisterPage() {
                 <span className="input-icon" aria-hidden="true">*</span>
                 <input
                   id="confirmar-senha"
-                  type="password"
+                  type={isConfirmPasswordVisible ? 'text' : 'password'}
                   placeholder="Digite a senha novamente"
                   value={confirmarSenha}
                   onChange={(event) => setConfirmarSenha(event.target.value)}
                   autoComplete="new-password"
                 />
+                <button
+                  className="password-toggle"
+                  type="button"
+                  onClick={() => setIsConfirmPasswordVisible((visible) => !visible)}
+                  aria-label={isConfirmPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  <PasswordVisibilityIcon visible={isConfirmPasswordVisible} />
+                </button>
               </div>
             </div>
 
@@ -235,7 +273,7 @@ function RegisterPage() {
               <span>Concordo com os termos de uso do CidUp.</span>
             </label>
 
-            <button type="submit" className="login-button">
+            <button type="submit" className="login-button" disabled={isSubmitting} aria-busy={isSubmitting}>
               Criar minha conta
               <span aria-hidden="true">→</span>
             </button>

@@ -1,7 +1,18 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
+import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
+
+// Ícone de olho (aberto ou riscado) usado no botão de mostrar/ocultar senha.
+function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      {visible && <path d="M4 4l16 16" />}
+    </svg>
+  )
+}
 
 // Apresenta o formulário de acesso e mantém o estado dos campos e mensagens.
 function LoginPage() {
@@ -11,16 +22,20 @@ function LoginPage() {
   const [mensagem, setMensagem] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Bloqueia envios repetidos (ex.: Enter pressionado duas vezes) antes de o botão ser desabilitado na tela.
+  const submittingRef = useRef(false)
 
   // Valida os campos, autentica o cidadão e redireciona conforme o perfil retornado.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submittingRef.current) return
 
     if (!email || !senha) {
       setMensagem('Preencha o e-mail e a senha para continuar.')
       return
     }
 
+    submittingRef.current = true
     setIsSubmitting(true)
     setMensagem('')
     try {
@@ -43,8 +58,10 @@ function LoginPage() {
         ? '/trocar-senha-temporaria'
         : data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')
     } catch (error) {
-      setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')
+      if (error instanceof ApiError && error.status === 429) setMensagem(formatRateLimitMessage(error))
+      else setMensagem(error instanceof Error ? error.message : 'Não foi possível entrar.')
     } finally {
+      submittingRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -121,9 +138,8 @@ function LoginPage() {
                   className="password-toggle"
                   type="button"
                   onClick={() => setIsPasswordVisible((visible) => !visible)}
-                  aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {isPasswordVisible ? 'Ocultar' : 'Mostrar'}
+                  aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}                >
+                  <PasswordVisibilityIcon visible={isPasswordVisible} />
                 </button>
               </div>
             </div>
