@@ -17,10 +17,19 @@ import { sendComplaintReceivedEmail, sendComplaintStatusEmail, sendPasswordReset
 /** API HTTP do CidUp: autenticação, usuários, órgãos, denúncias, históricos e integrações opcionais. */
 const scrypt = promisify(scryptCallback)
 // ===== CONFIGURAÇÃO E LIMITAÇÃO DE REQUISIÇÕES =====
-// Limita tentativas de login e cadastro para dificultar abuso dos endpoints de autenticação.
-const authenticationRateLimit = rateLimit({
+// Limita tentativas de login com falha para dificultar ataques de força bruta; logins aceitos não contam.
+const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Aguarde antes de tentar novamente.' },
+})
+// Limita a criação de contas por IP, com cota separada da do login.
+const registerRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas tentativas. Aguarde antes de tentar novamente.' },
@@ -290,7 +299,23 @@ const app = express()
 
 // Configura cabeçalhos, origem permitida, JSON e cookie usados pelas rotas abaixo.
 app.disable('x-powered-by')
-app.set('trust proxy', production ? 1 : false)
+// Quantidade de proxies à frente da API (Vercel + Render = 2), usada para obter o IP real do cliente.
+const trustProxyHops = process.env.TRUST_PROXY_HOPS?.trim()
+  ? Number(process.env.TRUST_PROXY_HOPS)
+  : production ? 2 : false
+if (trustProxyHops !== false && (!Number.isInteger(trustProxyHops) || trustProxyHops < 0)) {
+  throw new Error('TRUST_PROXY_HOPS deve ser um número inteiro maior ou igual a zero.')
+}
+app.set('trust proxy', trustProxyHops)
+// REMOVER DEPOIS: diagnóstico temporário do IP usado pelo rate limit do login (sem dados pessoais).
+if (production) {
+  app.use('/api/auth/login', (request, _response, next) => {
+    if (request.method === 'POST') {
+      console.log('[ratelimit-debug]', { ip: request.ip, xForwardedFor: request.get('x-forwarded-for') ?? null })
+    }
+    next()
+  })
+}
 if (production) {
   // Recusa conexões sem TLS quando a API está configurada para produção.
   app.use((request, response, next) => {
@@ -428,7 +453,7 @@ async function registerUser(request: express.Request, response: express.Response
 }
 
 // Recebe o cadastro iniciado pelo formulário do frontend e encaminha os dados ao Prisma.
-app.post(['/api/auth/register', '/api/users', '/api/usuarios'], authenticationRateLimit, registerUser)
+app.post(['/api/auth/register', '/api/users', '/api/usuarios'], registerRateLimit, registerUser)
 
 app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
@@ -631,7 +656,7 @@ app.post('/api/admin/password-recovery-requests/:id/temporary-password', authent
 })
 
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
-app.post('/api/auth/login', authenticationRateLimit, async (request, response) => {
+app.post('/api/auth/login', loginRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const password = body.password
