@@ -283,7 +283,7 @@ a {
   font-weight: 750;
 }
 
-.ai-draft p:last-child {
+.ai-draft .ai-draft-summary {
   margin: 14px 0 0;
   color: #334155;
   line-height: 1.55;

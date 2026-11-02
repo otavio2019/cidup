@@ -642,6 +642,17 @@ test('o login verifica a senha e emite um cookie de sessão HttpOnly', async () 
   assert.equal(setCookie.includes('Secure'), false)
 })
 
+test('o login aceita CPF com ou sem máscara no lugar do e-mail', async () => {
+  for (const login of ['529.982.247-25', '52998224725']) {
+    const response = await callApi('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ login, password: 'secret-password' }),
+    })
+    assert.equal(response.status, 200)
+    assert.equal(record((await response.json() as RecordValue).user).email, 'um@example.test')
+  }
+})
+
 test('o login rejeita uma senha incorreta', async () => {
   const response = await callApi('/api/auth/login', {
     method: 'POST',
@@ -952,6 +963,43 @@ test('o endpoint de IA exige autenticação e falhas do Prisma não expõem segr
     body: JSON.stringify({ description: 'Relato suficientemente detalhado.' }),
   })
   assert.equal(response.status, 401)
+})
+
+test('o rascunho da IA devolve só ocorrências aceitas pelo formulário', async () => {
+  const originalFetch = globalThis.fetch
+  const previousKey = process.env.AI_API_KEY
+  const previousBaseUrl = process.env.AI_BASE_URL
+  process.env.AI_API_KEY = 'test-key'
+  process.env.AI_BASE_URL = 'http://ai.example.test/v1'
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!String(input).startsWith('http://ai.example.test/')) return originalFetch(input, init)
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        title: 'Buraco na Rua das Flores',
+        categories: ['Buraco ou problema na via', 'Categoria inventada'],
+        priority: 'Alta',
+        summary: 'Há um buraco grande na Rua das Flores, perto da escola.',
+      }) } }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }) as typeof fetch
+  try {
+    const response = await callApi('/api/ai/complaint-draft', {
+      method: 'POST',
+      headers: { Cookie: await cookieFor(1) },
+      body: JSON.stringify({ description: 'Há um buraco grande na Rua das Flores, perto da escola.' }),
+    })
+    const body = await response.json() as RecordValue
+    assert.equal(response.status, 200)
+    assert.deepEqual(body.categories, ['Buraco ou problema na via'])
+    assert.equal(body.category, 'Buraco ou problema na via')
+    assert.equal(body.title, 'Buraco na Rua das Flores')
+  } finally {
+    globalThis.fetch = originalFetch
+    if (previousKey === undefined) delete process.env.AI_API_KEY
+    else process.env.AI_API_KEY = previousKey
+    if (previousBaseUrl === undefined) delete process.env.AI_BASE_URL
+    else process.env.AI_BASE_URL = previousBaseUrl
+  }
 })
 
 test('o login rejeita segredos de token malformados ou curtos demais ao iniciar a aplicação', () => {

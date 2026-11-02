@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
+import { clearActiveDraft } from '../../drafts'
 import '../../App.css'
 
 /** Painel do cidadão: indicadores, atalhos, denúncias recentes e rascunho opcional por IA. */
@@ -36,7 +37,7 @@ function DashboardPage() {
   const [citizenName, setCitizenName] = useState(readStoredCitizenName)
   const [draft, setDraft] = useState<{
     title: string
-    category: string
+    categories: string[]
     priority: string
     summary: string
   } | null>(null)
@@ -102,6 +103,7 @@ function DashboardPage() {
       const data = await apiRequest<{
         title?: string
         category?: string
+        categories?: string[]
         priority?: string
         summary?: string
       }>('/api/ai/complaint-draft', {
@@ -111,7 +113,7 @@ function DashboardPage() {
 
       setDraft({
         title: data.title ?? '',
-        category: data.category ?? '',
+        categories: data.categories?.length ? data.categories : data.category ? [data.category] : [],
         priority: data.priority ?? '',
         summary: data.summary ?? '',
       })
@@ -124,6 +126,18 @@ function DashboardPage() {
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  // Abre uma nova denúncia já preenchida com as ocorrências e a descrição sugeridas, para o cidadão revisar.
+  function applyDraftToComplaint() {
+    if (!draft) return
+    clearActiveDraft()
+    navigate('/registrar-denuncia', {
+      state: {
+        categories: draft.categories,
+        description: (draft.summary || description.trim()).slice(0, 1000),
+      },
+    })
   }
 
   const countStatus = (status: string) => complaints.filter((complaint) => complaint.status === status).length
@@ -188,10 +202,13 @@ function DashboardPage() {
                 <span className="draft-label">RASCUNHO PARA REVISÃO</span>
                 <h4>{draft.title}</h4>
                 <div className="draft-meta">
-                  <span>{draft.category}</span>
-                  <span>{draft.priority}</span>
+                  {draft.categories.map((category) => <span key={category}>{category}</span>)}
+                  {draft.priority && <span>Prioridade: {draft.priority}</span>}
                 </div>
-                <p>{draft.summary}</p>
+                <p className="ai-draft-summary">{draft.summary}</p>
+                <button className="ai-button" type="button" onClick={applyDraftToComplaint}>
+                  Usar este rascunho
+                </button>
               </div>
             )}
           </section>

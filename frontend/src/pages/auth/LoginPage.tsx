@@ -17,7 +17,7 @@ function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
 // Apresenta o formulário de acesso e mantém o estado dos campos e mensagens.
 function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [senha, setSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
@@ -30,8 +30,8 @@ function LoginPage() {
     event.preventDefault()
     if (submittingRef.current) return
 
-    if (!email || !senha) {
-      setMensagem('Preencha o e-mail e a senha para continuar.')
+    if (!login.trim() || !senha) {
+      setMensagem('Preencha o e-mail ou CPF e a senha para continuar.')
       return
     }
 
@@ -50,7 +50,7 @@ function LoginPage() {
         }
       }>('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password: senha }),
+        body: JSON.stringify({ login: login.trim(), password: senha }),
       })
       localStorage.removeItem('cidup-complaints')
       localStorage.setItem('cidup-profile', JSON.stringify(data.user))
@@ -103,16 +103,16 @@ function LoginPage() {
           {/* O envio autentica em POST /api/auth/login e encaminha ao dashboard conforme o papel retornado. */}
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="email">E-mail</label>
+              <label htmlFor="login">E-mail ou CPF</label>
               <div className="input-wrap">
                 <span className="input-icon" aria-hidden="true">@</span>
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
+                  id="login"
+                  type="text"
+                  placeholder="seu@email.com ou 000.000.000-00"
+                  value={login}
+                  onChange={(event) => setLogin(event.target.value)}
+                  autoComplete="username"
                 />
               </div>
             </div>

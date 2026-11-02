@@ -658,21 +658,28 @@ app.post('/api/admin/password-recovery-requests/:id/temporary-password', authent
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
 app.post('/api/auth/login', loginRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  // Aceita e-mail ou CPF no mesmo campo; "email" continua aceito por compatibilidade.
+  const rawLogin = typeof body.login === 'string' ? body.login : typeof body.email === 'string' ? body.email : ''
+  const identifier = rawLogin.trim()
+  const isEmailLogin = identifier.includes('@')
+  const email = isEmailLogin ? identifier.toLowerCase() : ''
+  const cpf = isEmailLogin ? '' : digits(identifier)
   const password = body.password
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== 'string' || password.length > 1024) {
-    response.status(400).json({ error: 'Informe e-mail e senha.' })
+  const validIdentifier = isEmailLogin ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : /^\d{11}$/.test(cpf)
+  if (!validIdentifier || typeof password !== 'string' || password.length > 1024) {
+    response.status(400).json({ error: 'Informe e-mail ou CPF e a senha.' })
     return
   }
 
   try {
-    const responsible = await database.responsavel.findUnique({
+    // Responsáveis só têm e-mail; o login por CPF vale apenas para cidadãos.
+    const responsible = isEmailLogin ? await database.responsavel.findUnique({
       where: { email },
       include: { orgao: { select: { id_orgao: true, nome: true } } },
-    })
+    }) : null
     if (responsible) {
       if (!(await verifyPassword(password, responsible.senha))) {
-        response.status(401).json({ error: 'E-mail ou senha inválidos.' })
+        response.status(401).json({ error: 'E-mail/CPF ou senha inválidos.' })
         return
       }
       const token = await createAuthToken(responsible.id_responsavel, secret, 'RESPONSIBLE')
@@ -695,9 +702,9 @@ app.post('/api/auth/login', loginRateLimit, async (request, response) => {
       })
       return
     }
-    const user = await database.usuario.findUnique({ where: { email } })
+    const user = await database.usuario.findUnique({ where: isEmailLogin ? { email } : { cpf } })
     if (!user || !(await verifyPassword(password, user.senha))) {
-      response.status(401).json({ error: 'E-mail ou senha inválidos.' })
+      response.status(401).json({ error: 'E-mail/CPF ou senha inválidos.' })
       return
     }
     const mustChangePassword = user.must_change_password
@@ -1685,9 +1692,9 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
       ? request.body.description.trim()
       : ''
 
-  if (description.length < 10) {
+  if (description.length < 10 || description.length > 1000) {
     response.status(400).json({
-      error: 'Descreva o problema com pelo menos 10 caracteres.',
+      error: 'Descreva o problema com 10 a 1.000 caracteres.',
     })
     return
   }
@@ -1707,6 +1714,7 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
     )
     const aiResponse = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -1719,7 +1727,9 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
           {
             role: 'system',
             content:
-              'Você estrutura denúncias cidadãs em JSON. Não invente informações. Responda somente com as propriedades title, category, priority e summary. Use português do Brasil.',
+              'Você estrutura denúncias cidadãs em JSON. Não invente informações. Responda somente com as propriedades title, categories, priority e summary. ' +
+              `"categories" é uma lista com uma ou mais opções copiadas exatamente desta lista: ${supportedComplaintCategories.map((category) => `"${category}"`).join(', ')}. ` +
+              '"priority" é "Baixa", "Média" ou "Alta". "summary" é a descrição clara do problema, em até 1.000 caracteres, com o local se ele foi informado. Use português do Brasil.',
           },
           {
             role: 'user',
@@ -1737,18 +1747,19 @@ app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
       choices?: Array<{ message?: { content?: string | null } }>
     }
     const content = completion.choices?.[0]?.message?.content ?? '{}'
-    const draft = JSON.parse(content) as {
-      title?: string
-      category?: string
-      priority?: string
-      summary?: string
-    }
+    const draft = JSON.parse(content) as Record<string, unknown>
+    const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+    // Mantém só as ocorrências aceitas pelo formulário; sem nenhuma válida, usa "Outro problema urbano".
+    const suggested = Array.isArray(draft.categories) ? draft.categories : [draft.category]
+    const validCategories = [...new Set(suggested.map(text).filter((category) => supportedComplaintCategories.includes(category)))]
+    const categories = validCategories.length ? validCategories : ['Outro problema urbano']
 
     response.json({
-      title: draft.title ?? '',
-      category: draft.category ?? '',
-      priority: draft.priority ?? '',
-      summary: draft.summary ?? '',
+      title: text(draft.title),
+      category: categories[0],
+      categories,
+      priority: text(draft.priority),
+      summary: text(draft.summary).slice(0, 1000),
     })
   } catch (error) {
     console.error('Falha ao gerar rascunho de denúncia com IA.')
