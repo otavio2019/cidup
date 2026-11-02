@@ -1750,7 +1750,8 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
     })
 
     if (!aiResponse.ok) {
-      throw new Error(`O provedor de IA retornou o status ${aiResponse.status}.`)
+      const detail = (await aiResponse.text().catch(() => '')).slice(0, 300)
+      throw new Error(`O provedor de IA retornou o status ${aiResponse.status}: ${detail}`)
     }
 
     const completion = (await aiResponse.json()) as {
@@ -1772,7 +1773,7 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
       summary: text(draft.summary).slice(0, 1000),
     })
   } catch (error) {
-    console.error('Falha ao gerar rascunho de denúncia com IA.')
+    console.error('Falha ao gerar rascunho de denúncia com IA.', error instanceof Error ? error.message : error)
     response.status(502).json({
       error: 'Não foi possível gerar o rascunho agora. Tente novamente.',
     })
