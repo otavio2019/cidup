@@ -109,7 +109,7 @@ function LoginPage() {
                 <input
                   id="login"
                   type="text"
-                  placeholder="seu@email.com ou 000.000.000-00"
+                  placeholder="E-mail ou CPF"
                   value={login}
                   onChange={(event) => setLogin(event.target.value)}
                   autoComplete="username"

@@ -720,6 +720,11 @@
   cursor: pointer;
 }
 
+/* O texto da opção não deve herdar o vermelho do asterisco de campo obrigatório. */
+.complaint-field .complaint-category-option span {
+  color: inherit;
+}
+
 .complaint-field .complaint-category-option input {
   width: 16px;
   min-height: 16px;
@@ -1072,6 +1077,8 @@
 }
 
 .register-link {
+  flex-wrap: wrap;
+  align-items: center;
   margin-top: 16px;
   font-size: 13px;
 }
@@ -1086,6 +1093,7 @@
   background: #eef6ff;
   color: #075fa4;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .register-link .register-cta:focus-visible,

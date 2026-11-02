@@ -565,18 +565,18 @@ function ResponsiblePanelPage() {
                 const complaint = group[0]!
                 const statuses = new Set(group.map((item) => item.status))
                 return <tr key={complaint.protocol} className={group.length > 1 ? 'rp-group-row' : undefined}>
-                  <td className="rp-protocol">
+                  <td className="rp-protocol" data-label="Protocolo">
                     <strong>{group.length > 1 ? `${group.length} denúncias agrupadas` : complaint.protocol}</strong>
                     {group.length > 1 && <details className="rp-group-details">
                       <summary>Ver protocolos</summary>
                       <div>{group.map((item) => <button className="rp-group-protocol" type="button" key={item.protocol} onClick={() => { setSelectedProtocol(item.protocol); setStatus(item.status); setSector(item.sectorId ? item.sector : ''); setSavedUpdate(false) }}>{item.protocol}</button>)}</div>
                     </details>}
                   </td>
-                  <td><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
-                  <td>{complaint.neighborhood || '—'}</td>
-                  <td>{complaint.date}</td>
-                  <td>{statuses.size === 1 ? <StatusBadge status={complaint.status} /> : <span className="rp-status rp-status-mixed">Vários status</span>}</td>
-                  <td><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td>
+                  <td data-label="Descrição"><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
+                  <td data-label="Bairro">{complaint.neighborhood || '—'}</td>
+                  <td data-label="Data">{complaint.date}</td>
+                  <td data-label="Status">{statuses.size === 1 ? <StatusBadge status={complaint.status} /> : <span className="rp-status rp-status-mixed">Vários status</span>}</td>
+                  <td className="rp-table-action"><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td>
                 </tr>
               })}</tbody>
           </table></div>
