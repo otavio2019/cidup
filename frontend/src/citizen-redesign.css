@@ -1451,3 +1451,41 @@
     flex-basis: 92px;
   }
 }
+
+/* Telas muito estreitas (320px a 360px): evita estouro de cards, botões e ícones. */
+@media (max-width: 360px) {
+  .ai-report-section,
+  .ai-draft,
+  .report-card,
+  .complaint-item {
+    min-width: 0;
+    padding-inline: 12px;
+  }
+
+  .ai-button,
+  .login-button {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .draft-meta {
+    flex-wrap: wrap;
+  }
+
+  .ai-draft h4,
+  .ai-draft-summary,
+  .draft-meta span {
+    overflow-wrap: anywhere;
+  }
+
+  .summary-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .password-toggle {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}

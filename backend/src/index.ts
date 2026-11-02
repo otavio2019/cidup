@@ -41,6 +41,16 @@ const passwordResetRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: 'Muitas solicitações. Aguarde antes de tentar novamente.' },
 })
+// Limita o uso da IA por usuário autenticado para controlar o custo da API externa.
+const aiRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  keyGenerator: (request) => `user:${request.authUserId ?? 'anon'}`,
+  validate: { keyGeneratorIpFallback: false },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Você atingiu o limite de uso do assistente de IA. Aguarde antes de tentar novamente.' },
+})
 
 // Converte um valor numérico em ID positivo ou retorna null quando ele for inválido.
 // ===== VALIDAÇÃO E ADAPTAÇÃO DE DADOS =====
@@ -1686,7 +1696,7 @@ app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (r
 
 // ===== IA: SUGESTÃO DE RASCUNHO PARA O FRONTEND =====
 // Solicita à IA um rascunho estruturado, sem criar ou enviar a denúncia automaticamente.
-app.post('/api/ai/complaint-draft', authenticate, async (request, response) => {
+app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, response) => {
   const description =
     typeof request.body?.description === 'string'
       ? request.body.description.trim()

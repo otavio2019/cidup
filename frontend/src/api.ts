@@ -35,7 +35,7 @@ export function formatRateLimitMessage(error: ApiError) {
   const wait = error.retryAfterSeconds < 60
     ? `${error.retryAfterSeconds} segundo${error.retryAfterSeconds === 1 ? '' : 's'}`
     : `${minutes} minuto${minutes === 1 ? '' : 's'}`
-  return `${error.message} Tente novamente em cerca de ${wait}.`
+  return `${error.message.replace(/\s*Aguarde antes de tentar novamente\.$/, '')} Aguarde cerca de ${wait} para tentar novamente.`.trim()
 }
 
 // Centraliza chamadas com cookie de sessão, leitura de respostas e tratamento de erros HTTP.

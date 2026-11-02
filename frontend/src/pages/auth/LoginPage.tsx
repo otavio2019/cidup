@@ -138,7 +138,8 @@ function LoginPage() {
                   className="password-toggle"
                   type="button"
                   onClick={() => setIsPasswordVisible((visible) => !visible)}
-                  aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}                >
+                  aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                >
                   <PasswordVisibilityIcon visible={isPasswordVisible} />
                 </button>
               </div>
