@@ -74,6 +74,7 @@ type StoredComplaint = {
   id_denuncia: number
   id_usuario: number
   id_orgao: number
+  prioridade?: string | null
   titulo: string
   descricao: string
   tipo: string
@@ -340,6 +341,7 @@ function installDatabaseMocks(database: PrismaClient) {
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
         categorias: Array.isArray(data.categorias) ? data.categorias.map(String) : [String(data.tipo)],
+        prioridade: typeof data.prioridade === 'string' ? data.prioridade : null,
         orgao: routedOrganization,
       }
       complaints.set(id_denuncia, complaint)
@@ -805,6 +807,28 @@ test('aceita uma foto válida na criação da denúncia', async () => {
   })
   assert.equal(response.status, 201)
   assert.equal(record(calls.find((call) => call.model === 'denuncia' && call.method === 'create')?.args.data).foto, photo)
+})
+
+test('salva a prioridade sugerida pela IA e ignora valores inválidos', async () => {
+  for (const [priority, expected] of [['Média', 'MEDIA'], ['urgente', null]] as const) {
+    calls.length = 0
+    const response = await callApi('/api/complaints', {
+      method: 'POST',
+      headers: { Cookie: await cookieFor(1) },
+      body: JSON.stringify({
+        type: 'Iluminação pública',
+        title: 'Poste apagado',
+        description: 'Poste apagado há uma semana na esquina.',
+        address: 'Rua de teste, 10, Centro',
+        latitude: -23,
+        longitude: -46,
+        priority,
+      }),
+    })
+    assert.equal(response.status, 201)
+    assert.equal(record(calls.find((call) => call.model === 'denuncia' && call.method === 'create')?.args.data).prioridade, expected)
+    assert.equal(record((await response.json() as RecordValue).complaint).priority, expected)
+  }
 })
 
 test('rejeita foto maior que 2 MB antes de persistir a denúncia', async () => {

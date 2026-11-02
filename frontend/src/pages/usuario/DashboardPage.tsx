@@ -136,6 +136,7 @@ function DashboardPage() {
       state: {
         categories: draft.categories,
         description: (draft.summary || description.trim()).slice(0, 1000),
+        priority: draft.priority,
       },
     })
   }

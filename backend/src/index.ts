@@ -127,6 +127,17 @@ const supportedComplaintCategories = [
   'Sinalização de trânsito',
   'Outro problema urbano',
 ]
+// Prioridade sugerida pela IA: gravada como código e exibida com acento.
+const complaintPriorityLabels = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' } as const
+type ComplaintPriority = keyof typeof complaintPriorityLabels
+
+// Aceita "Alta", "média", "MEDIA" etc. e devolve o código, ou null se não for uma prioridade válida.
+function normalizePriority(value: unknown): ComplaintPriority | null {
+  if (typeof value !== 'string') return null
+  const code = value.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase()
+  return code in complaintPriorityLabels ? code as ComplaintPriority : null
+}
+
 const NEARBY_COMPLAINT_RADIUS_METERS = 50
 const EARTH_RADIUS_METERS = 6_371_000
 
@@ -194,6 +205,7 @@ function complaintResponse(complaint: {
   latitude: number
   longitude: number
   foto?: string | null
+  prioridade?: string | null
   id_usuario: number
   id_orgao: number
   orgao?: { id_orgao: number; nome: string } | null
@@ -215,6 +227,7 @@ function complaintResponse(complaint: {
     description: complaint.descricao,
     address: complaint.endereco,
     photo: complaint.foto ?? null,
+    priority: normalizePriority(complaint.prioridade),
     neighborhood: '',
     number: '',
     complement: '',
@@ -1259,6 +1272,8 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   const latitude = body.latitude
   const longitude = body.longitude
   const photoValue = body.foto ?? body.photo
+  // Opcional: prioridade vinda do rascunho da IA; valores inválidos são ignorados.
+  const prioridade = normalizePriority(body.prioridade ?? body.priority)
   const categories = categoriesValue === undefined
     ? (typeof tipoValue === 'string' ? [tipoValue.trim()] : [])
     : Array.isArray(categoriesValue)
@@ -1324,6 +1339,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
         latitude,
         longitude,
         foto: photoValue === undefined || photoValue === null ? null : String(photoValue),
+        prioridade,
         usuario: { connect: { id_usuario } },
         orgao: { connect: { id_orgao: organization.id_orgao } },
         orgaos_extras: {
@@ -1769,7 +1785,10 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
       title: text(draft.title),
       category: categories[0],
       categories,
-      priority: text(draft.priority),
+      priority: (() => {
+        const priority = normalizePriority(draft.priority)
+        return priority ? complaintPriorityLabels[priority] : ''
+      })(),
       summary: text(draft.summary).slice(0, 1000),
     })
   } catch (error) {

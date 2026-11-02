@@ -23,6 +23,7 @@ type AdminComplaint = {
   longitude: number
   updatedAt: string
   photo?: string | null
+  priority: ComplaintPriority | null
   citizen: string
   email: string
   phone: string
@@ -31,6 +32,16 @@ type AdminComplaint = {
   sector: string
   sectorId?: number
   history: ComplaintHistory[]
+}
+
+type ComplaintPriority = 'BAIXA' | 'MEDIA' | 'ALTA'
+
+const priorityLabels: Record<ComplaintPriority, string> = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
+
+// Selo com a prioridade sugerida pela IA quando o cidadão usou o assistente.
+function PriorityBadge({ priority }: { priority: ComplaintPriority | null }) {
+  if (!priority) return null
+  return <span className={`rp-priority rp-priority-${priority.toLowerCase()}`}>Prioridade {priorityLabels[priority].toLowerCase()}</span>
 }
 
 type PasswordRecoveryRequest = {
@@ -62,6 +73,7 @@ type ApiComplaint = {
   latitude: number
   longitude: number
   photo?: string | null
+  priority?: ComplaintPriority | null
   type: { name: string }
   categories: string[]
   responsibleOrganizations?: string[]
@@ -209,6 +221,7 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
     latitude: complaint.latitude,
     longitude: complaint.longitude,
     photo: complaint.photo ?? null,
+    priority: complaint.priority ?? null,
     citizen: complaint.citizen || 'Cidadão não informado',
     email: complaint.citizenEmail || 'E-mail não informado',
     phone: complaint.citizenPhone || 'Telefone não informado',
@@ -518,6 +531,7 @@ function ResponsiblePanelPage() {
               <Info label="Telefone" value={selectedComplaint.phone} />
               <Info label="CPF" value={selectedComplaint.cpf} />
               <Info label="Categorias" value={selectedComplaint.categories.join(', ')} />
+              {selectedComplaint.priority && <Info label="Prioridade sugerida pela IA" value={priorityLabels[selectedComplaint.priority]} />}
               {selectedComplaint.photo && <div className="rp-photo-field"><strong>Foto anexada</strong><img src={selectedComplaint.photo} alt="Foto anexada pelo cidadão à denúncia" /></div>}
             </section>
             <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
@@ -572,7 +586,7 @@ function ResponsiblePanelPage() {
                       <div>{group.map((item) => <button className="rp-group-protocol" type="button" key={item.protocol} onClick={() => { setSelectedProtocol(item.protocol); setStatus(item.status); setSector(item.sectorId ? item.sector : ''); setSavedUpdate(false) }}>{item.protocol}</button>)}</div>
                     </details>}
                   </td>
-                  <td data-label="Descrição"><strong>{complaint.title}</strong><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
+                  <td data-label="Descrição"><strong>{complaint.title}</strong><PriorityBadge priority={complaint.priority} /><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
                   <td data-label="Bairro">{complaint.neighborhood || '—'}</td>
                   <td data-label="Data">{complaint.date}</td>
                   <td data-label="Status">{statuses.size === 1 ? <StatusBadge status={complaint.status} /> : <span className="rp-status rp-status-mixed">Vários status</span>}</td>

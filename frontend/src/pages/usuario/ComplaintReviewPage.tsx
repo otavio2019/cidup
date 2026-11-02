@@ -20,6 +20,7 @@ type ComplaintDraft = {
   complement?: string
   photoName?: string | null
   photoData?: string | null
+  priority?: string
   latitude?: number
   longitude?: number
 }
@@ -165,6 +166,7 @@ function ComplaintReviewPage() {
             <h2>Sobre o problema</h2>
             <ReviewField label="Ocorrências" value={(draft.categories?.length ? draft.categories : [draft.type]).filter(Boolean).join(', ')} />
             <ReviewField label="Descrição" value={draft.description} />
+            {draft.priority && <ReviewField label="Prioridade sugerida pela IA" value={draft.priority} />}
             {draft.photoName && <ReviewField label="Foto anexada" value={draft.photoName} />}
           </section>
 

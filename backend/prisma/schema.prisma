@@ -22,6 +22,7 @@ model denuncia {
   latitude      Float
   longitude     Float
   foto          String?     @db.Text
+  prioridade    String?     @db.VarChar(10)
   id_usuario    Int
   id_orgao      Int
   orgao         orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
