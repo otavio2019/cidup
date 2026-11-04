@@ -3,12 +3,19 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+// ===== ESQUECI MINHA SENHA =====
+// O QUE FAZ: pede recuperação de senha informando o CPF.
+// QUEM USA: App.tsx, rota /recuperar-senha; LoginPage.tsx linka para cá.
+// CHAMA: POST /api/auth/forgot-password (via apiRequest em api.ts).
+// DEPOIS: o responsável gera a senha temporária no painel
+//   (GET/POST /api/admin/password-recovery-requests).
 export default function ForgotPasswordPage() {
   const [cpf, setCpf] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Envia só os dígitos do CPF e mostra a mensagem neutra devolvida pela API.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)

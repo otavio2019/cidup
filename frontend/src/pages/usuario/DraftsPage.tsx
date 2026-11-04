@@ -7,16 +7,26 @@ import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { deleteDraft, listDrafts, resumeDraft } from '../../drafts'
 import '../../App.css'
 
-/** Lista os rascunhos salvos no navegador; permite continuar ou excluir cada um. */
+// ===== PÁGINA DE RASCUNHOS =====
+// O QUE FAZ: lista rascunhos salvos no navegador; continuar ou excluir cada um.
+// QUEM USA: App.tsx, rota /rascunhos (ProtectedRoute).
+//   Links: DashboardPage.tsx (menu lateral "Rascunhos") e CitizenHeader/CitizenMobileNav.
+// CHAMA: drafts.ts (listDrafts, resumeDraft, deleteDraft). Não usa API, só storage local.
+// NAVEGA PARA: /registrar-denuncia (CreateComplaintPage.tsx).
 function DraftsPage() {
   const navigate = useNavigate()
+  // Lê os rascunhos uma vez; depois atualiza manualmente com listDrafts().
   const [drafts, setDrafts] = useState(() => listDrafts())
 
+  // O QUE FAZ: carrega o rascunho como "ativo" e abre o formulário de denúncia.
+  // CHAMA: resumeDraft() em drafts.ts. Se o rascunho sumiu (false), só recarrega a lista.
   function continueDraft(id: string) {
     if (resumeDraft(id)) navigate('/registrar-denuncia')
     else setDrafts(listDrafts())
   }
 
+  // O QUE FAZ: exclui um rascunho após confirmação.
+  // CHAMA: deleteDraft() em drafts.ts.
   function removeDraft(id: string) {
     if (!window.confirm('Excluir este rascunho?')) return
     deleteDraft(id)
@@ -33,11 +43,13 @@ function DraftsPage() {
             <h2 id="drafts-title">Meus rascunhos</h2>
             <p>Denúncias que você começou e ainda não enviou. Ficam salvas neste navegador.</p>
           </div>
+          {/* "Nova denúncia": limpa o rascunho ativo para abrir o formulário em branco. */}
           <Link className="primary-action" to="/registrar-denuncia" onClick={() => { sessionStorage.removeItem('cidup-complaint-draft'); sessionStorage.removeItem('cidup-active-draft-id') }}>
             Nova denúncia
           </Link>
         </div>
 
+        {/* Lista vazia ou cartões de rascunho (Continuar / Excluir). */}
         {drafts.length === 0 ? (
           <div className="complaints-empty-state">
             <span aria-hidden="true">✎</span>

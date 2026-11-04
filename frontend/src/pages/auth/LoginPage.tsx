@@ -14,7 +14,13 @@ function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
   )
 }
 
-// Apresenta o formulário de acesso e mantém o estado dos campos e mensagens.
+// ===== TELA DE LOGIN =====
+// O QUE FAZ: formulário de acesso (e-mail/CPF + senha).
+// QUEM USA: App.tsx, rota /login (também é o destino de "*" e "/").
+// CHAMA: POST /api/auth/login (via apiRequest em api.ts).
+// PRÓXIMA TELA: /trocar-senha-temporaria (ChangeTemporaryPasswordPage),
+//   /responsavel/dashboard (RESPONSIBLE) ou /dashboard (cidadão).
+// LINKS: /recuperar-senha (ForgotPasswordPage) e /cadastro (RegisterPage).
 function LoginPage() {
   const navigate = useNavigate()
   const [login, setLogin] = useState('')
@@ -22,10 +28,13 @@ function LoginPage() {
   const [mensagem, setMensagem] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Bloqueia envios repetidos (ex.: Enter pressionado duas vezes) antes de o botão ser desabilitado na tela.
+  // Bloqueia envios repetidos (ex.: Enter duas vezes)
+  // antes de o botão ser desabilitado na tela.
   const submittingRef = useRef(false)
 
-  // Valida os campos, autentica o cidadão e redireciona conforme o perfil retornado.
+  // O QUE FAZ: valida os campos, autentica e redireciona conforme o perfil.
+  // CHAMA: POST /api/auth/login (backend/src/index.ts).
+  // 1) Valida campos  2) Chama a API  3) Guarda perfil  4) Navega.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (submittingRef.current) return
@@ -52,8 +61,10 @@ function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ login: login.trim(), password: senha }),
       })
+      // Limpa denúncias locais antigas para não mostrar dados de outra conta.
       localStorage.removeItem('cidup-complaints')
       localStorage.setItem('cidup-profile', JSON.stringify(data.user))
+      // Senha temporária bloqueia o resto do app até ser trocada (TemporaryPasswordRoute).
       navigate(data.user.mustChangePassword
         ? '/trocar-senha-temporaria'
         : data.user.role === 'RESPONSIBLE' ? '/responsavel/dashboard' : '/dashboard')

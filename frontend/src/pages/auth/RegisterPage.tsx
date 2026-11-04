@@ -56,7 +56,11 @@ function isValidCpf(value: string) {
   return digit === Number(cpf[10])
 }
 
-// Apresenta o cadastro e controla os campos, a confirmação de senha e o feedback.
+// ===== TELA DE CADASTRO =====
+// O QUE FAZ: cria a conta do cidadão (valida CPF, CEP e senha).
+// QUEM USA: App.tsx, rota /cadastro; LoginPage.tsx linka para cá.
+// CHAMA: POST /api/auth/register (via apiRequest em api.ts).
+// PRÓXIMA TELA: /login (LoginPage), após 900 ms.
 function RegisterPage() {
   const navigate = useNavigate()
   const [nome, setNome] = useState('')
@@ -70,10 +74,13 @@ function RegisterPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Evita cadastros duplicados por cliques repetidos antes de o botão ser desabilitado na tela.
+  // Evita cadastros duplicados por cliques repetidos
+  // antes de o botão ser desabilitado na tela.
   const submittingRef = useRef(false)
 
-  // Valida os dados, cria a conta e encaminha o usuário para a tela de login.
+  // O QUE FAZ: valida os dados, cria a conta e vai para o login.
+  // CHAMA: POST /api/auth/register (backend/src/index.ts).
+  // 1) Valida no navegador  2) Chama a API  3) Navega para /login.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (submittingRef.current) return
@@ -101,7 +108,7 @@ function RegisterPage() {
     submittingRef.current = true
     setIsSubmitting(true)
     try {
-      // Cria a conta no backend; após sucesso, a tela encaminha a pessoa para /login.
+      // Cria a conta no backend; com sucesso, a tela segue para /login.
       await apiRequest('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name: nome, email, phone: telefone, cpf, cep, password: senha }),

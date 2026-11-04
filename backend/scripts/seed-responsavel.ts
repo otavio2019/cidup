@@ -3,14 +3,23 @@ import { randomBytes, scrypt as scryptCallback } from 'node:crypto'
 import { promisify } from 'node:util'
 import { prisma } from '../src/lib/prisma.js'
 
+// ===== SEED DO RESPONSÁVEL =====
+// Rodar com: npm run seed:responsavel (package.json do backend).
+// Cria ou atualiza o responsável que entra pelo login do painel (ResponsiblePanelPage.tsx).
 const scrypt = promisify(scryptCallback)
 
+// O QUE FAZ: lê uma variável obrigatória do backend/.env ou aborta com erro.
+// QUEM USA: main (neste arquivo).
 function requiredEnv(name: string) {
   const value = process.env[name]?.trim()
   if (!value) throw new Error(`Defina ${name} no backend/.env antes de executar o seed.`)
   return value
 }
 
+// O QUE FAZ: gera o hash scrypt no formato "salt:hash" para guardar em responsavel.senha.
+// QUEM USA: main (neste arquivo).
+// Por quê: a senha nunca é salva em texto puro. O login (POST /api/auth/login em
+//   backend/src/index.ts) precisa ler este mesmo formato.
 async function hashPassword(password: string) {
   if (password.length < 6 || password.length > 1024) {
     throw new Error('RESPONSAVEL_PASSWORD deve conter entre 6 e 1024 caracteres.')
@@ -20,7 +29,11 @@ async function hashPassword(password: string) {
   return `${salt}:${derivedKey.toString('hex')}`
 }
 
+// O QUE FAZ: valida as variáveis RESPONSAVEL_* e faz upsert do responsável por e-mail.
+// QUEM USA: execução direta do script (await main() no fim do arquivo).
+// CHAMA: requiredEnv, hashPassword e prisma.responsavel.upsert (lib/prisma.ts).
 async function main() {
+  // 1) Lê e valida os dados do ambiente.
   const nome = requiredEnv('RESPONSAVEL_NAME')
   const email = requiredEnv('RESPONSAVEL_EMAIL').toLowerCase()
   const telefone = requiredEnv('RESPONSAVEL_PHONE')
@@ -37,6 +50,7 @@ async function main() {
     throw new Error('RESPONSAVEL_NAME ou RESPONSAVEL_PHONE excede o tamanho permitido.')
   }
 
+  // 2) Cria o responsável ou atualiza se o e-mail já existir; vincula ao órgão.
   const responsible = await prisma.responsavel.upsert({
     where: { email },
     create: {
@@ -58,6 +72,7 @@ async function main() {
   console.log(`Responsável sincronizado: ${responsible.nome} <${responsible.email}> (id ${responsible.id_responsavel}, órgão ${responsible.id_orgao})`)
 }
 
+// Sempre fecha a conexão com o banco, mesmo se main falhar.
 try {
   await main()
 } finally {

@@ -14,6 +14,25 @@ import { prisma } from './lib/prisma.js'
 import { isSupabaseConfigured, supabaseRequest } from './lib/supabase.js'
 import { sendComplaintReceivedEmail, sendComplaintStatusEmail, sendPasswordResetEmail } from './email.js'
 
+// ===== ÍNDICE DESTE ARQUIVO (use Ctrl+F no nome da seção) =====
+// 1. CONFIGURAÇÃO E LIMITAÇÃO DE REQUISIÇÕES: rate limits (login, cadastro, senha, IA)
+// 2. VALIDAÇÃO E ADAPTAÇÃO DE DADOS: helpers (CPF, CEP, imagem, prioridade, órgão)
+// 3. CONFIGURAÇÃO DA API E MIDDLEWARES: createApp, CORS, authenticate, requireAdministrator
+// 4. AUTENTICAÇÃO: cadastro, login, recuperação de senha, sessão
+// 5. USUÁRIOS: perfil próprio (ProfilePage.tsx)
+// 6. ÓRGÃOS: lista pública e administração
+// 7. DENÚNCIAS: CRUD, relacionadas, e-mails
+// 8. HISTÓRICO: acompanhamento das denúncias
+// 9. IA: rascunho de denúncia (DashboardPage.tsx)
+// 10. ERROS e INICIALIZAÇÃO do servidor
+// 
+// Ligações gerais:
+// - Frontend chama tudo via apiRequest() em frontend/src/api.ts.
+// - Prisma (variável `database`): usuario, responsavel, orgao, denuncia, historico,
+//   password_reset_token, password_recovery_request.
+// - Autenticação (token/cookie): ./auth.ts. E-mails: ./email.ts. Supabase: ./lib/supabase.ts.
+// - Rotas com dois nomes (/api/users e /api/usuarios etc.) são apelidos da mesma rota.
+// 
 /** API HTTP do CidUp: autenticação, usuários, órgãos, denúncias, históricos e integrações opcionais. */
 const scrypt = promisify(scryptCallback)
 // ===== CONFIGURAÇÃO E LIMITAÇÃO DE REQUISIÇÕES =====
@@ -420,11 +439,15 @@ async function notifySafely(action: () => Promise<unknown>) {
 }
 
 // Disponibiliza uma verificação simples de disponibilidade sem exigir sessão.
+// QUEM USA: monitoramento/hospedagem (nenhuma tela do frontend).
+// MIDDLEWARE: nenhum. Prisma: nenhum.
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' })
 })
 
 // Verifica a configuração e a conectividade do serviço Supabase.
+// QUEM USA: nenhuma tela (diagnóstico).
+// MIDDLEWARE: authenticate. CHAMA: supabaseRequest (./lib/supabase.ts).
 app.get('/api/supabase/status', authenticate, async (_request, response) => {
   if (!isSupabaseConfigured()) {
     response.status(503).json({ error: 'Supabase não configurado.' })
@@ -476,8 +499,16 @@ async function registerUser(request: express.Request, response: express.Response
 }
 
 // Recebe o cadastro iniciado pelo formulário do frontend e encaminha os dados ao Prisma.
+// QUEM USA: RegisterPage.tsx (POST /api/auth/register).
+// MIDDLEWARE: registerRateLimit. CHAMA: registerUser, que usa isValidCpf, isValidCep,
+// hashPassword. PRISMA: usuario (create).
 app.post(['/api/auth/register', '/api/users', '/api/usuarios'], registerRateLimit, registerUser)
 
+// O QUE FAZ: pede recuperação de senha por CPF (cria pedido) ou e-mail (envia link).
+// QUEM USA: ForgotPasswordPage.tsx. MIDDLEWARE: passwordResetRateLimit.
+// CHAMA: isValidCpf, notifySafely + sendPasswordResetEmail (./email.ts), hashResetToken.
+// PRISMA: usuario, password_recovery_request (CPF), password_reset_token (e-mail).
+// Resposta sempre genérica: não revela se a conta existe.
 app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -537,6 +568,9 @@ app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, re
   }
 })
 
+// O QUE FAZ: troca a senha usando o token enviado por e-mail (uso único).
+// QUEM USA: ResetPasswordPage.tsx. MIDDLEWARE: passwordResetRateLimit.
+// CHAMA: hashResetToken, hashPassword. PRISMA: password_reset_token, usuario (transação).
 app.post('/api/auth/reset-password', passwordResetRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const token = typeof body.token === 'string' ? body.token.trim() : ''
@@ -570,6 +604,9 @@ app.post('/api/auth/reset-password', passwordResetRateLimit, async (request, res
   }
 })
 
+// O QUE FAZ: troca a senha temporária definida por um responsável.
+// QUEM USA: ChangeTemporaryPasswordPage.tsx. MIDDLEWARE: authenticate (liberada mesmo
+// com troca de senha pendente). CHAMA: verifyPassword, hashPassword. PRISMA: usuario.
 app.post('/api/auth/change-temporary-password', authenticate, async (request, response) => {
   const userId = readAuthUserId(request)
   const newPassword = isRecord(request.body) ? request.body.newPassword : undefined
@@ -612,6 +649,9 @@ app.post('/api/auth/change-temporary-password', authenticate, async (request, re
   }
 })
 
+// O QUE FAZ: lista pedidos de recuperação de senha pendentes.
+// QUEM USA: ResponsiblePanelPage.tsx. MIDDLEWARE: authenticate, requireAdministrator.
+// PRISMA: password_recovery_request (com usuario).
 app.get('/api/admin/password-recovery-requests', authenticate, requireAdministrator, async (_request, response) => {
   try {
     const requests = await database.password_recovery_request.findMany({
@@ -638,6 +678,9 @@ app.get('/api/admin/password-recovery-requests', authenticate, requireAdministra
   }
 })
 
+// O QUE FAZ: gera senha temporária e obriga o usuário a trocá-la no próximo login.
+// QUEM USA: ResponsiblePanelPage.tsx. MIDDLEWARE: authenticate, requireAdministrator.
+// CHAMA: hashPassword. PRISMA: password_recovery_request, usuario (transação).
 app.post('/api/admin/password-recovery-requests/:id/temporary-password', authenticate, requireAdministrator, async (request, response) => {
   const requestId = readPositiveInt(request.params.id)
   const responsibleId = readAuthUserId(request)
@@ -679,6 +722,9 @@ app.post('/api/admin/password-recovery-requests/:id/temporary-password', authent
 })
 
 // Autentica as credenciais e devolve os dados públicos junto ao cookie de sessão.
+// QUEM USA: LoginPage.tsx. MIDDLEWARE: loginRateLimit.
+// CHAMA: verifyPassword, createAuthToken (./auth.ts), handlePrismaError.
+// PRISMA: responsavel (login por e-mail), usuario (e-mail ou CPF).
 app.post('/api/auth/login', loginRateLimit, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   // Aceita e-mail ou CPF no mesmo campo; "email" continua aceito por compatibilidade.
@@ -762,6 +808,7 @@ app.post('/api/auth/login', loginRateLimit, async (request, response) => {
 })
 
 // Encerra a sessão removendo o cookie com os mesmos atributos de segurança.
+// QUEM USA: ProfilePage.tsx e DashboardPage.tsx. MIDDLEWARE: nenhum. Prisma: nenhum.
 app.post('/api/auth/logout', (_request, response) => {
   response.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
@@ -773,6 +820,8 @@ app.post('/api/auth/logout', (_request, response) => {
 })
 
 // Confirma a sessão atual consultando o usuário associado ao token.
+// QUEM USA: App.tsx (restaura sessão), DashboardPage.tsx, ProfilePage.tsx,
+// ResponsiblePanelPage.tsx. MIDDLEWARE: authenticate. PRISMA: responsavel, usuario.
 app.get('/api/auth/session', authenticate, async (request, response) => {
   const principalId = readAuthUserId(request)
   if (!principalId) {
@@ -833,6 +882,8 @@ app.get('/api/auth/session', authenticate, async (request, response) => {
 
 // ===== USUÁRIOS: PERFIL E GERENCIAMENTO DA PRÓPRIA CONTA =====
 // Retorna somente o perfil do usuário autenticado.
+// QUEM USA: nenhuma tela hoje (o perfil vem de /api/auth/session).
+// MIDDLEWARE: authenticate. PRISMA: usuario (findUnique).
 app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -855,6 +906,7 @@ app.get(['/api/users', '/api/usuarios'], authenticate, async (request, response)
 })
 
 // Consulta o perfil apenas quando o ID solicitado pertence à própria sessão.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate. PRISMA: usuario.
 app.get(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
@@ -887,6 +939,8 @@ app.get(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, r
 })
 
 // Valida e atualiza campos permitidos exclusivamente no perfil do usuário autenticado.
+// QUEM USA: ProfilePage.tsx (salvar perfil). MIDDLEWARE: authenticate.
+// CHAMA: isValidCpf, isValidCep, isValidImageData, hashPassword. PRISMA: usuario (update).
 app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
@@ -976,6 +1030,8 @@ app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request,
 })
 
 // Exclui o próprio usuário somente quando não há denúncias ou históricos vinculados.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate.
+// PRISMA: denuncia e historico (count), usuario (delete).
 app.delete(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
@@ -1010,6 +1066,8 @@ app.delete(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request
 
 // ===== ÓRGÃOS: CONSULTA E ADMINISTRAÇÃO =====
 // Lista apenas os campos públicos dos órgãos responsáveis.
+// QUEM USA: ComplaintReviewPage.tsx e ResponsiblePanelPage.tsx.
+// MIDDLEWARE: nenhum (pública). PRISMA: orgao (findMany).
 app.get(['/api/orgaos', '/api/organs'], async (_request, response) => {
   try {
     const orgaos = await database.orgao.findMany({
@@ -1023,6 +1081,7 @@ app.get(['/api/orgaos', '/api/organs'], async (_request, response) => {
 })
 
 // Busca um órgão por ID sem retornar seus dados de contato privados.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: nenhum (pública). PRISMA: orgao.
 app.get(['/api/orgaos/:id', '/api/organs/:id'], async (request, response) => {
   const id_orgao = readPositiveInt(request.params.id)
   if (!id_orgao) {
@@ -1046,6 +1105,8 @@ app.get(['/api/orgaos/:id', '/api/organs/:id'], async (request, response) => {
 })
 
 // Cria um órgão depois de validar os campos e autorizar o responsável.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate, requireAdministrator.
+// PRISMA: orgao (create).
 app.post(['/api/orgaos', '/api/organs'], authenticate, requireAdministrator, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const nome = typeof body.nome === 'string' ? body.nome.trim() : ''
@@ -1068,6 +1129,8 @@ app.post(['/api/orgaos', '/api/organs'], authenticate, requireAdministrator, asy
 })
 
 // Atualiza somente campos válidos de um órgão para administradores autorizados.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate, requireAdministrator.
+// PRISMA: orgao (update).
 app.patch(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdministrator, async (request, response) => {
   const id_orgao = readPositiveInt(request.params.id)
   const body = isRecord(request.body) ? request.body : {}
@@ -1106,6 +1169,8 @@ app.patch(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdministr
 })
 
 // Remove um órgão apenas quando não existem denúncias relacionadas a ele.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate, requireAdministrator.
+// PRISMA: denuncia (count), orgao (delete).
 app.delete(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdministrator, async (request, response) => {
   const id_orgao = readPositiveInt(request.params.id)
   if (!id_orgao) {
@@ -1126,6 +1191,8 @@ app.delete(['/api/orgaos/:id', '/api/organs/:id'], authenticate, requireAdminist
 
 // ===== DENÚNCIAS: CONSULTA, CRIAÇÃO E ATUALIZAÇÃO =====
 // Lista as denúncias próprias; administradores autorizados podem consultar todas.
+// QUEM USA: DashboardPage.tsx, MyComplaintsPage.tsx, ResponsiblePanelPage.tsx.
+// MIDDLEWARE: authenticate. CHAMA: complaintResponse. PRISMA: denuncia (findMany).
 app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -1155,6 +1222,8 @@ app.get(['/api/complaints', '/api/denuncias'], authenticate, async (request, res
 })
 
 // Consulta uma denúncia somente se ela pertencer ao usuário ou se houver acesso administrativo.
+// QUEM USA: ComplaintDetailsPage.tsx. MIDDLEWARE: authenticate.
+// CHAMA: complaintResponse. PRISMA: denuncia (findFirst).
 app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -1193,6 +1262,8 @@ app.get(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (requ
 })
 
 // Encontra denúncias próximas que compartilham ao menos uma categoria, mantendo protocolos separados.
+// QUEM USA: ComplaintDetailsPage.tsx. MIDDLEWARE: authenticate.
+// CHAMA: distanceInMeters. PRISMA: denuncia (findFirst, findMany).
 app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -1260,6 +1331,10 @@ app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], auth
 })
 
 // Valida e registra a denúncia, encaminhando-a automaticamente pelo tipo informado.
+// QUEM USA: ComplaintReviewPage.tsx (envio final). MIDDLEWARE: authenticate.
+// CHAMA: isValidImageData, findOrganizationByComplaintType, complaintResponse,
+// notifySafely + sendComplaintReceivedEmail (./email.ts).
+// PRISMA: orgao (findMany), denuncia (create, com usuario e orgao).
 app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
   const body = isRecord(request.body) ? request.body : {}
   const id_usuario = readAuthUserId(request)
@@ -1367,6 +1442,9 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
 })
 
 // Atualiza uma denúncia própria, reservando mudanças de status e encaminhamento aos responsáveis.
+// QUEM USA: ResponsiblePanelPage.tsx (muda status). MIDDLEWARE: authenticate.
+// CHAMA: isResponsibleRequest, normalizePriority, complaintResponse,
+// notifySafely + sendComplaintStatusEmail. PRISMA: denuncia (findFirst, update).
 app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -1465,6 +1543,8 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
 })
 
 // Exclui uma denúncia própria ou administrativa somente se não houver histórico associado.
+// QUEM USA: DashboardPage.tsx (excluir). MIDDLEWARE: authenticate.
+// PRISMA: denuncia (findFirst, delete), historico (count).
 app.delete(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   const id_denuncia = readPositiveInt(request.params.id)
@@ -1500,6 +1580,7 @@ app.delete(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (r
 })
 
 // Lista históricos das denúncias próprias, liberando todos os registros a administradores.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate. PRISMA: historico.
 app.get(['/api/historicos', '/api/histories'], authenticate, async (request, response) => {
   const id_usuario = readAuthUserId(request)
   if (!id_usuario) {
@@ -1523,6 +1604,7 @@ app.get(['/api/historicos', '/api/histories'], authenticate, async (request, res
 
 // ===== HISTÓRICO: ACOMPANHAMENTO DAS DENÚNCIAS =====
 // Consulta um histórico apenas se estiver ligado a uma denúncia acessível ao usuário.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate. PRISMA: historico.
 app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
   const id_usuario = readAuthUserId(request)
@@ -1555,6 +1637,8 @@ app.get(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (requ
 })
 
 // Registra um histórico e valida a permissão do usuário sobre a denúncia referenciada.
+// QUEM USA: ResponsiblePanelPage.tsx (registra a mudança de status).
+// MIDDLEWARE: authenticate. PRISMA: denuncia (checa dono), historico (create).
 app.post(['/api/historicos', '/api/histories'], authenticate, async (request, response) => {
   const authenticatedUserId = readAuthUserId(request)
   const body = isRecord(request.body) ? request.body : {}
@@ -1606,6 +1690,8 @@ app.post(['/api/historicos', '/api/histories'], authenticate, async (request, re
 })
 
 // Atualiza dados do histórico e impede vínculos com denúncias de outros usuários.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate.
+// PRISMA: denuncia (checa dono), historico (findFirst, update).
 app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
   const authenticatedUserId = readAuthUserId(request)
@@ -1680,6 +1766,8 @@ app.patch(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (re
 })
 
 // Remove um histórico somente quando o registro pode ser acessado pela sessão atual.
+// QUEM USA: nenhuma tela hoje. MIDDLEWARE: authenticate.
+// PRISMA: historico (findFirst, delete).
 app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (request, response) => {
   const id_historico = readPositiveInt(request.params.id)
   const id_usuario = readAuthUserId(request)
@@ -1712,6 +1800,9 @@ app.delete(['/api/historicos/:id', '/api/histories/:id'], authenticate, async (r
 
 // ===== IA: SUGESTÃO DE RASCUNHO PARA O FRONTEND =====
 // Solicita à IA um rascunho estruturado, sem criar ou enviar a denúncia automaticamente.
+// QUEM USA: DashboardPage.tsx (assistente de nova denúncia).
+// MIDDLEWARE: authenticate, aiRateLimit. CHAMA: API externa de IA (fetch /chat/completions),
+// normalizePriority. Prisma: nenhum. Não grava nada: só devolve o rascunho.
 app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, response) => {
   const description =
     typeof request.body?.description === 'string'
@@ -1801,6 +1892,7 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
 
 // ===== TRATAMENTO DE ERROS DA API =====
 // Converte erros inesperados e JSON malformado em respostas seguras para o cliente.
+// MIDDLEWARE: último da cadeia; recebe erros de todas as rotas acima.
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   if (isRecord(error) && (error.type === 'entity.too.large' || error.name === 'PayloadTooLargeError')) {
     response.status(413).json({ error: 'A requisição é muito grande. A foto deve ter no máximo 2 MB.' })

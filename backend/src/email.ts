@@ -8,8 +8,13 @@ type EmailMessage = {
   html?: string
 }
 
+// ===== ENVIO DE E-MAILS =====
+// Sem SMTP configurado, as mensagens ficam só em memória (modo teste).
 let testMessages: EmailMessage[] = []
 
+// O QUE FAZ: monta o transporte SMTP; sem host/usuário/senha, usa jsonTransport (não envia).
+// QUEM USA: sendEmail (neste arquivo).
+// Variáveis: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_SECURE.
 function createTransport(): Transporter {
   const host = process.env.SMTP_HOST
   const port = Number(process.env.SMTP_PORT ?? 587)
@@ -28,6 +33,9 @@ function createTransport(): Transporter {
   return nodemailer.createTransport({ jsonTransport: true })
 }
 
+// O QUE FAZ: envia um e-mail; EMAIL_DISABLED=true pula o envio.
+// QUEM USA: as três funções sendXxxEmail abaixo.
+// CHAMA: createTransport. Guarda cópia em testMessages quando não há SMTP_HOST.
 export async function sendEmail(message: EmailMessage) {
   if (process.env.EMAIL_DISABLED === 'true') return { skipped: true }
   if (!process.env.SMTP_HOST) testMessages.push(message)
@@ -39,14 +47,21 @@ export async function sendEmail(message: EmailMessage) {
   return { skipped: false }
 }
 
+// O QUE FAZ: devolve uma cópia dos e-mails guardados em memória.
+// QUEM USA: apenas testes (backend/src/email.test.ts).
 export function getTestEmails() {
   return [...testMessages]
 }
 
+// O QUE FAZ: limpa os e-mails guardados em memória.
+// QUEM USA: apenas testes (backend/src/email.test.ts).
 export function clearTestEmails() {
   testMessages = []
 }
 
+// O QUE FAZ: envia o link de recuperação de senha (válido por 30 minutos).
+// QUEM USA: backend/src/index.ts, rota POST /api/auth/forgot-password.
+// CHAMA: sendEmail. Telas ligadas: ForgotPasswordPage.tsx e ResetPasswordPage.tsx.
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   return sendEmail({
     to,
@@ -56,6 +71,9 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   })
 }
 
+// O QUE FAZ: avisa que a denúncia foi recebida (protocolo e status atual).
+// QUEM USA: backend/src/index.ts, rota POST /api/complaints (cidadão e órgão).
+// CHAMA: sendEmail.
 export async function sendComplaintReceivedEmail(to: string, protocol: string, status: string) {
   return sendEmail({
     to,
@@ -65,6 +83,9 @@ export async function sendComplaintReceivedEmail(to: string, protocol: string, s
   })
 }
 
+// O QUE FAZ: avisa que o status da denúncia mudou (com observação opcional).
+// QUEM USA: backend/src/index.ts, rota PATCH /api/complaints/:id; backend/src/email.test.ts.
+// CHAMA: sendEmail.
 export async function sendComplaintStatusEmail(to: string, protocol: string, status: string, observation?: string) {
   return sendEmail({
     to,

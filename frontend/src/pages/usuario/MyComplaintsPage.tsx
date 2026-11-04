@@ -5,8 +5,8 @@ import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
 
-/** Lista as denúncias da sessão e liga cada protocolo à tela de detalhes. */
 // ===== APRESENTAÇÃO DOS STATUS =====
+// Mapeia o rótulo em pt-BR para a classe CSS da etiqueta (App.css).
 const statusClasses: Record<string, string> = {
 	'Recebida': 'status-received',
 	'Em análise': 'status-analysis',
@@ -16,6 +16,7 @@ const statusClasses: Record<string, string> = {
 	'Cancelada': 'status-canceled',
 }
 
+// Mapeia o status da API (enum do backend) para o rótulo em pt-BR.
 const statusLabels: Record<string, string> = {
 	RECEIVED: 'Recebida',
 	IN_ANALYSIS: 'Em análise',
@@ -26,7 +27,8 @@ const statusLabels: Record<string, string> = {
 }
 
 // ===== FORMATAÇÃO E CARREGAMENTO DA LISTA =====
-// Formata datas para exibição local e oferece uma mensagem para valores inválidos.
+// O QUE FAZ: formata data ISO como dd/mm/aaaa; devolve aviso se vazia ou inválida.
+// QUEM USA: MyComplaintsPage (campo registeredAt).
 function formatDate(value?: string) {
 	if (!value) return 'Data não informada'
 	const date = new Date(value)
@@ -34,15 +36,21 @@ function formatDate(value?: string) {
 	return new Intl.DateTimeFormat('pt-BR').format(date)
 }
 
-// Busca as denúncias do cidadão e apresenta estados de carregamento, erro e resultados.
+// ===== PÁGINA MINHAS DENÚNCIAS =====
+// O QUE FAZ: busca as denúncias do cidadão e mostra carregando, erro, vazio ou lista.
+// QUEM USA: App.tsx, rota /minhas-denuncias (ProtectedRoute).
+//   Links: DashboardPage.tsx ("Ver todas") e CitizenHeader/CitizenMobileNav.
+// CHAMA: GET /api/complaints (backend/src/index.ts) via apiRequest em api.ts.
+// NAVEGA PARA: /registrar-denuncia (CreateComplaintPage.tsx)
+//   e /denuncias/:id (ComplaintDetailsPage.tsx).
 function MyComplaintsPage() {
 	const [complaints, setComplaints] = useState<Complaint[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
 	// ===== CHAMADA À API =====
-	// GET /api/complaints carrega os registros do cidadão e alimenta os links para ComplaintDetailsPage.
-	// Carrega a lista da API e impede atualizações de estado após sair da página.
+	// GET /api/complaints: o backend filtra pelas denúncias do usuário logado.
+	// A flag "active" evita atualizar o estado se a página já foi fechada.
 	useEffect(() => {
 		let active = true
 		apiRequest<{ complaints: Complaint[] }>('/api/complaints')

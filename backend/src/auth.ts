@@ -19,7 +19,9 @@ declare global {
 }
 
 // ===== CHAVES E EMISSÃO DE TOKEN =====
-// Valida o tamanho mínimo do segredo e o converte para o formato usado pelo JWT.
+// O QUE FAZ: valida o tamanho mínimo do segredo e o converte para o formato do JWT.
+// QUEM USA: createAuthToken e requireAuthentication (neste arquivo).
+// Por quê: segredo curto deixa o token fácil de forjar.
 function secretKey(secret: string) {
   if (Buffer.byteLength(secret, 'utf8') < 32) {
     throw new Error('AUTH_TOKEN_SECRET deve conter pelo menos 32 bytes.')
@@ -27,7 +29,11 @@ function secretKey(secret: string) {
   return new TextEncoder().encode(secret)
 }
 
-// Cria um token assinado com identidade, emissor, público e prazo de expiração definidos.
+// O QUE FAZ: cria o token (JWT) assinado com id, emissor, público e expiração de 15 min.
+// QUEM USA: backend/src/index.ts nas rotas POST /api/auth/login (cidadão e responsável)
+//   e POST /api/auth/change-temporary-password; backend/src/index.test.ts.
+// CHAMA: secretKey. O token vai no cookie AUTH_COOKIE_NAME (lido por requireAuthentication).
+// principalType: CITIZEN, RESPONSIBLE ou PASSWORD_CHANGE_REQUIRED (senha temporária).
 export async function createAuthToken(userId: number, secret: string, principalType: AuthPrincipalType = 'CITIZEN') {
   if (!Number.isInteger(userId) || userId <= 0) {
     throw new Error('É necessário informar um ID de usuário válido para criar o token de autenticação.')

@@ -3,6 +3,11 @@ import type { FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+// ===== REDEFINIR SENHA =====
+// O QUE FAZ: define nova senha usando o token do link de recuperação.
+// QUEM USA: App.tsx, rota /recuperar-senha/nova (o token vem em ?token=).
+// CHAMA: POST /api/auth/reset-password (via apiRequest em api.ts).
+// PRÓXIMA TELA: /login (link "Entrar" após o sucesso).
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''
@@ -12,6 +17,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Confere as senhas, envia token + senha e limpa os campos no sucesso.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')

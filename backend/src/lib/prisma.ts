@@ -8,5 +8,6 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL não está definida. Copie backend/.env.example para backend/.env e configure a URL de conexão do PostgreSQL.')
 }
 
-// Instancia o cliente compartilhado que as rotas acessam por meio de createApp.
+// O QUE FAZ: instancia o cliente compartilhado que as rotas acessam por meio de createApp.
+// QUEM USA: backend/src/index.ts (todas as rotas) e backend/scripts/seed-responsavel.ts.
 export const prisma = new PrismaClient()

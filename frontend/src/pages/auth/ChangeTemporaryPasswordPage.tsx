@@ -3,6 +3,12 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
+// ===== TROCA DE SENHA TEMPORÁRIA =====
+// O QUE FAZ: obriga a definir senha definitiva no primeiro acesso.
+// QUEM USA: App.tsx, rota /trocar-senha-temporaria (guardada por TemporaryPasswordRoute).
+// CHAMA: POST /api/auth/change-temporary-password (exige login).
+// VEM DE: LoginPage.tsx (quando mustChangePassword é true).
+// PRÓXIMA TELA: /dashboard.
 export default function ChangeTemporaryPasswordPage() {
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
@@ -10,6 +16,7 @@ export default function ChangeTemporaryPasswordPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // 1) Confere as duas senhas  2) POST na API  3) Vai para /dashboard.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
