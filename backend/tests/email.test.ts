@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { clearTestEmails, getTestEmails, sendComplaintStatusEmail, sendPasswordResetEmail } from './email.js'
+import { clearTestEmails, getTestEmails, sendComplaintStatusEmail, sendPasswordResetEmail } from '../src/email.js'
 
 test('captura e-mails de recuperação sem SMTP real', async () => {
   delete process.env.SMTP_HOST

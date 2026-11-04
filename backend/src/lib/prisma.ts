@@ -9,5 +9,5 @@ if (!process.env.DATABASE_URL) {
 }
 
 // O QUE FAZ: instancia o cliente compartilhado que as rotas acessam por meio de createApp.
-// QUEM USA: backend/src/index.ts (todas as rotas) e backend/scripts/seed-responsavel.ts.
+// QUEM USA: backend/src/app.ts (repassado a todas as rotas) e backend/scripts/seed-responsavel.ts.
 export const prisma = new PrismaClient()

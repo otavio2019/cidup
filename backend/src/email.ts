@@ -48,19 +48,19 @@ export async function sendEmail(message: EmailMessage) {
 }
 
 // O QUE FAZ: devolve uma cópia dos e-mails guardados em memória.
-// QUEM USA: apenas testes (backend/src/email.test.ts).
+// QUEM USA: apenas testes (backend/tests/email.test.ts).
 export function getTestEmails() {
   return [...testMessages]
 }
 
 // O QUE FAZ: limpa os e-mails guardados em memória.
-// QUEM USA: apenas testes (backend/src/email.test.ts).
+// QUEM USA: apenas testes (backend/tests/email.test.ts).
 export function clearTestEmails() {
   testMessages = []
 }
 
 // O QUE FAZ: envia o link de recuperação de senha (válido por 30 minutos).
-// QUEM USA: backend/src/index.ts, rota POST /api/auth/forgot-password.
+// QUEM USA: backend/src/routes/auth/passwordRecovery.ts, rota POST /api/auth/forgot-password.
 // CHAMA: sendEmail. Telas ligadas: ForgotPasswordPage.tsx e ResetPasswordPage.tsx.
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   return sendEmail({
@@ -72,7 +72,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 }
 
 // O QUE FAZ: avisa que a denúncia foi recebida (protocolo e status atual).
-// QUEM USA: backend/src/index.ts, rota POST /api/complaints (cidadão e órgão).
+// QUEM USA: backend/src/routes/usuario/complaints.ts, rota POST /api/complaints (cidadão e órgão).
 // CHAMA: sendEmail.
 export async function sendComplaintReceivedEmail(to: string, protocol: string, status: string) {
   return sendEmail({
@@ -84,7 +84,7 @@ export async function sendComplaintReceivedEmail(to: string, protocol: string, s
 }
 
 // O QUE FAZ: avisa que o status da denúncia mudou (com observação opcional).
-// QUEM USA: backend/src/index.ts, rota PATCH /api/complaints/:id; backend/src/email.test.ts.
+// QUEM USA: backend/src/routes/usuario/complaints.ts, rota PATCH /api/complaints/:id; backend/tests/email.test.ts.
 // CHAMA: sendEmail.
 export async function sendComplaintStatusEmail(to: string, protocol: string, status: string, observation?: string) {
   return sendEmail({
@@ -93,4 +93,15 @@ export async function sendComplaintStatusEmail(to: string, protocol: string, sta
     text: `A denúncia ${protocol} foi atualizada para: ${status}.${observation ? ` Observação: ${observation}` : ''}`,
     html: `<p>A denúncia <strong>${protocol}</strong> foi atualizada para:</p><p><strong>${status}</strong></p>${observation ? `<p>Observação: ${observation}</p>` : ''}`,
   })
+}
+
+// O QUE FAZ: executa o envio de e-mail sem derrubar a rota se ele falhar.
+// A falha só é registrada no console; a resposta ao usuário segue normal.
+// QUEM USA: rotas de recuperação de senha e de denúncias.
+export async function notifySafely(action: () => Promise<unknown>) {
+  try {
+    await action()
+  } catch (error) {
+    console.error('Falha ao enviar e-mail transacional:', error instanceof Error ? error.message : 'erro desconhecido')
+  }
 }

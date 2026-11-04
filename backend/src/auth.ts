@@ -30,8 +30,8 @@ function secretKey(secret: string) {
 }
 
 // O QUE FAZ: cria o token (JWT) assinado com id, emissor, público e expiração de 15 min.
-// QUEM USA: backend/src/index.ts nas rotas POST /api/auth/login (cidadão e responsável)
-//   e POST /api/auth/change-temporary-password; backend/src/index.test.ts.
+// QUEM USA: backend/src/routes/auth/login.ts (cidadão e responsável),
+//   backend/src/routes/auth/passwordRecovery.ts (change-temporary-password) e backend/tests.
 // CHAMA: secretKey. O token vai no cookie AUTH_COOKIE_NAME (lido por requireAuthentication).
 // principalType: CITIZEN, RESPONSIBLE ou PASSWORD_CHANGE_REQUIRED (senha temporária).
 export async function createAuthToken(userId: number, secret: string, principalType: AuthPrincipalType = 'CITIZEN') {

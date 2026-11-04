@@ -19,7 +19,7 @@ function requiredEnv(name: string) {
 // O QUE FAZ: gera o hash scrypt no formato "salt:hash" para guardar em responsavel.senha.
 // QUEM USA: main (neste arquivo).
 // Por quê: a senha nunca é salva em texto puro. O login (POST /api/auth/login em
-//   backend/src/index.ts) precisa ler este mesmo formato.
+//   backend/src/routes/auth/login.ts) precisa ler este mesmo formato.
 async function hashPassword(password: string) {
   if (password.length < 6 || password.length > 1024) {
     throw new Error('RESPONSAVEL_PASSWORD deve conter entre 6 e 1024 caracteres.')
