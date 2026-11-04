@@ -73,6 +73,9 @@ const aiRateLimit = rateLimit({
 
 // Converte um valor numérico em ID positivo ou retorna null quando ele for inválido.
 // ===== VALIDAÇÃO E ADAPTAÇÃO DE DADOS =====
+// Funções pequenas e reutilizadas pelas rotas mais abaixo.
+// Converte um valor em inteiro positivo seguro, ou devolve null.
+// QUEM USA: rotas com :id (ex.: /api/complaints/:id, /api/organizations/:id).
 function readPositiveInt(value: unknown) {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
@@ -109,6 +112,7 @@ function isValidCep(value: unknown) {
   return /^\d{8}$/.test(digits(value))
 }
 
+// Tamanho máximo de foto: 2 MB (já decodificada de base64).
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
 // Valida o formato e o tamanho das imagens recebidas nas rotas de perfil e denúncia.
@@ -129,6 +133,10 @@ function normalizeRoutingText(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
 }
 
+// ----- Roteamento automático: tipo da denúncia -> órgão responsável -----
+// Cada regra liga palavras do TIPO (typeKeywords)
+// a palavras do NOME do órgão (organizationKeywords).
+// QUEM USA: findOrganizationByComplaintType, chamada ao criar denúncia (POST /api/complaints).
 const organizationRoutingRules = [
   { typeKeywords: ['buraco', 'calcada', 'sinalizacao', 'pavimento'], organizationKeywords: ['obra', 'infraestrutura'] },
   { typeKeywords: ['iluminacao', 'poste', 'lampada'], organizationKeywords: ['iluminacao'] },
@@ -136,6 +144,8 @@ const organizationRoutingRules = [
   { typeKeywords: ['arvore', 'area verde', 'meio ambiente'], organizationKeywords: ['meio ambiente', 'ambiental'] },
   { typeKeywords: ['alagamento', 'drenagem', 'esgoto', 'saneamento'], organizationKeywords: ['saneamento', 'drenagem'] },
 ]
+// Categorias aceitas em denúncias e na sugestão da IA.
+// Mantenha igual à lista de categorias do frontend (CreateComplaintPage.tsx).
 const supportedComplaintCategories = [
   'Buraco ou problema na via',
   'Iluminação pública',
@@ -157,7 +167,9 @@ function normalizePriority(value: unknown): ComplaintPriority | null {
   return code in complaintPriorityLabels ? code as ComplaintPriority : null
 }
 
+// Raio (em metros) para considerar duas denúncias como "próximas".
 const NEARBY_COMPLAINT_RADIUS_METERS = 50
+// Raio médio da Terra, usado na fórmula de distância (distanceInMeters).
 const EARTH_RADIUS_METERS = 6_371_000
 
 // Encontra o órgão responsável exclusivamente com base no tipo informado pelo cidadão.
@@ -174,6 +186,9 @@ function findOrganizationByComplaintType(type: string, organizations: Array<{ id
 }
 
 // Traduz erros conhecidos do Prisma e oculta detalhes internos nos demais casos.
+// P2025 = não encontrado (404) | P2002 = dado duplicado (409) | P2003 = relação inválida (409).
+// Qualquer outro erro vira 500 genérico, sem vazar detalhes.
+// QUEM USA: o catch de quase todas as rotas.
 function handlePrismaError(error: unknown, response: express.Response, operation: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2025') {
@@ -210,7 +225,9 @@ function isResponsibleRequest(request: express.Request) {
   return readAuthPrincipalType(request) === 'RESPONSIBLE'
 }
 
-// Adapta os campos do banco ao formato de denúncia consumido pelo frontend.
+// Adapta os campos do banco (português) ao formato de denúncia usado pelo frontend (inglês).
+// QUEM USA: todas as rotas /api/complaints e /api/history que devolvem denúncia.
+// Exemplo: id_denuncia vira id e protocol ("CIDUP-<id>").
 function complaintResponse(complaint: {
   id_denuncia: number
   titulo: string
@@ -232,12 +249,14 @@ function complaintResponse(complaint: {
   usuario?: { id_usuario: number; nome: string; email: string; telefone?: string | null; cpf?: string | null; foto?: string | null } | null
   historico?: Array<{ id_historico: number; descricao: string; observacao: string; foto?: string; data_criacao?: Date }>
 }) {
+  // 1) "Atualizada em" = a data mais recente entre registro, edição e histórico.
   const updatedAtValues = [
     complaint.data_registro,
     complaint.atualizada_em,
     ...(complaint.historico ?? []).map((item) => item.data_criacao),
   ].filter((date): date is Date => date instanceof Date && Number.isFinite(date.getTime()))
   const updatedAt = new Date(Math.max(...updatedAtValues.map((date) => date.getTime()))).toISOString()
+  // 2) Devolve os campos originais + os nomes em inglês que o frontend espera.
   return {
     ...complaint,
     id: complaint.id_denuncia,
@@ -276,6 +295,8 @@ function complaintResponse(complaint: {
   }
 }
 
+// Calcula a distância em metros entre dois pontos de GPS (fórmula de Haversine).
+// QUEM USA: busca de denúncias próximas (NEARBY_COMPLAINT_RADIUS_METERS), na criação da denúncia.
 function distanceInMeters(latitudeA: number, longitudeA: number, latitudeB: number, longitudeB: number) {
   const toRadians = (degrees: number) => degrees * Math.PI / 180
   const latitudeDelta = toRadians(latitudeB - latitudeA)
@@ -295,6 +316,7 @@ export function createApp(
     production?: boolean
   } = {},
 ) {
+// 1) Lê e valida as configurações (segredo do token, origens permitidas, produção).
 const secret = options.authTokenSecret ?? process.env.AUTH_TOKEN_SECRET
 if (!secret || Buffer.byteLength(secret, 'utf8') < 32) {
   throw new Error('Defina AUTH_TOKEN_SECRET com um valor de pelo menos 32 bytes.')
@@ -309,6 +331,10 @@ const authCookieSameSite = production ? 'none' : 'lax'
 if (production && frontendOrigins.some((origin) => new URL(origin).protocol !== 'https:')) {
   throw new Error('FRONTEND_ORIGINS deve usar HTTPS em produção.')
 }
+// 2) Middleware "authenticate" = login válido (auth.ts) + senha temporária já trocada.
+// Se must_change_password for true, bloqueia com 403 (PASSWORD_CHANGE_REQUIRED),
+// exceto em /api/auth/session e /api/auth/change-temporary-password.
+// QUEM USA: quase todas as rotas /api (ver "MIDDLEWARE:" em cada rota).
 const verifyAuthentication = requireAuthentication(secret)
 const authenticate: express.RequestHandler = (request, response, next) => {
   verifyAuthentication(request, response, (error?: unknown) => {
@@ -393,6 +419,8 @@ app.use('/api', (request, response, next) => {
   next()
 })
 // Restringe operações administrativas a usuários autenticados presentes na lista autorizada.
+// Uso: rotas /api/admin/* e ações do painel (ResponsiblePanelPage.tsx).
+// Erros: 401 sem sessão | 403 se não for RESPONSIBLE.
 function requireAdministrator(request: express.Request, response: express.Response, next: express.NextFunction) {
   const userId = readAuthUserId(request)
   if (!userId) {
@@ -422,14 +450,20 @@ async function verifyPassword(password: string, storedHash: string) {
   return storedKey.length === derivedKey.length && timingSafeEqual(storedKey, derivedKey)
 }
 
+// Guarda só o hash SHA-256 do token de recuperação; o token original vai apenas no e-mail.
+// QUEM USA: rotas de recuperação de senha (forgot-password e reset-password).
 function hashResetToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
+// Devolve a URL base do frontend (sem "/" final), usada nos links dos e-mails.
+// Origem: FRONTEND_URL, senão o primeiro item de FRONTEND_ORIGINS.
 function frontendUrl() {
   return (process.env.FRONTEND_URL ?? process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173').split(',')[0]!.trim().replace(/\/$/, '')
 }
 
+// Executa o envio de e-mail (email.ts) sem derrubar a rota se ele falhar.
+// A falha só é registrada no console; a resposta ao usuário segue normal.
 async function notifySafely(action: () => Promise<unknown>) {
   try {
     await action()
@@ -465,6 +499,7 @@ app.get('/api/supabase/status', authenticate, async (_request, response) => {
 // ===== AUTENTICAÇÃO: CADASTRO, LOGIN E SESSÃO =====
 // Valida os campos do cadastro e cria um usuário sem expor a senha armazenada.
 async function registerUser(request: express.Request, response: express.Response) {
+  // 1) Limpa os dados recebidos (trim, minúsculas no e-mail, só dígitos em CPF/CEP).
   const body = isRecord(request.body) ? request.body : {}
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -487,6 +522,8 @@ async function registerUser(request: express.Request, response: express.Response
     return
   }
 
+  // 2) Grava com a senha já em hash. Duplicados (e-mail/CPF/telefone) caem no
+  //    handlePrismaError como 409.
   try {
     const user = await database.usuario.create({
       data: { nome: name, email, telefone: phone, cpf, cep, senha: await hashPassword(password) },
@@ -513,6 +550,8 @@ app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, re
   const body = isRecord(request.body) ? request.body : {}
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   const genericResponse = { message: 'Se os dados informados estiverem cadastrados, enviaremos as instruções de recuperação por e-mail.' }
+  // Caminho A: pedido por CPF -> fila de atendimento manual do responsável
+  // (listada em GET /api/admin/password-recovery-requests).
   if ('cpf' in body) {
     const cpf = digits(body.cpf)
     try {
@@ -543,6 +582,7 @@ app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, re
     return
   }
 
+  // Caminho B: pedido por e-mail -> gera token de 30 min e envia o link.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
     response.json(genericResponse)
     return
@@ -550,6 +590,7 @@ app.post('/api/auth/forgot-password', passwordResetRateLimit, async (request, re
   try {
     const user = await database.usuario.findUnique({ where: { email }, select: { id_usuario: true, email: true } })
     if (user) {
+      // Apaga tokens antigos: só o link mais recente vale.
       await database.password_reset_token.deleteMany({ where: { id_usuario: user.id_usuario } })
       const rawToken = randomBytes(32).toString('hex')
       await database.password_reset_token.create({
@@ -585,6 +626,8 @@ app.post('/api/auth/reset-password', passwordResetRateLimit, async (request, res
       response.status(400).json({ error: 'O link de recuperação é inválido ou expirou.' })
       return
     }
+    // "Reivindica" o token e troca a senha na mesma transação.
+    // Assim, dois cliques simultâneos não usam o mesmo link duas vezes.
     const result = await database.$transaction(async (transaction) => {
       const claimed = await transaction.password_reset_token.updateMany({
         where: { id: resetToken.id, used_at: null, expires_at: { gt: new Date() } },
@@ -635,6 +678,7 @@ app.post('/api/auth/change-temporary-password', authenticate, async (request, re
       where: { id_usuario: userId },
       data: { senha: await hashPassword(newPassword), must_change_password: false },
     })
+    // Emite novo cookie de cidadão comum (o anterior era PASSWORD_CHANGE_REQUIRED).
     const token = await createAuthToken(userId, secret, 'CITIZEN')
     response.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
@@ -693,6 +737,8 @@ app.post('/api/admin/password-recovery-requests/:id/temporary-password', authent
     response.status(400).json({ error: 'A senha temporária deve ter pelo menos 8 caracteres.' })
     return
   }
+  // Marca o pedido como atendido e grava a senha temporária na mesma transação.
+  // O updateMany com status PENDING impede atender o mesmo pedido duas vezes.
   try {
     const completed = await database.$transaction(async (transaction) => {
       const requestUpdate = await transaction.password_recovery_request.updateMany({
@@ -741,7 +787,8 @@ app.post('/api/auth/login', loginRateLimit, async (request, response) => {
   }
 
   try {
-    // Responsáveis só têm e-mail; o login por CPF vale apenas para cidadãos.
+    // 1) Tenta primeiro como responsável (painel admin).
+    //    Responsáveis só têm e-mail; o login por CPF vale apenas para cidadãos.
     const responsible = isEmailLogin ? await database.responsavel.findUnique({
       where: { email },
       include: { orgao: { select: { id_orgao: true, nome: true } } },
@@ -771,6 +818,8 @@ app.post('/api/auth/login', loginRateLimit, async (request, response) => {
       })
       return
     }
+    // 2) Não achou responsável: tenta cidadão (por e-mail ou CPF).
+    //    Mesma mensagem de erro para "não existe" e "senha errada" (não revela contas).
     const user = await database.usuario.findUnique({ where: isEmailLogin ? { email } : { cpf } })
     if (!user || !(await verifyPassword(password, user.senha))) {
       response.status(401).json({ error: 'E-mail/CPF ou senha inválidos.' })
@@ -942,6 +991,8 @@ app.get(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, r
 // QUEM USA: ProfilePage.tsx (salvar perfil). MIDDLEWARE: authenticate.
 // CHAMA: isValidCpf, isValidCep, isValidImageData, hashPassword. PRISMA: usuario (update).
 app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request, response) => {
+  // Segurança: a SESSÃO define o usuário; o :id da URL só é conferido contra ela.
+  // ID diferente devolve 404 (não revela se o outro usuário existe).
   const authenticatedUserId = readAuthUserId(request)
   const requestedUserId = readPositiveInt(request.params.id)
   const body = isRecord(request.body) ? request.body : {}
@@ -958,6 +1009,8 @@ app.patch(['/api/users/:id', '/api/usuarios/:id'], authenticate, async (request,
     return
   }
 
+  // Só entram em `data` os campos que vieram no corpo (atualização parcial).
+  // Aceita nomes em português e inglês (nome/name, telefone/phone, foto/photo).
   const data: Prisma.usuarioUpdateInput = {}
   if ('name' in body || 'nome' in body) {
     const nome = body.nome ?? body.name
@@ -1277,6 +1330,7 @@ app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], auth
   }
 
   try {
+    // 1) Pega a denúncia de referência (cidadão só vê as próprias).
     const complaint = await database.denuncia.findFirst({
       where: {
         id_denuncia,
@@ -1289,12 +1343,15 @@ app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], auth
       return
     }
 
+    // 2) Monta uma "caixa" em graus ao redor do ponto (~50 m) para filtrar no banco.
+    //    111_320 m = tamanho aproximado de 1 grau de latitude.
     const categories = complaint.categorias?.length ? complaint.categorias : [complaint.tipo]
     const latitudeDelta = NEARBY_COMPLAINT_RADIUS_METERS / 111_320
     const longitudeDelta = Math.min(
       180,
       NEARBY_COMPLAINT_RADIUS_METERS / (111_320 * Math.max(Math.abs(Math.cos(complaint.latitude * Math.PI / 180)), 0.000001)),
     )
+    // 3) Busca candidatas dentro da caixa e com ao menos uma categoria em comum.
     const candidates = await database.denuncia.findMany({
       where: {
         id_denuncia: { not: id_denuncia },
@@ -1311,6 +1368,7 @@ app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], auth
         longitude: true,
       },
     })
+    // 4) Refina pela distância real (a caixa é quadrada) e devolve as 10 mais próximas.
     const related = candidates
       .map((candidate) => ({
         id: candidate.id_denuncia,
@@ -1336,6 +1394,7 @@ app.get(['/api/complaints/:id/related', '/api/denuncias/:id/relacionadas'], auth
 // notifySafely + sendComplaintReceivedEmail (./email.ts).
 // PRISMA: orgao (findMany), denuncia (create, com usuario e orgao).
 app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, response) => {
+  // 1) Lê os campos aceitando nomes em português e inglês (tipo/type, foto/photo...).
   const body = isRecord(request.body) ? request.body : {}
   const id_usuario = readAuthUserId(request)
   const tipoValue = body.tipo ?? body.type
@@ -1355,6 +1414,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
       ? [...new Set(categoriesValue.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))]
       : []
 
+  // 2) Valida tipo, título, descrição, categorias (lista suportada) e coordenadas de GPS.
   if (!id_usuario) {
     response.status(401).json({ error: 'Autenticação necessária.' })
     return
@@ -1376,6 +1436,7 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
     response.status(400).json({ error: 'A foto deve ser PNG, JPG ou WEBP e ter no máximo 2 MB.' })
     return
   }
+  // 3) Junta endereço + número + bairro + complemento (formato antigo) em uma linha.
   const legacyAddress = [
     enderecoValue,
     body.number,
@@ -1391,6 +1452,8 @@ app.post(['/api/complaints', '/api/denuncias'], authenticate, async (request, re
   }
 
   try {
+    // 4) Descobre o órgão de cada categoria. O primeiro é o principal;
+    //    os demais viram "órgãos extras".
     const organizations = await database.orgao.findMany({
       select: { id_orgao: true, nome: true, email: true },
       orderBy: { nome: 'asc' },
@@ -1459,6 +1522,7 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
   }
   const responsibleUser = isResponsibleRequest(request)
 
+  // 1) Cidadão NÃO pode mudar status nem órgão: isso é papel do responsável (403).
   const data: Prisma.denunciaUpdateInput = {}
   if (!responsibleUser && ('status' in body || 'id_orgao' in body || 'orgaoId' in body)) {
     response.status(403).json({ error: 'Somente responsáveis podem alterar status ou encaminhar denúncias.' })
@@ -1501,6 +1565,7 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
     return
   }
 
+  // 2) Confirma que a denúncia existe e que o usuário pode alterá-la.
   try {
     const existing = await database.denuncia.findFirst({
       where: {
@@ -1527,6 +1592,7 @@ app.patch(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (re
         },
       },
     })
+    // 3) Só avisa o cidadão por e-mail quando o status realmente mudou.
     const statusChanged = typeof data.status === 'string' && data.status !== existing.status
     if (statusChanged && denuncia.usuario?.email) {
       void notifySafely(() => sendComplaintStatusEmail(
@@ -1646,6 +1712,8 @@ app.post(['/api/historicos', '/api/histories'], authenticate, async (request, re
     response.status(401).json({ error: 'Autenticação necessária.' })
     return
   }
+  // `responsible` = sessão de responsável: o histórico fica ligado a ele (id_responsavel).
+  // Cidadão: o histórico fica ligado a ele (id_usuario).
   const responsibleUser = isResponsibleRequest(request)
   const responsible = readAuthPrincipalType(request) === 'RESPONSIBLE'
   const id_usuario = responsible
@@ -1816,6 +1884,7 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
     return
   }
 
+  // 1) Valida o texto (10 a 1000 caracteres) e exige AI_API_KEY configurada.
   const apiKey = process.env.AI_API_KEY
   if (!apiKey) {
     response.status(503).json({
@@ -1824,6 +1893,8 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
     return
   }
 
+  // 2) Chama a API de IA (compatível com OpenAI) pedindo resposta em JSON.
+  //    O prompt limita as categorias às de supportedComplaintCategories.
   try {
     const baseUrl = (process.env.AI_BASE_URL ?? 'https://api.openai.com/v1').replace(
       /\/$/,
@@ -1861,6 +1932,7 @@ app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, r
       throw new Error(`O provedor de IA retornou o status ${aiResponse.status}: ${detail}`)
     }
 
+    // 3) Lê a resposta e confere cada campo (a IA pode errar). Devolve ao frontend.
     const completion = (await aiResponse.json()) as {
       choices?: Array<{ message?: { content?: string | null } }>
     }
