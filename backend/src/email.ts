@@ -1,6 +1,3 @@
-import nodemailer from 'nodemailer'
-import type { Transporter } from 'nodemailer'
-
 type EmailMessage = {
   to: string
   subject: string
@@ -9,41 +6,96 @@ type EmailMessage = {
 }
 
 // ===== ENVIO DE E-MAILS =====
-// Sem SMTP configurado, as mensagens ficam só em memória (modo teste).
+// Produção: envia por HTTPS (porta 443) pela API transacional do Brevo.
+// Não usamos SMTP porque o Render Free bloqueia as portas 25, 465 e 587.
+// Sem BREVO_API_KEY (desenvolvimento/testes), nada é enviado: a mensagem fica só em memória.
 let testMessages: EmailMessage[] = []
 
-// O QUE FAZ: monta o transporte SMTP; sem host/usuário/senha, usa jsonTransport (não envia).
-// QUEM USA: sendEmail (neste arquivo).
-// Variáveis: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_SECURE.
-function createTransport(): Transporter {
-  const host = process.env.SMTP_HOST
-  const port = Number(process.env.SMTP_PORT ?? 587)
-  const user = process.env.SMTP_USER
-  const password = process.env.SMTP_PASSWORD
+const DEFAULT_BREVO_API_URL = 'https://api.brevo.com/v3'
+const BREVO_TIMEOUT_MS = 15_000
+const DEFAULT_SENDER = 'CidUp <no-reply@cidup.local>'
 
-  if (host && user && password) {
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user, pass: password },
-    })
+// O QUE FAZ: troca caracteres especiais por entidades HTML.
+// Usado em todo valor dinâmico inserido no htmlContent (link, protocolo, status, observação).
+export function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// O QUE FAZ: separa "Nome <email>" em { name, email } para o campo sender do Brevo.
+// Origem: SMTP_FROM (mantido para não mudar as variáveis do Render).
+// Em produção, o e-mail do remetente PRECISA estar verificado no painel do Brevo.
+function readSender() {
+  const from = (process.env.SMTP_FROM ?? '').trim() || DEFAULT_SENDER
+  const match = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(from)
+  if (match) return { name: match[1]!.trim() || 'CidUp', email: match[2]!.trim() }
+  return { name: 'CidUp', email: from }
+}
+
+// O QUE FAZ: remove a chave da API de qualquer texto antes de ir para erro/log.
+function redact(text: string, apiKey: string) {
+  return apiKey ? text.split(apiKey).join('[redacted]') : text
+}
+
+// O QUE FAZ: chama POST {BREVO_API_URL}/smtp/email com timeout de 15 s.
+// A chave vai só no header api-key; erros nunca incluem a chave.
+async function sendWithBrevo(message: EmailMessage, apiKey: string) {
+  const baseUrl = (process.env.BREVO_API_URL ?? '').trim().replace(/\/+$/, '') || DEFAULT_BREVO_API_URL
+  const body = {
+    sender: readSender(),
+    to: [{ email: message.to }],
+    subject: message.subject,
+    textContent: message.text,
+    htmlContent: message.html ?? `<p>${escapeHtml(message.text)}</p>`,
   }
 
-  return nodemailer.createTransport({ jsonTransport: true })
+  let response: Response
+  try {
+    response = await fetch(`${baseUrl}/smtp/email`, {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(BREVO_TIMEOUT_MS),
+    })
+  } catch (error) {
+    const name = error instanceof Error ? error.name : ''
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      throw new Error(`Brevo: tempo limite de ${BREVO_TIMEOUT_MS / 1000}s excedido.`)
+    }
+    const detail = error instanceof Error ? error.message : 'erro desconhecido'
+    throw new Error(`Brevo: falha de conexão (${redact(detail, apiKey).slice(0, 200)}).`)
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '')
+    const summary = redact(detail.replace(/\s+/g, ' ').trim(), apiKey).slice(0, 300)
+    throw new Error(`Brevo respondeu HTTP ${response.status}${summary ? `: ${summary}` : ''}`)
+  }
 }
 
 // O QUE FAZ: envia um e-mail; EMAIL_DISABLED=true pula o envio.
 // QUEM USA: as três funções sendXxxEmail abaixo.
-// CHAMA: createTransport. Guarda cópia em testMessages quando não há SMTP_HOST.
+// Com BREVO_API_KEY: envia pela API do Brevo. Sem ela: guarda em testMessages
+// (sem envio real); em produção isso gera erro, registrado por notifySafely.
 export async function sendEmail(message: EmailMessage) {
   if (process.env.EMAIL_DISABLED === 'true') return { skipped: true }
-  if (!process.env.SMTP_HOST) testMessages.push(message)
-  const transporter = createTransport()
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? 'CidUp <no-reply@cidup.local>',
-    ...message,
-  })
+  const apiKey = (process.env.BREVO_API_KEY ?? '').trim()
+  if (!apiKey) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('BREVO_API_KEY não configurada; e-mail não enviado.')
+    }
+    testMessages.push(message)
+    return { skipped: false }
+  }
+  await sendWithBrevo(message, apiKey)
   return { skipped: false }
 }
 
@@ -67,7 +119,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     to,
     subject: 'Recuperação de senha — CidUp',
     text: `Recebemos uma solicitação para trocar sua senha no CidUp. Acesse este link em até 30 minutos: ${resetUrl}\n\nSe você não fez esta solicitação, ignore este e-mail.`,
-    html: `<p>Recebemos uma solicitação para trocar sua senha no CidUp.</p><p><a href="${resetUrl}">Criar nova senha</a> (válido por 30 minutos)</p><p>Se você não fez esta solicitação, ignore este e-mail.</p>`,
+    html: `<p>Recebemos uma solicitação para trocar sua senha no CidUp.</p><p><a href="${escapeHtml(resetUrl)}">Criar nova senha</a> (válido por 30 minutos)</p><p>Se você não fez esta solicitação, ignore este e-mail.</p>`,
   })
 }
 
@@ -79,7 +131,7 @@ export async function sendComplaintReceivedEmail(to: string, protocol: string, s
     to,
     subject: `Denúncia ${protocol} recebida — CidUp`,
     text: `Sua denúncia ${protocol} foi recebida pelo CidUp. Status atual: ${status}.`,
-    html: `<p>Sua denúncia <strong>${protocol}</strong> foi recebida pelo CidUp.</p><p>Status atual: <strong>${status}</strong>.</p>`,
+    html: `<p>Sua denúncia <strong>${escapeHtml(protocol)}</strong> foi recebida pelo CidUp.</p><p>Status atual: <strong>${escapeHtml(status)}</strong>.</p>`,
   })
 }
 
@@ -91,7 +143,7 @@ export async function sendComplaintStatusEmail(to: string, protocol: string, sta
     to,
     subject: `Atualização da denúncia ${protocol} — CidUp`,
     text: `A denúncia ${protocol} foi atualizada para: ${status}.${observation ? ` Observação: ${observation}` : ''}`,
-    html: `<p>A denúncia <strong>${protocol}</strong> foi atualizada para:</p><p><strong>${status}</strong></p>${observation ? `<p>Observação: ${observation}</p>` : ''}`,
+    html: `<p>A denúncia <strong>${escapeHtml(protocol)}</strong> foi atualizada para:</p><p><strong>${escapeHtml(status)}</strong></p>${observation ? `<p>Observação: ${escapeHtml(observation)}</p>` : ''}`,
   })
 }
 

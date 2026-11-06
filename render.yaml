@@ -29,6 +29,9 @@ services:
         sync: false
       - key: SMTP_PASSWORD
         sync: false
+      # Chave da API do Brevo: secret preenchido manualmente no painel do Render.
+      - key: BREVO_API_KEY
+        sync: false
       - key: SMTP_FROM
         sync: false
       - key: EMAIL_DISABLED
