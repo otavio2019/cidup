@@ -4,27 +4,36 @@ import { Link } from 'react-router-dom'
 import { apiRequest } from '../../api'
 
 // ===== ESQUECI MINHA SENHA =====
-// O QUE FAZ: pede recuperação de senha informando o CPF.
+// O QUE FAZ: pede recuperação de senha informando o CPF ou o e-mail.
 // QUEM USA: App.tsx, rota /recuperar-senha; LoginPage.tsx linka para cá.
 // CHAMA: POST /api/auth/forgot-password (via apiRequest em api.ts).
 // DEPOIS: o responsável gera a senha temporária no painel
 //   (GET/POST /api/admin/password-recovery-requests).
 export default function ForgotPasswordPage() {
-  const [cpf, setCpf] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Envia só os dígitos do CPF e mostra a mensagem neutra devolvida pela API.
+  // Com "@" envia como e-mail (link de redefinição); senão, envia só os dígitos do CPF
+  // (pedido ao responsável). Mostra a mensagem neutra devolvida pela API.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const value = identifier.trim()
+    const isEmail = value.includes('@')
+    if (!isEmail && value.replace(/\D/g, '').length !== 11) {
+      setError('Informe um CPF com 11 dígitos ou um e-mail válido.')
+      setMessage('')
+      return
+    }
     setLoading(true)
     setError('')
     setMessage('')
     try {
+      const payload = isEmail ? { email: value.toLowerCase() } : { cpf: value.replace(/\D/g, '') }
       const result = await apiRequest<{ message: string }>('/api/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ cpf: cpf.replace(/\D/g, '') }),
+        body: JSON.stringify(payload),
       })
       setMessage(result.message)
     } catch (requestError) {
@@ -44,9 +53,9 @@ export default function ForgotPasswordPage() {
         </aside>
         <section className="login-panel" aria-labelledby="forgot-title">
           <div className="mobile-brand"><img className="auth-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" /></div>
-          <div className="login-panel-header"><p className="panel-kicker">RECUPERAÇÃO DE SENHA</p><h2 id="forgot-title">Esqueci minha senha</h2><p>Informe seu CPF para solicitar ajuda ao responsável. Você receberá uma senha temporária após a análise.</p></div>
+          <div className="login-panel-header"><p className="panel-kicker">RECUPERAÇÃO DE SENHA</p><h2 id="forgot-title">Esqueci minha senha</h2><p>Informe seu CPF ou e-mail. Pelo e-mail você recebe um link para criar uma nova senha; pelo CPF, o responsável analisa o pedido e envia uma senha temporária.</p></div>
           <form className="login-form" onSubmit={handleSubmit}>
-            <div className="form-group"><label htmlFor="recovery-cpf">CPF</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">#</span><input id="recovery-cpf" type="text" inputMode="numeric" required minLength={11} maxLength={14} placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(event.target.value)} autoComplete="off" /></div></div>
+            <div className="form-group"><label htmlFor="recovery-identifier">CPF ou e-mail</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">@</span><input id="recovery-identifier" type="text" required maxLength={255} placeholder="000.000.000-00 ou seu@email.com" value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} /></div></div>
             <button type="submit" className="login-button" disabled={loading}>{loading ? 'Enviando solicitação...' : 'Solicitar recuperação'}{!loading && <span aria-hidden="true">→</span>}</button>
             {message && <p className="form-message" role="status">{message}</p>}
             {error && <p className="form-message" role="alert">{error}</p>}
