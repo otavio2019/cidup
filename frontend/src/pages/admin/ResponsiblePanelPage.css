@@ -457,6 +457,13 @@
     background: #1059ad;
   }
 
+  /* [ALTERAÇÃO-ANTONIO] Tarefa 2: estado "Salvando..." com azul mais escuro que o normal (#1768c5) e o hover (#1059ad), e cursor de progresso. */
+  .rp-primary-button.is-saving,
+  .rp-primary-button.is-saving:hover {
+    background: #0d4f9c;
+    cursor: progress;
+  }
+
   .rp-outline-button {
     border-color: #9bbde0;
     color: var(--rp-blue);

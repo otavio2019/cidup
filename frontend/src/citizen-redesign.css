@@ -5,6 +5,21 @@
   --citizen-muted: #667789;
   --citizen-canvas: #f2f6fb;
   --citizen-line: #d5dce6;
+
+  /* [ALTERAÇÃO-ANTONIO] Tarefa 1: paleta de status da tela inicial definida em um único lugar, para não repetir hexadecimais. */
+  --status-recebida: #6366f1;
+  --status-em-analise: #2563eb;
+  --status-em-atendimento: #d97706;
+  --status-resolvida: #16a34a;
+  --status-negada: #dc2626;
+  --status-neutro: #64748b;
+  /* [ALTERAÇÃO-ANTONIO] Tarefa 1: versões claras (~10% de opacidade, sufixo 1a no hex) usadas no fundo de badges e ícones. */
+  --status-recebida-bg: #6366f11a;
+  --status-em-analise-bg: #2563eb1a;
+  --status-em-atendimento-bg: #d977061a;
+  --status-resolvida-bg: #16a34a1a;
+  --status-negada-bg: #dc26261a;
+  --status-neutro-bg: #64748b1a;
 }
 
 .dashboard-page,
@@ -325,49 +340,96 @@
   line-height: 1.25;
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: card "Recebida" com a nova paleta (#6366F1): borda de 1px e 4px à esquerda e bolinha sólida com símbolo branco. Original: borda #321ce4 e bolinha #321ce4. */
 .progress-card {
-  border-color: #321ce4;
+  border: 1px solid var(--status-recebida);
+  border-left-width: 4px;
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: bolinha do card "Recebida" sólida na cor do status com símbolo branco. Original: color #fff, background #321ce4. */
 .progress-card .summary-icon {
-  color: #fff;
-  background: #321ce4;
+  color: #ffffff;
+  background: var(--status-recebida);
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: card "Em análise" com a nova paleta (#2563EB): borda de 1px e 4px à esquerda e bolinha sólida com símbolo branco. Original: borda #f01822 e bolinha #f01822. */
 .open-card {
-  border-color: #f01822;
+  border: 1px solid var(--status-em-analise);
+  border-left-width: 4px;
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: bolinha do card "Em análise" sólida na cor do status com símbolo branco. Original: color #fff, background #f01822. */
 .open-card .summary-icon {
-  color: #fff;
-  background: #f01822;
+  color: #ffffff;
+  background: var(--status-em-analise);
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: card "Em atendimento" com a nova paleta (#D97706): borda de 1px e 4px à esquerda e bolinha sólida com símbolo branco. Original: borda #f49b00 e bolinha #f8a51a. */
 .yellow-card {
-  border-color: #f49b00;
+  border: 1px solid var(--status-em-atendimento);
+  border-left-width: 4px;
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: bolinha do card "Em atendimento" sólida na cor do status com símbolo branco. Original: color #13314c, background #f8a51a. */
 .yellow-card .summary-icon {
-  color: #13314c;
-  background: #f8a51a;
+  color: #ffffff;
+  background: var(--status-em-atendimento);
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: card "Resolvida" com a nova paleta (#16A34A): borda de 1px e 4px à esquerda e bolinha sólida com símbolo branco. Original: borda #77ed83 e bolinha #8eff8e. */
 .green-card {
-  border-color: #77ed83;
+  border: 1px solid var(--status-resolvida);
+  border-left-width: 4px;
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: bolinha do card "Resolvida" sólida na cor do status com símbolo branco. Original: color #13314c, background #8eff8e. */
 .green-card .summary-icon {
-  color: #13314c;
-  background: #8eff8e;
+  color: #ffffff;
+  background: var(--status-resolvida);
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: card "Negadas" com a nova paleta (#DC2626): borda de 1px e 4px à esquerda e bolinha sólida com símbolo branco. Original: borda #c62828 e bolinha #c62828. */
 .denied-card {
-  border-color: #c62828;
+  border: 1px solid var(--status-negada);
+  border-left-width: 4px;
 }
 
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: bolinha do card "Negadas" sólida na cor do status com símbolo branco. Original: color #fff, background #c62828. */
 .denied-card .summary-icon {
-  color: #fff;
-  background: #c62828;
+  color: #ffffff;
+  background: var(--status-negada);
+}
+
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: etiquetas de status exclusivas da tela inicial (.dashboard-page), sem alterar as classes globais .status-* usadas em outras telas. */
+.dashboard-page .status.dashboard-status-recebida {
+  color: var(--status-recebida);
+  background: var(--status-recebida-bg);
+}
+
+.dashboard-page .status.dashboard-status-em-analise {
+  color: var(--status-em-analise);
+  background: var(--status-em-analise-bg);
+}
+
+.dashboard-page .status.dashboard-status-em-atendimento {
+  color: var(--status-em-atendimento);
+  background: var(--status-em-atendimento-bg);
+}
+
+.dashboard-page .status.dashboard-status-resolvida {
+  color: var(--status-resolvida);
+  background: var(--status-resolvida-bg);
+}
+
+.dashboard-page .status.dashboard-status-negada {
+  color: var(--status-negada);
+  background: var(--status-negada-bg);
+}
+
+/* [ALTERAÇÃO-ANTONIO] Tarefa 1: cor neutra de fallback para status desconhecido. */
+.dashboard-page .status.dashboard-status-neutro {
+  color: var(--status-neutro);
+  background: var(--status-neutro-bg);
 }
 
 .complaints-section {

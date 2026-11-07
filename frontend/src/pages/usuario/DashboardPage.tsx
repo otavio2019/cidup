@@ -18,6 +18,23 @@ const complaintStatusLabels: Record<string, string> = {
   CANCELED: 'Cancelada',
 }
 
+// [ALTERAÇÃO-ANTONIO] Tarefa 1: mapeia o código de status vindo do backend (ex.: RECEIVED, IN_ANALYSIS) para a classe de cor da tela inicial.
+const dashboardStatusClasses: Record<string, string> = {
+  RECEIVED: 'dashboard-status-recebida',
+  IN_ANALYSIS: 'dashboard-status-em-analise',
+  FORWARDED: 'dashboard-status-em-atendimento',
+  IN_SERVICE: 'dashboard-status-em-atendimento',
+  RESOLVED: 'dashboard-status-resolvida',
+  NOT_SERVED: 'dashboard-status-negada',
+  CANCELLED: 'dashboard-status-negada',
+  CANCELED: 'dashboard-status-negada',
+}
+
+// [ALTERAÇÃO-ANTONIO] Tarefa 1: normaliza o texto (espaços e maiúsculas) e usa a cor neutra quando o status for desconhecido.
+function getDashboardStatusClass(status: string) {
+  return dashboardStatusClasses[status.trim().toUpperCase()] ?? 'dashboard-status-neutro'
+}
+
 function readStoredCitizenName() {
   try {
     const profile = JSON.parse(localStorage.getItem('cidup-profile') ?? '{}') as { name?: unknown }
@@ -267,7 +284,8 @@ function DashboardPage() {
                   <p>{complaint.title}</p>
                   <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
                 </div>
-                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : ['NOT_SERVED', 'CANCELLED', 'CANCELED'].includes(complaint.status) ? 'status-canceled' : complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE' ? 'status-service' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
+                {/* [ALTERAÇÃO-ANTONIO] Tarefa 1: a classe de cor agora vem do mapeamento da paleta (antes usava as classes globais status-solved/canceled/service/analysis). */}
+                <span className={`status ${getDashboardStatusClass(complaint.status)}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
                 <button className="dashboard-delete-button" type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
               </article>
             ))}

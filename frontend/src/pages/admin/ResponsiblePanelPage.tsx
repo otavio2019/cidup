@@ -258,6 +258,8 @@ function ResponsiblePanelPage() {
   const [status, setStatus] = useState<ComplaintStatus>('Recebida')
   const [observation, setObservation] = useState('')
   const [savedUpdate, setSavedUpdate] = useState(false)
+  // [ALTERAÇÃO-ANTONIO] Tarefa 2: indica que a atualização está sendo enviada, para dar feedback visual no botão.
+  const [isSaving, setIsSaving] = useState(false)
 
   async function handleLogout() {
     setLogoutError('')
@@ -357,6 +359,8 @@ function ResponsiblePanelPage() {
     const formData = new FormData(event.currentTarget)
     const nextStatus = formData.get('status') as ComplaintStatus
     const selectedOrganization = organizations.find((organization) => organization.nome === sector)
+    // [ALTERAÇÃO-ANTONIO] Tarefa 2: ativa o estado "Salvando..." antes de chamar a API.
+    setIsSaving(true)
     try {
       await apiRequest(`/api/complaints/${selectedComplaint.id}`, {
         method: 'PATCH',
@@ -384,6 +388,9 @@ function ResponsiblePanelPage() {
     } catch (error) {
       setSavedUpdate(false)
       setLoadError(error instanceof Error ? error.message : 'Não foi possível salvar a atualização.')
+    } finally {
+      // [ALTERAÇÃO-ANTONIO] Tarefa 2: o finally garante que o botão volte ao normal tanto em sucesso quanto em erro.
+      setIsSaving(false)
     }
   }
 
@@ -564,7 +571,8 @@ function ResponsiblePanelPage() {
               <label>Setor responsável<select value={sector} onChange={(event) => { setSector(event.target.value); setSavedUpdate(false) }}><option value="">Não encaminhada</option>{organizations.map((organization) => <option key={organization.id_orgao} value={organization.nome}>{organization.nome}</option>)}</select></label>
               <label>Observação<textarea value={observation} onChange={(event) => { setObservation(event.target.value); setSavedUpdate(false) }} placeholder="Inclua uma atualização para o cidadão acompanhar." rows={3} /></label>
               {savedUpdate && <p className="rp-success-message" role="status">Atualização salva com sucesso.</p>}
-              <button className="rp-primary-button" type="submit">Salvar atualização</button>
+              {/* [ALTERAÇÃO-ANTONIO] Tarefa 2: durante o envio o botão fica desabilitado (evita clique duplo), com aria-busy, classe mais escura e texto "Salvando...". */}
+              <button className={`rp-primary-button${isSaving ? ' is-saving' : ''}`} type="submit" disabled={isSaving} aria-busy={isSaving}>{isSaving ? 'Salvando...' : 'Salvar atualização'}</button>
             </form>
           </div>
           <section className="rp-panel rp-history-panel" aria-labelledby="responsible-history-title">
