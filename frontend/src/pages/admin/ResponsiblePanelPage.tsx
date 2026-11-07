@@ -1,241 +1,39 @@
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import type { FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
+import { ComplaintsSection } from './responsavel/components/ComplaintsSection'
+import { ComplaintTypesSection } from './responsavel/components/ComplaintTypesSection'
+import { DashboardSection } from './responsavel/components/DashboardSection'
+import { PasswordRecoverySection } from './responsavel/components/PasswordRecoverySection'
+import { ReportsSection } from './responsavel/components/ReportsSection'
+import { ResponsiblePanelLayout } from './responsavel/components/ResponsiblePanelLayout'
+import { SettingsSection } from './responsavel/components/SettingsSection'
+import type {
+  AdminComplaint,
+  ApiComplaint,
+  ComplaintStatus,
+  Organization,
+  PasswordRecoveryRequest,
+  ResponsibleProfile,
+} from './responsavel/types'
+import { ALL_PERIODS, groupNearbyComplaints, labelToApiStatus, mapApiComplaint, monthKey } from './responsavel/utils'
 import './ResponsiblePanelPage.css'
 
-/** Área administrativa: consulta a API, atualiza denúncias e calcula relatórios locais. */
-type ComplaintStatus = 'Recebida' | 'Em análise' | 'Encaminhada' | 'Em atendimento' | 'Resolvida' | 'Negada'
+// ===== RESPONSÁVEL: CONTROLADOR DO PAINEL =====
+// QUEM USA: rota /responsavel/* em App.tsx.
+// API: denúncias, órgãos, sessão do responsável e solicitações de recuperação de senha.
+// COMPONENTES: cada seção visual vive em responsavel/components.
 
-type AdminComplaint = {
-  id?: number
-  protocol: string
-  title: string
-  description: string
-  neighborhood: string
-  date: string
-  createdAt: string
-  status: ComplaintStatus
-  category: string
-  categories: string[]
-  responsibleOrganizations?: string[]
-  address: string
-  latitude: number
-  longitude: number
-  updatedAt: string
-  photo?: string | null
-  priority: ComplaintPriority | null
-  citizen: string
-  email: string
-  phone: string
-  cpf: string
-  citizenPhoto?: string | null
-  sector: string
-  sectorId?: number
-  history: ComplaintHistory[]
+const sectionHeadings: Record<string, string> = {
+  dashboard: 'Painel',
+  denuncias: 'Denúncias',
+  'recuperacao-senha': 'Recuperação de senha',
+  tipos: 'Tipos de ocorrência',
+  relatorios: 'Relatórios',
+  configuracoes: 'Configurações',
 }
 
-type ComplaintPriority = 'BAIXA' | 'MEDIA' | 'ALTA'
-
-const priorityLabels: Record<ComplaintPriority, string> = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
-
-// Selo com a prioridade sugerida pela IA quando o cidadão usou o assistente.
-function PriorityBadge({ priority }: { priority: ComplaintPriority | null }) {
-  if (!priority) return null
-  return <span className={`rp-priority rp-priority-${priority.toLowerCase()}`}>Prioridade {priorityLabels[priority].toLowerCase()}</span>
-}
-
-type PasswordRecoveryRequest = {
-  id: number
-  requestedAt: string
-  citizen: string
-  email: string
-  phone: string | null
-  cpf: string | null
-}
-
-type ComplaintHistory = {
-  id: number
-  description: string
-  observation: string
-  createdAt: string
-  photo: string
-}
-
-type ApiComplaint = {
-  id: number
-  protocol: string
-  title: string
-  description: string
-  address: string
-  status: string
-  createdAt: string
-  updatedAt: string
-  latitude: number
-  longitude: number
-  photo?: string | null
-  priority?: ComplaintPriority | null
-  type: { name: string }
-  categories: string[]
-  responsibleOrganizations?: string[]
-  orgao?: { id_orgao: number; nome: string } | null
-  citizen?: string
-  citizenEmail?: string
-  citizenPhone?: string
-  citizenCpf?: string
-  citizenPhoto?: string | null
-  history?: ComplaintHistory[]
-}
-
-type Organization = { id_orgao: number; nome: string; descricao: string }
-
-type ResponsibleProfile = {
-  name: string
-  email: string
-  phone: string
-  orgao: { id_orgao: number; nome: string } | null
-}
-
-const ALL_PERIODS = 'all'
-
-// Converte a data em uma chave AAAA-MM usada para agrupar por mês.
-function monthKey(isoDate: string) {
-  const date = new Date(isoDate)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function monthLabel(key: string) {
-  const [year, month] = key.split('-').map(Number)
-  const label = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-  return label.charAt(0).toLocaleUpperCase('pt-BR') + label.slice(1)
-}
-
-function relativeTime(isoDate: string) {
-  const minutes = Math.max(0, Math.round((Date.now() - new Date(isoDate).getTime()) / 60000))
-  if (minutes < 60) return `há ${Math.max(minutes, 1)} min`
-  if (minutes < 1440) return `há ${Math.floor(minutes / 60)} h`
-  return `há ${Math.floor(minutes / 1440)} d`
-}
-
-function percent(part: number, total: number) {
-  return total === 0 ? 0 : (part / total) * 100
-}
-
-const NEARBY_RADIUS_METERS = 50
-
-function distanceInMeters(first: AdminComplaint, second: AdminComplaint) {
-  const earthRadius = 6371000
-  const radians = (value: number) => value * Math.PI / 180
-  const latitudeDelta = radians(second.latitude - first.latitude)
-  const longitudeDelta = radians(second.longitude - first.longitude)
-  const firstLatitude = radians(first.latitude)
-  const secondLatitude = radians(second.latitude)
-  const value = Math.sin(latitudeDelta / 2) ** 2
-    + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2
-  return 2 * earthRadius * Math.asin(Math.sqrt(value))
-}
-
-function shareCategory(first: AdminComplaint, second: AdminComplaint) {
-  return first.categories.some((category) => second.categories.includes(category))
-}
-
-function groupNearbyComplaints(records: AdminComplaint[]) {
-  const groups: AdminComplaint[][] = []
-  const assigned = new Set<number>()
-
-  records.forEach((record, index) => {
-    if (assigned.has(index)) return
-    const group = [record]
-    assigned.add(index)
-    let changed = true
-    while (changed) {
-      changed = false
-      records.forEach((candidate, candidateIndex) => {
-        if (assigned.has(candidateIndex)) return
-        if (group.some((member) => shareCategory(member, candidate)
-          && distanceInMeters(member, candidate) <= NEARBY_RADIUS_METERS)) {
-          group.push(candidate)
-          assigned.add(candidateIndex)
-          changed = true
-        }
-      })
-    }
-    groups.push(group)
-  })
-
-  return groups
-}
-
-const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Encaminhada', 'Em atendimento', 'Resolvida', 'Negada']
-const navigation = [
-  { path: '/responsavel/dashboard', label: 'Painel' },
-  { path: '/responsavel/denuncias', label: 'Denúncias' },
-  { path: '/responsavel/recuperacao-senha', label: 'Recuperação de senha' },
-  { path: '/responsavel/tipos', label: 'Tipos de ocorrência' },
-  { path: '/responsavel/relatorios', label: 'Relatórios' },
-  { path: '/responsavel/configuracoes', label: 'Configurações' },
-]
-
-// Converte o status em uma classe CSS e exibe o rótulo correspondente.
-function StatusBadge({ status }: { status: ComplaintStatus }) {
-  const className = status.toLocaleLowerCase('pt-BR').replaceAll(' ', '-')
-  return <span className={`rp-status rp-status-${className}`}>{status}</span>
-}
-
-function apiStatusToLabel(status: string): ComplaintStatus {
-  return ({
-    RECEIVED: 'Recebida',
-    IN_ANALYSIS: 'Em análise',
-    FORWARDED: 'Encaminhada',
-    IN_SERVICE: 'Em atendimento',
-    RESOLVED: 'Resolvida',
-    NOT_SERVED: 'Negada',
-  } as Record<string, ComplaintStatus>)[status] ?? 'Recebida'
-}
-
-function labelToApiStatus(status: ComplaintStatus) {
-  return ({
-    Recebida: 'RECEIVED',
-    'Em análise': 'IN_ANALYSIS',
-    Encaminhada: 'FORWARDED',
-    'Em atendimento': 'IN_SERVICE',
-    Resolvida: 'RESOLVED',
-    Negada: 'NOT_SERVED',
-  } as Record<ComplaintStatus, string>)[status]
-}
-
-function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
-  return {
-    id: complaint.id,
-    protocol: complaint.protocol,
-    title: complaint.title,
-    description: complaint.description,
-    neighborhood: '',
-    date: new Date(complaint.createdAt).toLocaleDateString('pt-BR'),
-    createdAt: complaint.createdAt,
-    updatedAt: complaint.updatedAt ?? complaint.createdAt,
-    status: apiStatusToLabel(complaint.status),
-    category: complaint.type.name,
-    categories: complaint.categories?.length ? complaint.categories : [complaint.type.name],
-    responsibleOrganizations: complaint.responsibleOrganizations,
-    address: complaint.address,
-    latitude: complaint.latitude,
-    longitude: complaint.longitude,
-    photo: complaint.photo ?? null,
-    priority: complaint.priority ?? null,
-    citizen: complaint.citizen || 'Cidadão não informado',
-    email: complaint.citizenEmail || 'E-mail não informado',
-    phone: complaint.citizenPhone || 'Telefone não informado',
-    cpf: complaint.citizenCpf || 'CPF não informado',
-    citizenPhoto: complaint.citizenPhoto ?? null,
-    sector: complaint.responsibleOrganizations?.length
-      ? complaint.responsibleOrganizations.join(', ')
-      : complaint.orgao?.nome ?? 'Não encaminhada',
-    sectorId: complaint.orgao?.id_orgao,
-    history: complaint.history ?? [],
-  }
-}
-
-// Reúne o painel administrativo e mantém em estado local os filtros e dados carregados da API.
 function ResponsiblePanelPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -259,6 +57,7 @@ function ResponsiblePanelPage() {
   const [observation, setObservation] = useState('')
   const [savedUpdate, setSavedUpdate] = useState(false)
 
+  // Encerra a sessão no servidor e remove os dados locais antes de voltar ao login.
   async function handleLogout() {
     setLogoutError('')
     setIsLoggingOut(true)
@@ -280,9 +79,9 @@ function ResponsiblePanelPage() {
     navigate('/login', { replace: true })
   }
 
+  // Carrega os dados usados pelas seções administrativas em uma única montagem.
   useEffect(() => {
     let active = true
-    // Reúne denúncias, órgãos de encaminhamento e sessão do responsável para montar o painel.
     Promise.all([
       apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
       apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
@@ -322,7 +121,7 @@ function ResponsiblePanelPage() {
     })
     return [...counts.entries()].sort((a, b) => b[1] - a[1])
   }, [periodComplaints])
-  // Filtra denúncias pelo texto de busca, pelo status e pelo período selecionados.
+  // Filtra denúncias pelo texto, status e período escolhidos no painel.
   const visibleComplaints = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR')
     return periodComplaints.filter((complaint) => {
@@ -348,10 +147,10 @@ function ResponsiblePanelPage() {
 
   const heading = selectedComplaint && section === 'denuncias'
     ? 'Detalhes da denúncia'
-    : navigation.find((item) => item.path.endsWith(section))?.label ?? 'Painel'
+    : sectionHeadings[section] ?? 'Painel'
 
-  // Persiste o status, o encaminhamento e a observação da denúncia na API.
-  async function saveComplaintUpdate(event: React.FormEvent<HTMLFormElement>) {
+  // Salva status e órgão da denúncia e registra a observação quando informada.
+  async function saveComplaintUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedComplaint?.id) return
     const formData = new FormData(event.currentTarget)
@@ -387,7 +186,8 @@ function ResponsiblePanelPage() {
     }
   }
 
-  async function setTemporaryPassword(event: React.FormEvent<HTMLFormElement>, requestId: number) {
+  // Define a senha temporária e atualiza as solicitações pendentes.
+  async function setTemporaryPassword(event: FormEvent<HTMLFormElement>, requestId: number) {
     event.preventDefault()
     setRecoveryMessage('')
     try {
@@ -408,42 +208,7 @@ function ResponsiblePanelPage() {
     }
   }
 
-  function renderPasswordRecovery() {
-    return (
-      <>
-        <div className="rp-page-heading"><div><h1>Recuperação de senha</h1><p>Analise solicitações e defina uma senha temporária para o cidadão.</p></div></div>
-        {recoveryMessage && <p className="rp-success-message" role="status">{recoveryMessage}</p>}
-        <section className="rp-panel rp-recovery-list" aria-label="Solicitações de recuperação pendentes">
-          {recoveryRequests.length === 0 && <p className="rp-empty-state">Nenhuma solicitação pendente.</p>}
-          {recoveryRequests.map((item) => (
-            <article className="rp-recovery-request" key={item.id}>
-              <div className="rp-recovery-citizen">
-                <h2>{item.citizen}</h2>
-                <p>{item.email} · {item.phone ?? 'Telefone não informado'} · CPF {item.cpf ?? 'não informado'}</p>
-                <small>Solicitada em {new Date(item.requestedAt).toLocaleString('pt-BR')}</small>
-              </div>
-              <form className="rp-recovery-form" onSubmit={(event) => void setTemporaryPassword(event, item.id)}>
-                <label htmlFor={`temporary-password-${item.id}`}>Senha temporária</label>
-                <input
-                  id={`temporary-password-${item.id}`}
-                  type="text"
-                  autoComplete="off"
-                  minLength={8}
-                  maxLength={1024}
-                  required
-                  value={temporaryPasswords[item.id] ?? ''}
-                  onChange={(event) => setTemporaryPasswords((current) => ({ ...current, [item.id]: event.target.value }))}
-                />
-                <button className="rp-primary-button" type="submit">Definir senha</button>
-              </form>
-            </article>
-          ))}
-        </section>
-      </>
-    )
-  }
-
-  // Gera um arquivo CSV com os dados atualmente disponíveis na lista.
+  // Exporta para CSV o conjunto de denúncias do período selecionado.
   function exportReport() {
     const rows = [
       [
@@ -485,245 +250,72 @@ function ResponsiblePanelPage() {
     URL.revokeObjectURL(url)
   }
 
-  // Monta o resumo visual com métricas e atividade recente do painel.
-  function renderDashboard() {
-    const total = complaints.length
-    const pendingCount = complaints.filter((complaint) => complaint.status === 'Recebida' || complaint.status === 'Em análise').length
-    const inServiceCount = complaints.filter((complaint) => complaint.status === 'Em atendimento').length
-    const resolvedCount = complaints.filter((complaint) => complaint.status === 'Resolvida').length
-    const statusSummary: Array<[string, number, string]> = [
-      ['Recebidas', complaints.filter((complaint) => complaint.status === 'Recebida').length, 'blue'],
-      ['Em análise', complaints.filter((complaint) => complaint.status === 'Em análise').length, 'gold'],
-      ['Em atendimento', inServiceCount, 'sky'],
-      ['Resolvidas', resolvedCount, 'green'],
-    ]
-    const recentComplaints = [...complaints]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5)
-    return (
-      <>
-        <div className="rp-page-heading">
-          <div><h1>Visão geral</h1><p>Acompanhe as denúncias recebidas.</p></div>
-        </div>
-        <section className="rp-metric-grid" aria-label="Indicadores gerais">
-          <Metric label="Pendentes" value={String(pendingCount)} note="Aguardando análise" color="blue" />
-          <Metric label="Em atendimento" value={String(inServiceCount)} note="Em execução" color="gold" />
-          <Metric label="Resolvidas" value={String(resolvedCount)} note="Total resolvido" color="green" />
-          <Metric label="Total" value={String(total)} note="Denúncias registradas" color="teal" />
-        </section>
-        <div className="rp-dashboard-grid">
-          <section className="rp-panel rp-status-panel">
-            <h2>Denúncias por status</h2>
-            <div className="rp-status-bars">
-              {statusSummary.map(([label, count, color]) => (
-                <div className="rp-bar-row" key={label}>
-                  <strong>{label}</strong><div className="rp-bar-track"><span className={`rp-bar-fill rp-fill-${color}`} style={{ width: `${percent(Number(count), total)}%` }} /></div><b>{count}</b>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="rp-panel rp-activity-panel">
-            <h2>Atividade recente</h2>
-            {recentComplaints.length === 0 && <p className="rp-empty-state">Nenhuma denúncia registrada.</p>}
-            {recentComplaints.map((complaint) => (
-              <div className="rp-activity-item" key={complaint.protocol}><span aria-hidden="true" /><div><strong>{complaint.title}</strong><small>{complaint.protocol} · {complaint.status} · {relativeTime(complaint.createdAt)}</small></div></div>
-            ))}
-          </section>
-        </div>
-        <div className="rp-dashboard-footer"><span>Atualizado em {new Date().toLocaleDateString('pt-BR')}</span><NavLink to="/responsavel/denuncias">Acessar denúncias <span aria-hidden="true">→</span></NavLink></div>
-      </>
+  // Entrega às telas filhas apenas os dados e ações que cada seção precisa.
+  const body = section === 'denuncias'
+    ? (
+      <ComplaintsSection
+        selectedComplaint={selectedComplaint}
+        visibleComplaints={visibleComplaints}
+        visibleComplaintGroups={visibleComplaintGroups}
+        organizations={organizations}
+        status={status}
+        statusFilter={statusFilter}
+        query={query}
+        period={period}
+        periodOptions={periodOptions}
+        sector={sector}
+        observation={observation}
+        savedUpdate={savedUpdate}
+        onSelectComplaint={(complaint) => {
+          setSelectedProtocol(complaint.protocol)
+          setStatus(complaint.status)
+          setSector(complaint.sectorId ? complaint.sector : '')
+          setSavedUpdate(false)
+        }}
+        onBack={() => { setSelectedProtocol(null); setSavedUpdate(false) }}
+        onStatusChange={(nextStatus) => { setStatus(nextStatus); setSavedUpdate(false) }}
+        onStatusFilterChange={setStatusFilter}
+        onQueryChange={setQuery}
+        onPeriodChange={setPeriod}
+        onSectorChange={(nextSector) => { setSector(nextSector); setSavedUpdate(false) }}
+        onObservationChange={(nextObservation) => { setObservation(nextObservation); setSavedUpdate(false) }}
+        onSave={saveComplaintUpdate}
+        onExport={exportReport}
+      />
     )
-  }
-
-  // Exibe a listagem filtrável ou os detalhes e controles da denúncia selecionada.
-  function renderComplaints() {
-    if (selectedComplaint) {
-      return (
-        <>
-          <button className="rp-back-link" type="button" onClick={() => { setSelectedProtocol(null); setSavedUpdate(false) }}>← Voltar para denúncias</button>
-          <div className="rp-detail-heading">
-            <div><h1>{selectedComplaint.title}</h1><p>{selectedComplaint.protocol} · recebido em {selectedComplaint.date}</p></div>
-            <StatusBadge status={selectedComplaint.status} />
-          </div>
-          <div className="rp-detail-grid">
-            <section className="rp-panel rp-information-panel">
-              <h2>Informações da denúncia</h2>
-              <Info label="Descrição" value={selectedComplaint.description} />
-              <Info label="Endereço" value={selectedComplaint.address} />
-              <Info label="Cidadão" value={selectedComplaint.citizen} />
-              <Info label="E-mail" value={selectedComplaint.email} />
-              <Info label="Telefone" value={selectedComplaint.phone} />
-              <Info label="CPF" value={selectedComplaint.cpf} />
-              <Info label="Categorias" value={selectedComplaint.categories.join(', ')} />
-              {selectedComplaint.priority && <Info label="Prioridade sugerida pela IA" value={priorityLabels[selectedComplaint.priority]} />}
-              {selectedComplaint.photo && <div className="rp-photo-field"><strong>Foto anexada</strong><img src={selectedComplaint.photo} alt="Foto anexada pelo cidadão à denúncia" /></div>}
-            </section>
-            <form className="rp-panel rp-update-panel" onSubmit={saveComplaintUpdate}>
-              <h2>Atualizar atendimento</h2>
-              <label>Status atual<select name="status" value={status} onChange={(event) => { setStatus(event.target.value as ComplaintStatus); setSavedUpdate(false) }}>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
-              <label>Setor responsável<select value={sector} onChange={(event) => { setSector(event.target.value); setSavedUpdate(false) }}><option value="">Não encaminhada</option>{organizations.map((organization) => <option key={organization.id_orgao} value={organization.nome}>{organization.nome}</option>)}</select></label>
-              <label>Observação<textarea value={observation} onChange={(event) => { setObservation(event.target.value); setSavedUpdate(false) }} placeholder="Inclua uma atualização para o cidadão acompanhar." rows={3} /></label>
-              {savedUpdate && <p className="rp-success-message" role="status">Atualização salva com sucesso.</p>}
-              <button className="rp-primary-button" type="submit">Salvar atualização</button>
-            </form>
-          </div>
-          <section className="rp-panel rp-history-panel" aria-labelledby="responsible-history-title">
-            <h2 id="responsible-history-title">Observações e histórico</h2>
-            {selectedComplaint.history.length === 0 ? (
-              <p className="rp-empty-state">Nenhuma observação registrada para esta denúncia.</p>
-            ) : (
-              <div className="rp-history-list">
-                {selectedComplaint.history.map((item) => (
-                  <article className="rp-history-item" key={item.id}>
-                    <strong>{item.description}</strong>
-                    <p>{item.observation}</p>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+    : section === 'recuperacao-senha'
+      ? (
+        <PasswordRecoverySection
+          requests={recoveryRequests}
+          temporaryPasswords={temporaryPasswords}
+          message={recoveryMessage}
+          onPasswordChange={(requestId, password) => setTemporaryPasswords((current) => ({ ...current, [requestId]: password }))}
+          onSubmit={setTemporaryPassword}
+        />
       )
-    }
-
-    return (
-      <>
-        <div className="rp-page-heading rp-heading-with-action">
-          <div><h1>Todas as denúncias</h1><p>Gerencie os registros recebidos pela prefeitura.</p></div>
-          <button className="rp-outline-button" type="button" onClick={exportReport}>↓ Exportar relatório</button>
-        </div>
-        <section className="rp-filter-bar" aria-label="Filtros de denúncias">
-          <label className="rp-search-field"><span>Buscar por protocolo, CPF, nome, e-mail ou telefone</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para buscar..." /></label>
-          <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>Todos</option>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
-          <label>Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value={ALL_PERIODS}>Todos os períodos</option>{periodOptions.map((key) => <option key={key} value={key}>{monthLabel(key)}</option>)}</select></label>
-        </section>
-        <section className="rp-panel rp-table-panel">
-          <div className="rp-table-scroll"><table className="rp-table"><thead><tr><th>Protocolo</th><th>Descrição</th><th>Bairro</th><th>Data</th><th>Status</th><th>Ação</th></tr></thead>
-              <tbody>{visibleComplaintGroups.map((group) => {
-                const complaint = group[0]!
-                const statuses = new Set(group.map((item) => item.status))
-                return <tr key={complaint.protocol} className={group.length > 1 ? 'rp-group-row' : undefined}>
-                  <td className="rp-protocol" data-label="Protocolo">
-                    <strong>{group.length > 1 ? `${group.length} denúncias agrupadas` : complaint.protocol}</strong>
-                    {group.length > 1 && <details className="rp-group-details">
-                      <summary>Ver protocolos</summary>
-                      <div>{group.map((item) => <button className="rp-group-protocol" type="button" key={item.protocol} onClick={() => { setSelectedProtocol(item.protocol); setStatus(item.status); setSector(item.sectorId ? item.sector : ''); setSavedUpdate(false) }}>{item.protocol}</button>)}</div>
-                    </details>}
-                  </td>
-                  <td data-label="Descrição"><strong>{complaint.title}</strong><PriorityBadge priority={complaint.priority} /><small>{complaint.categories.join(', ')}</small>{group.length > 1 && <small className="rp-group-note">Mesma categoria e até 50 m de distância</small>}</td>
-                  <td data-label="Bairro">{complaint.neighborhood || '—'}</td>
-                  <td data-label="Data">{complaint.date}</td>
-                  <td data-label="Status">{statuses.size === 1 ? <StatusBadge status={complaint.status} /> : <span className="rp-status rp-status-mixed">Vários status</span>}</td>
-                  <td className="rp-table-action"><button className="rp-text-button" type="button" onClick={() => { setSelectedProtocol(complaint.protocol); setStatus(complaint.status); setSector(complaint.sectorId ? complaint.sector : ''); setSavedUpdate(false) }}>Ver detalhes <span aria-hidden="true">→</span></button></td>
-                </tr>
-              })}</tbody>
-          </table></div>
-          {visibleComplaints.length === 0 && <p className="rp-empty-state">Nenhuma denúncia encontrada com esses filtros.</p>}
-          <div className="rp-table-footer"><span>{visibleComplaintGroups.length} grupos / {visibleComplaints.length} denúncias</span></div>
-        </section>
-      </>
-    )
-  }
-
-  // Exibe as categorias encontradas nas denúncias reais, com a contagem de cada uma.
-  function renderTypes() {
-    return (
-      <>
-        <div className="rp-page-heading"><div><h1>Categorias de denúncia</h1><p>Tipos de ocorrência registrados pelos cidadãos.</p></div></div>
-        <section className="rp-panel rp-types-panel" aria-label="Categorias de denúncia">
-          {categories.map(([name, count], index) => <div className="rp-type-row" key={name}><span className="rp-type-number">{index + 1}</span><div className="rp-type-copy"><strong>{name}</strong></div><span className="rp-type-count">{count} {count === 1 ? 'denúncia' : 'denúncias'}</span></div>)}
-          {categories.length === 0 && <p className="rp-empty-state">Nenhuma denúncia registrada ainda.</p>}
-        </section>
-      </>
-    )
-  }
-
-  // Calcula indicadores e gráficos a partir das denúncias do período escolhido.
-  function renderReports() {
-    const total = periodComplaints.length
-    const resolved = periodComplaints.filter((complaint) => complaint.status === 'Resolvida').length
-    const open = total - resolved
-    const weekCounts = [0, 0, 0, 0, 0]
-    periodComplaints.forEach((complaint) => {
-      weekCounts[Math.min(Math.floor((new Date(complaint.createdAt).getDate() - 1) / 7), 4)] += 1
-    })
-    const maxWeek = Math.max(...weekCounts, 1)
-    const maxCategory = Math.max(...categories.map(([, count]) => count), 1)
-    const format = (value: number) => `${value.toFixed(1).replace('.', ',')}%`
-    return (
-      <>
-        <div className="rp-page-heading rp-heading-with-action"><div><h1>Relatórios e indicadores</h1><p>Acompanhe os resultados dos atendimentos.</p></div><label className="rp-period-select">Período<select value={period} onChange={(event) => setPeriod(event.target.value)}><option value={ALL_PERIODS}>Todos os períodos</option>{periodOptions.map((key) => <option key={key} value={key}>{monthLabel(key)}</option>)}</select></label></div>
-        <section className="rp-report-metrics"><Metric label="Total de denúncias" value={String(total)} note="No período selecionado" color="blue" /><Metric label="Resolvidas" value={String(resolved)} note={`${format(percent(resolved, total))} do total`} color="green" /><Metric label="Em aberto" value={String(open)} note={`${format(percent(open, total))} do total`} color="gold" /></section>
-        <div className="rp-report-grid">
-          <section className="rp-panel rp-monthly-panel"><h2>Denúncias por semana do mês</h2><div className="rp-chart" aria-label="Gráfico de denúncias recebidas por semana"><div className="rp-chart-bars">{weekCounts.map((count, index) => <div className="rp-chart-column" key={index}><span style={{ height: `${percent(count, maxWeek)}%`, ...(count === 0 && { minHeight: 0 }) }} title={`${count} denúncias`} /><small>Sem {index + 1} ({count})</small></div>)}</div></div></section>
-          <section className="rp-panel rp-category-panel"><h2>Distribuição por categoria</h2>{categories.length === 0 && <p className="rp-empty-state">Sem denúncias no período.</p>}{categories.map(([label, value]) => <div className="rp-category-bar" key={label}><div><strong>{label}</strong><span>{value}</span></div><div className="rp-bar-track"><span className="rp-bar-fill rp-fill-blue" style={{ width: `${percent(value, maxCategory)}%` }} /></div></div>)}</section>
-        </div>
-        <button className="rp-outline-button rp-export-bottom" type="button" onClick={exportReport}>↓ Baixar dados do período</button>
-      </>
-    )
-  }
-
-  // Mostra os dados reais da conta do responsável autenticado.
-  function renderSettings() {
-    return (
-      <>
-        <div className="rp-page-heading"><div><h1>Configurações</h1><p>Dados da conta do responsável.</p></div></div>
-        <div className="rp-settings-grid">
-          <section className="rp-panel rp-settings-panel"><h2>Perfil responsável</h2><dl>
-            <Info label="Nome" value={profile?.name ?? '—'} />
-            <Info label="E-mail" value={profile?.email ?? '—'} />
-            <Info label="Telefone" value={profile?.phone ?? '—'} />
-            <Info label="Órgão" value={profile?.orgao?.nome ?? 'Não vinculado'} />
-          </dl></section>
-        </div>
-      </>
-    )
-  }
-
-  // Seleciona o conteúdo conforme a rota /responsavel/*, incluindo relatórios e configurações.
-  const body = section === 'denuncias' ? renderComplaints()
-    : section === 'recuperacao-senha' ? renderPasswordRecovery()
-    : section === 'tipos' ? renderTypes()
-      : section === 'relatorios' ? renderReports()
-        : section === 'configuracoes' ? renderSettings()
-          : renderDashboard()
+      : section === 'tipos'
+        ? <ComplaintTypesSection categories={categories} />
+        : section === 'relatorios'
+          ? <ReportsSection complaints={periodComplaints} categories={categories} period={period} periodOptions={periodOptions} onPeriodChange={setPeriod} onExport={exportReport} />
+          : section === 'configuracoes'
+            ? <SettingsSection profile={profile} />
+            : <DashboardSection complaints={complaints} />
 
   return (
-    <div className="rp-shell">
-      <aside className="rp-sidebar">
-        <NavLink className="rp-brand" to="/responsavel/dashboard"><img className="rp-brand-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" /><span><small>Painel do responsável</small></span></NavLink>
-        <nav className="rp-navigation" aria-label="Navegação do responsável">{navigation.map((item) => <NavLink key={item.path} to={item.path} className={({ isActive }) => `rp-nav-link${isActive && (item.path.endsWith('/' + section) || section === '' && item.path.endsWith('dashboard')) ? ' is-active' : ''}`} onClick={() => setSelectedProtocol(null)}>{item.label}</NavLink>)}</nav>
-        <div className="rp-sidebar-footer"><strong>◉ Responsável</strong><span>{profile?.orgao?.nome ?? ''}</span></div>
-      </aside>
-      <div className="rp-main-column">
-        <header className="rp-topbar">
-          <h2>{heading}</h2>
-          <div className="rp-topbar-actions">
-            <span className="rp-profile-button">{profile?.name ?? ''}</span>
-            <button className="rp-logout-button" type="button" onClick={handleLogout} disabled={isLoggingOut}>
-              {isLoggingOut ? 'Saindo...' : 'Sair'}
-            </button>
-          </div>
-        </header>
-        <main className="rp-content">
-          {/* Exibe o estado de carregamento/erro ou a seção selecionada com dados da API. */}
-          {logoutError && <p className="rp-error-message" role="alert">{logoutError}</p>}
-          {loadError && <p className="rp-error-message" role="alert">{loadError}</p>}
-          {loading ? <p className="rp-empty-state" aria-busy="true">Carregando dados do painel...</p> : body}
-        </main>
-      </div>
-    </div>
+    <ResponsiblePanelLayout
+      section={section}
+      heading={heading}
+      profileName={profile?.name ?? ''}
+      organizationName={profile?.orgao?.nome ?? ''}
+      isLoggingOut={isLoggingOut}
+      logoutError={logoutError}
+      loadError={loadError}
+      onLogout={() => void handleLogout()}
+      onNavigate={() => setSelectedProtocol(null)}
+    >
+      {loading ? <p className="rp-empty-state" aria-busy="true">Carregando dados do painel...</p> : body}
+    </ResponsiblePanelLayout>
   )
-}
-
-// Apresenta uma métrica com sua descrição e variação visual de cor.
-function Metric({ label, value, note, color }: { label: string; value: string; note: string; color: string }) {
-  return <article className={`rp-metric rp-metric-${color}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
-}
-
-// Exibe um par de rótulo e valor nas informações de uma denúncia.
-function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rp-info-row"><dt>{label}</dt><dd>{value}</dd></div>
 }
 
 export default ResponsiblePanelPage

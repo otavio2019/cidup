@@ -1,0 +1,241 @@
+/* Estrutura, navegação e cabeçalho do painel administrativo. */
+  /* Estrutura principal e navegação lateral do painel administrativo. */
+  .rp-shell {
+    --rp-ink: #102f49;
+    --rp-muted: #718397;
+    --rp-line: #e1eaf0;
+    --rp-blue: #1768c5;
+    --rp-green: #347663;
+    --rp-paper: #ffffff;
+    display: grid;
+    grid-template-columns: 188px minmax(0, 1fr);
+    min-height: 100vh;
+    color: var(--rp-ink);
+    background: #f3f7fa;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .rp-shell * {
+    box-sizing: border-box;
+  }
+
+  .rp-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-height: 620px;
+    padding: 23px 13px 27px;
+    color: #e8f2f7;
+    background: #102f49;
+  }
+
+  .rp-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    color: #ffffff;
+  }
+
+  .rp-brand-mark {
+    display: grid;
+    width: 23px;
+    height: 28px;
+    place-items: center;
+    border-left: 3px solid #ffffff;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .rp-brand-logo {
+    display: block;
+    width: 102px;
+    height: 40px;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: #0a2338;
+    object-fit: contain;
+  }
+
+  .rp-brand strong,
+  .rp-brand small {
+    display: block;
+  }
+
+  .rp-brand strong {
+    font-size: 19px;
+    line-height: 1.1;
+  }
+
+  .rp-brand small {
+    margin-top: 5px;
+    color: #9dbbd0;
+    font-size: 8px;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+
+  .rp-navigation {
+    display: grid;
+    gap: 7px;
+    margin-top: 24px;
+  }
+
+  .rp-nav-link {
+    display: flex;
+    min-height: 35px;
+    align-items: center;
+    padding: 0 18px;
+    border-radius: 6px;
+    color: #c6d8e5;
+    font-size: 12px;
+    font-weight: 700;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .rp-nav-link:hover,
+  .rp-nav-link.is-active {
+    color: #ffffff;
+    background: #1b4a6b;
+  }
+
+  .rp-sidebar-footer {
+    display: grid;
+    gap: 6px;
+    margin: auto 10px 0;
+    padding: 25px 8px 0;
+    border-top: 1px solid #31516a;
+    font-size: 11px;
+  }
+
+  .rp-sidebar-footer strong {
+    color: #eef5f8;
+  }
+
+  .rp-sidebar-footer span {
+    color: #a9c1d2;
+  }
+
+  .rp-recovery-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .rp-recovery-request {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
+    gap: 20px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid var(--rp-line);
+    border-radius: 10px;
+  }
+
+  .rp-recovery-citizen h2,
+  .rp-recovery-citizen p {
+    margin: 0 0 7px;
+  }
+
+  .rp-recovery-citizen h2 {
+    font-size: 15px;
+  }
+
+  .rp-recovery-citizen p,
+  .rp-recovery-citizen small {
+    color: var(--rp-muted);
+    font-size: 12px;
+  }
+
+  .rp-recovery-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: end;
+  }
+
+  .rp-recovery-form label {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .rp-recovery-form input {
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid var(--rp-line);
+    border-radius: 6px;
+  }
+
+  @media (max-width: 760px) {
+    .rp-recovery-request {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .rp-main-column {
+    min-width: 0;
+  }
+
+  .rp-topbar {
+    display: flex;
+    height: 58px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 30px;
+    border-bottom: 1px solid var(--rp-line);
+    background: var(--rp-paper);
+  }
+
+  .rp-topbar h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 750;
+  }
+
+  .rp-profile-button {
+    padding: 8px 0 8px 10px;
+    color: var(--rp-ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .rp-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .rp-logout-button {
+    min-height: 34px;
+    padding: 0 13px;
+    border: 1px solid #d5e0e8;
+    border-radius: 6px;
+    color: var(--rp-ink);
+    background: #ffffff;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .rp-logout-button:hover:not(:disabled) {
+    border-color: var(--rp-blue);
+    color: var(--rp-blue);
+  }
+
+  .rp-logout-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+  }
+
+  .rp-content {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    padding: 20px 30px 38px;
+  }
+

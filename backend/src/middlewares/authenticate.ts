@@ -31,7 +31,7 @@ export function createAuthenticate(secret: string, database: PrismaClient): expr
       void database.usuario.findUnique({
         where: { id_usuario: readAuthUserId(request) ?? -1 },
         select: { must_change_password: true },
-      }).then((user) => {
+      }).then((user: { must_change_password: any }) => {
         if (user?.must_change_password) {
           response.status(403).json({
             error: 'Troque sua senha temporária para continuar.',
@@ -40,7 +40,7 @@ export function createAuthenticate(secret: string, database: PrismaClient): expr
           return
         }
         next()
-      }).catch((error) => handlePrismaError(error, response, 'require-password-change'))
+      }).catch((error: unknown) => handlePrismaError(error, response, 'require-password-change'))
     })
   }
 }

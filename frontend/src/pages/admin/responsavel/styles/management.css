@@ -1,0 +1,230 @@
+/* Recuperação de senha, categorias, relatórios e configurações. */
+  /* Gerenciamento de categorias, gráficos e preferências administrativas. */
+  .rp-add-button {
+    min-width: 162px;
+  }
+
+  .rp-types-panel {
+    padding: 4px 25px;
+  }
+
+  .rp-type-row {
+    display: grid;
+    grid-template-columns: 42px minmax(150px, 1fr) 130px 50px 48px;
+    min-height: 82px;
+    align-items: center;
+    gap: 18px;
+    border-bottom: 1px solid var(--rp-line);
+  }
+
+  .rp-type-row:last-child {
+    border-bottom: 0;
+  }
+
+  .rp-type-number {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 9px;
+    color: var(--rp-blue);
+    background: #eaf4fb;
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  .rp-type-copy strong,
+  .rp-type-copy small {
+    display: block;
+  }
+
+  .rp-type-copy strong {
+    font-size: 12px;
+  }
+
+  .rp-type-copy small {
+    margin-top: 5px;
+    color: var(--rp-muted);
+    font-size: 10px;
+  }
+
+  .rp-type-count {
+    color: var(--rp-green);
+    font-size: 9px;
+    font-weight: 750;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .rp-report-metrics {
+    margin-bottom: 22px;
+  }
+
+  .rp-period-select {
+    grid-template-columns: auto minmax(125px, 1fr);
+    align-items: center;
+    padding: 0;
+  }
+
+  .rp-period-select select {
+    min-width: 150px;
+    border-color: #9bbde0;
+    color: var(--rp-blue);
+    background: #ffffff;
+    font-weight: 700;
+  }
+
+  .rp-monthly-panel h2,
+  .rp-category-panel h2 {
+    margin-bottom: 25px;
+  }
+
+  .rp-chart {
+    display: flex;
+    height: 206px;
+    align-items: stretch;
+    padding: 0 12px;
+    border-bottom: 1px solid #dce6ec;
+  }
+
+  .rp-chart-bars {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: end;
+    gap: 25px;
+  }
+
+  .rp-chart-column {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: end;
+    gap: 9px;
+  }
+
+  .rp-chart-column > span {
+    width: min(42px, 72%);
+    min-height: 20px;
+    border-radius: 6px 6px 0 0;
+    background: #1768c5;
+  }
+
+  .rp-chart-column small {
+    height: 18px;
+    color: var(--rp-muted);
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .rp-category-bar {
+    margin: 0 0 20px;
+  }
+
+  .rp-category-bar > div:first-child {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 9px;
+  }
+
+  .rp-category-bar > div:first-child span {
+    color: var(--rp-muted);
+  }
+
+  .rp-category-bar .rp-bar-track {
+    height: 8px;
+  }
+
+  .rp-export-bottom {
+    margin-top: 18px;
+  }
+
+  .rp-settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr);
+    align-items: start;
+    gap: 20px;
+  }
+
+  .rp-settings-panel h2,
+  .rp-preferences-panel h2 {
+    margin-bottom: 2px;
+  }
+
+  .rp-settings-panel .rp-primary-button {
+    align-self: flex-start;
+    min-width: 150px;
+  }
+
+  .rp-preferences-panel > p {
+    margin: -7px 0 2px;
+    color: var(--rp-muted);
+    font-size: 10px;
+  }
+
+  .rp-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 12px 0;
+    border-top: 1px solid var(--rp-line);
+  }
+
+  .rp-toggle-row strong,
+  .rp-toggle-row small {
+    display: block;
+  }
+
+  .rp-toggle-row strong {
+    color: var(--rp-ink);
+    font-size: 10px;
+  }
+
+  .rp-toggle-row small {
+    margin-top: 5px;
+    color: var(--rp-muted);
+    font-size: 9px;
+  }
+
+  .rp-toggle-row input {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--rp-blue);
+  }
+
+  .rp-modal-backdrop {
+    position: fixed;
+    z-index: 5;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgb(9 31 49 / 48%);
+  }
+
+  .rp-modal {
+    display: grid;
+    width: min(420px, 100%);
+    gap: 17px;
+    padding: 24px;
+    border: 1px solid var(--rp-line);
+    border-radius: 9px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgb(16 47 73 / 22%);
+  }
+
+  .rp-modal h2 {
+    margin: 0 0 2px;
+    font-size: 17px;
+  }
+
+  .rp-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 3px;
+  }
+
