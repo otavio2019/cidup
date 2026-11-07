@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import './ResponsiblePanelPage.css'
 
@@ -238,11 +238,14 @@ function mapApiComplaint(complaint: ApiComplaint): AdminComplaint {
 // Reúne o painel administrativo e mantém em estado local os filtros e dados carregados da API.
 function ResponsiblePanelPage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const section = location.pathname.split('/')[2] || 'dashboard'
   const [complaints, setComplaints] = useState<AdminComplaint[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [logoutError, setLogoutError] = useState('')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [profile, setProfile] = useState<ResponsibleProfile | null>(null)
   const [recoveryRequests, setRecoveryRequests] = useState<PasswordRecoveryRequest[]>([])
   const [temporaryPasswords, setTemporaryPasswords] = useState<Record<number, string>>({})
@@ -255,6 +258,27 @@ function ResponsiblePanelPage() {
   const [status, setStatus] = useState<ComplaintStatus>('Recebida')
   const [observation, setObservation] = useState('')
   const [savedUpdate, setSavedUpdate] = useState(false)
+
+  async function handleLogout() {
+    setLogoutError('')
+    setIsLoggingOut(true)
+    try {
+      await apiRequest('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : 'Não foi possível encerrar a sessão.')
+      setIsLoggingOut(false)
+      return
+    }
+
+    localStorage.removeItem('cidup-role')
+    localStorage.removeItem('cidup-user-id')
+    localStorage.removeItem('cidup-complaints')
+    localStorage.removeItem('cidup-profile')
+    sessionStorage.removeItem('cidup-complaint-draft')
+    sessionStorage.removeItem('cidup-complaint-confirmation')
+    sessionStorage.removeItem('cidup-active-draft-id')
+    navigate('/login', { replace: true })
+  }
 
   useEffect(() => {
     let active = true
@@ -672,9 +696,18 @@ function ResponsiblePanelPage() {
         <div className="rp-sidebar-footer"><strong>◉ Responsável</strong><span>{profile?.orgao?.nome ?? ''}</span></div>
       </aside>
       <div className="rp-main-column">
-        <header className="rp-topbar"><h2>{heading}</h2><button type="button" className="rp-profile-button">{profile?.name ?? ''}</button></header>
+        <header className="rp-topbar">
+          <h2>{heading}</h2>
+          <div className="rp-topbar-actions">
+            <span className="rp-profile-button">{profile?.name ?? ''}</span>
+            <button className="rp-logout-button" type="button" onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? 'Saindo...' : 'Sair'}
+            </button>
+          </div>
+        </header>
         <main className="rp-content">
           {/* Exibe o estado de carregamento/erro ou a seção selecionada com dados da API. */}
+          {logoutError && <p className="rp-error-message" role="alert">{logoutError}</p>}
           {loadError && <p className="rp-error-message" role="alert">{loadError}</p>}
           {loading ? <p className="rp-empty-state" aria-busy="true">Carregando dados do painel...</p> : body}
         </main>
