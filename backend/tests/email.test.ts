@@ -50,6 +50,11 @@ test('sem BREVO_API_KEY, guarda a mensagem em memória e não chama fetch', asyn
   assert.equal(message?.to, 'cidadao@example.test')
   assert.match(message?.subject ?? '', /Recuperação de senha/)
   assert.match(message?.text ?? '', /token=abc/)
+  for (const content of [message?.text, message?.html]) {
+    assert.match(content ?? '', /redefinir a senha da sua conta no CidUp/)
+    assert.match(content ?? '', /válido por 30 minutos/)
+    assert.match(content ?? '', /Se você não solicitou a redefinição, ignore este e-mail/)
+  }
   assert.equal(calls.length, 0)
 })
 

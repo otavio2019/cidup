@@ -118,8 +118,8 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   return sendEmail({
     to,
     subject: 'Recuperação de senha — CidUp',
-    text: `Recebemos uma solicitação para trocar sua senha no CidUp. Acesse este link em até 30 minutos: ${resetUrl}\n\nSe você não fez esta solicitação, ignore este e-mail.`,
-    html: `<p>Recebemos uma solicitação para trocar sua senha no CidUp.</p><p><a href="${escapeHtml(resetUrl)}">Criar nova senha</a> (válido por 30 minutos)</p><p>Se você não fez esta solicitação, ignore este e-mail.</p>`,
+    text: `Recebemos uma solicitação para redefinir a senha da sua conta no CidUp.\n\nPara criar uma nova senha, acesse o link abaixo. Ele é válido por 30 minutos:\n${resetUrl}\n\nSe você não solicitou a redefinição, ignore este e-mail.`,
+    html: `<p>Recebemos uma solicitação para redefinir a senha da sua conta no CidUp.</p><p>Para criar uma nova senha, acesse o link abaixo. Ele é válido por 30 minutos:</p><p><a href="${escapeHtml(resetUrl)}">Criar nova senha</a></p><p>Se você não solicitou a redefinição, ignore este e-mail.</p>`,
   })
 }
 
