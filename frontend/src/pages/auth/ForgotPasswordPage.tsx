@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import BouncingText from '../../components/BouncingText'
 import { apiRequest } from '../../api'
 
 // ===== ESQUECI MINHA SENHA =====
@@ -56,7 +57,9 @@ export default function ForgotPasswordPage() {
           <div className="login-panel-header"><p className="panel-kicker">RECUPERAÇÃO DE SENHA</p><h2 id="forgot-title">Esqueci minha senha</h2><p>Informe seu CPF ou e-mail. Pelo e-mail você recebe um link para criar uma nova senha; pelo CPF, o responsável analisa o pedido e envia uma senha temporária.</p></div>
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group"><label htmlFor="recovery-identifier">CPF ou e-mail</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">@</span><input id="recovery-identifier" type="text" required maxLength={255} placeholder="000.000.000-00 ou seu@email.com" value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} /></div></div>
-            <button type="submit" className="login-button" disabled={loading}>{loading ? 'Enviando solicitação...' : 'Solicitar recuperação'}{!loading && <span aria-hidden="true">→</span>}</button>
+            <button type="submit" className="login-button" disabled={loading} aria-busy={loading}>
+              {loading ? <BouncingText>Enviando solicitação...</BouncingText> : <>Solicitar recuperação<span aria-hidden="true">→</span></>}
+            </button>
             {message && <p className="form-message" role="status">{message}</p>}
             {error && <p className="form-message" role="alert">{error}</p>}
           </form>

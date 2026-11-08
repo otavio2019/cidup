@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
+import BouncingText from '../../components/BouncingText'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { deleteDraft, getActiveDraftId } from '../../drafts'
@@ -195,8 +196,8 @@ function ComplaintReviewPage() {
 
           <div className="complaint-actions">
             <Link className="secondary-action" to="/registrar-denuncia" state={draft}>Editar denúncia</Link>
-            <button className="primary-action" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Enviando...' : 'Enviar denúncia'} <span aria-hidden="true">→</span>
+            <button className="primary-action" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+              {isSubmitting ? <BouncingText>Enviando...</BouncingText> : <>Enviar denúncia <span aria-hidden="true">→</span></>}
             </button>
           </div>
         </form>

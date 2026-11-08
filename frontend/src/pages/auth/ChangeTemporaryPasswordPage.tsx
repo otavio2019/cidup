@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import BouncingText from '../../components/BouncingText'
 import { apiRequest } from '../../api'
 
 // ===== TROCA DE SENHA TEMPORÁRIA =====
@@ -53,7 +54,9 @@ export default function ChangeTemporaryPasswordPage() {
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group"><label htmlFor="new-password">Nova senha</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">*</span><input id="new-password" type="password" required minLength={6} maxLength={1024} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /></div></div>
             <div className="form-group"><label htmlFor="confirm-password">Confirmar nova senha</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">*</span><input id="confirm-password" type="password" required minLength={6} maxLength={1024} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" /></div></div>
-            <button type="submit" className="login-button" disabled={loading}>{loading ? 'Salvando...' : 'Salvar senha definitiva'}{!loading && <span aria-hidden="true">→</span>}</button>
+            <button type="submit" className="login-button" disabled={loading} aria-busy={loading}>
+              {loading ? <BouncingText>Salvando...</BouncingText> : <>Salvar senha definitiva<span aria-hidden="true">→</span></>}
+            </button>
             {error && <p className="form-message" role="alert">{error}</p>}
           </form>
           <div className="register-link"><Link className="register-cta" to="/login">Voltar para o login</Link></div>

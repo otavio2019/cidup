@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import BouncingText from '../../components/BouncingText'
 import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
 
 /** Cadastro do cidadão: formata documentos no navegador e persiste a conta pela API. */
@@ -281,8 +282,7 @@ function RegisterPage() {
             </label>
 
             <button type="submit" className="login-button" disabled={isSubmitting} aria-busy={isSubmitting}>
-              Criar minha conta
-              <span aria-hidden="true">→</span>
+              {isSubmitting ? <BouncingText>Criando conta...</BouncingText> : <>Criar minha conta<span aria-hidden="true">→</span></>}
             </button>
 
             {mensagem && (

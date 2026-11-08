@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import BouncingText from '../../components/BouncingText'
 import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
 
 // Ícone de olho (aberto ou riscado) usado no botão de mostrar/ocultar senha.
@@ -162,7 +163,7 @@ function LoginPage() {
             </label>
 
             <button type="submit" className="login-button" disabled={isSubmitting} aria-busy={isSubmitting}>
-              {isSubmitting ? 'Entrando...' : 'Entrar na conta'}
+              {isSubmitting ? <BouncingText>Entrando...</BouncingText> : 'Entrar na conta'}
               {!isSubmitting && <span aria-hidden="true">→</span>}
             </button>
 
