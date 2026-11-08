@@ -60,6 +60,10 @@
       white-space: nowrap;
     }
 
+    .rp-logout-button {
+      width: auto;
+    }
+
     .rp-sidebar-footer {
       display: none;
     }
@@ -156,12 +160,6 @@
       font-size: 9px;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    .rp-logout-button {
-      min-height: 30px;
-      padding: 0 9px;
-      font-size: 10px;
     }
 
     .rp-page-heading,

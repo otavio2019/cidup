@@ -56,6 +56,14 @@ export function ResponsiblePanelLayout({
               {item.label}
             </NavLink>
           ))}
+          <button
+            className="rp-nav-link rp-logout-button"
+            type="button"
+            onClick={onLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? 'Saindo...' : 'Sair'}
+          </button>
         </nav>
         <div className="rp-sidebar-footer"><strong>◉ Responsável</strong><span>{organizationName}</span></div>
       </aside>
@@ -64,9 +72,6 @@ export function ResponsiblePanelLayout({
           <h2>{heading}</h2>
           <div className="rp-topbar-actions">
             <span className="rp-profile-button">{profileName}</span>
-            <button className="rp-logout-button" type="button" onClick={onLogout} disabled={isLoggingOut}>
-              {isLoggingOut ? 'Saindo...' : 'Sair'}
-            </button>
           </div>
         </header>
         <main className="rp-content">
