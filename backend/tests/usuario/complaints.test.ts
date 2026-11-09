@@ -5,6 +5,28 @@ import { callApi, calls, complaints, cookieFor, record, setupTestServer, type Re
 // ===== TESTES: DENÚNCIAS (src/routes/usuario/complaints.ts) =====
 setupTestServer()
 
+test('salva os componentes do endereço da IA uma única vez', async () => {
+  calls.length = 0
+  const response = await callApi('/api/complaints', {
+    method: 'POST',
+    headers: { Cookie: await cookieFor(1) },
+    body: JSON.stringify({
+      type: 'Buraco ou problema na via',
+      categories: ['Buraco ou problema na via'],
+      description: 'Existe um buraco na Avenida Solon de Lucena, número 55, no bairro Centro, próximo à praça.',
+      address: 'Avenida Solon de Lucena',
+      number: '55',
+      neighborhood: 'Centro',
+      complement: 'próximo à praça',
+      latitude: -23,
+      longitude: -46,
+    }),
+  })
+  assert.equal(response.status, 201)
+  assert.equal(record(calls.find((call) => call.model === 'denuncia' && call.method === 'create')?.args.data).endereco,
+    'Avenida Solon de Lucena, 55, Centro, próximo à praça')
+})
+
 test('encaminha denúncias automaticamente para o órgão compatível com a categoria', async () => {
   const routingCases = [
     ['Buraco ou problema na via', 1, 'Secretaria de Infraestrutura'],
@@ -201,4 +223,3 @@ test('usuários não podem consultar, atualizar ou excluir denúncias de outras 
   assert.equal(calls.some((call) => call.model === 'denuncia' && ['update', 'delete'].includes(call.method)), false)
   assert.equal(complaints.get(202)?.descricao, 'Relato privado do cidadão dois')
 })
-

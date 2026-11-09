@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
+import { applyAiComplaintDraft, type AiComplaintDraft } from '../../aiComplaintDraft'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { clearActiveDraft } from '../../drafts'
@@ -35,11 +36,12 @@ function DashboardPage() {
   const [logoutError, setLogoutError] = useState('')
   const [description, setDescription] = useState('')
   const [citizenName, setCitizenName] = useState(readStoredCitizenName)
-  const [draft, setDraft] = useState<{
+  const [draft, setDraft] = useState<AiComplaintDraft & {
     title: string
     categories: string[]
     priority: string
     summary: string
+    originalDescription: string
   } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
@@ -100,22 +102,18 @@ function DashboardPage() {
     setIsGenerating(true)
 
     try {
-      const data = await apiRequest<{
-        title?: string
-        category?: string
-        categories?: string[]
-        priority?: string
-        summary?: string
-      }>('/api/ai/complaint-draft', {
+      const data = await apiRequest<AiComplaintDraft>('/api/ai/complaint-draft', {
         method: 'POST',
         body: JSON.stringify({ description }),
       })
 
       setDraft({
+        ...data,
         title: data.title ?? '',
         categories: data.categories?.length ? data.categories : data.category ? [data.category] : [],
         priority: data.priority ?? '',
-        summary: data.summary ?? '',
+        summary: data.summary ?? data.improvedDescription ?? description,
+        originalDescription: description,
       })
     } catch (error) {
       setAiMessage(
@@ -133,11 +131,10 @@ function DashboardPage() {
     if (!draft) return
     clearActiveDraft()
     navigate('/registrar-denuncia', {
-      state: {
-        categories: draft.categories,
-        description: (draft.summary || description.trim()).slice(0, 1000),
-        priority: draft.priority,
-      },
+      state: applyAiComplaintDraft({
+        title: '', type: '', categories: [], description: draft.originalDescription,
+        address: '', number: '', neighborhood: '', complement: '', priority: '',
+      }, draft),
     })
   }
 

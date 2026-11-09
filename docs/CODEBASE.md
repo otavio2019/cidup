@@ -90,6 +90,8 @@ As rotas públicas são `/health`, leitura pública de órgãos e login/cadastro
 
 A rota opcional `POST /api/ai/complaint-draft` envia um relato autenticado ao endpoint compatível com OpenAI configurado por `AI_BASE_URL`, `AI_MODEL` e `AI_API_KEY`. Ela produz somente um rascunho; não cria nem envia uma denúncia automaticamente. Sem chave configurada, responde `503` e o fluxo principal continua disponível.
 
+O retorno inclui `title`, `description` original, `type`, `categories`, `priority` e os campos de localização `street`, `number`, `neighborhood` e `referencePoint`, nulos quando não houver evidência suficiente no relato. A rota mantém `category`, `improvedDescription` e `summary` para clientes existentes; a prioridade continua com os rótulos `Baixa`, `Média` e `Alta`. O formulário mapeia `street` para `address` e `referencePoint` para `complement`, preserva o texto original e permite revisar os dados antes do envio. As sugestões da IA são verificadas contra o texto, mas ainda podem exigir correção pelo cidadão.
+
 ## Prisma e PostgreSQL
 
 `schema.prisma` usa o provider PostgreSQL e separa `DATABASE_URL` (runtime) de `DIRECT_URL` (migrações). Os modelos principais são:

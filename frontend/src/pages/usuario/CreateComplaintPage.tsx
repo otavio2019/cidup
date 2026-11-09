@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
+import { applyAiComplaintDraft, type AiComplaintDraft, type AiComplaintForm } from '../../aiComplaintDraft'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
@@ -13,16 +14,7 @@ const InteractiveLocationMap = lazy(() => import('../../components/usuario/Inter
 /** Primeira etapa do fluxo: relato, endereço inicial e anexo opcional da denúncia. */
 
 // ===== TIPOS E OPÇÕES DO FORMULÁRIO =====
-type ComplaintFormData = {
-  title: string
-  type: string
-  categories: string[]
-  description: string
-  address: string
-  number: string
-  neighborhood: string
-  complement: string
-}
+type ComplaintFormData = AiComplaintForm
 
 type ComplaintErrors = Partial<Record<keyof ComplaintFormData | 'photo', string>>
 
@@ -35,6 +27,7 @@ const initialForm: ComplaintFormData = {
   number: '',
   neighborhood: '',
   complement: '',
+  priority: '',
 }
 
 const complaintTypes = [
@@ -94,6 +87,7 @@ function CreateComplaintPage() {
   const [locationMessage, setLocationMessage] = useState('')
   const [draftMessage, setDraftMessage] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const automaticLocation = useRef<Partial<Pick<ComplaintFormData, 'address' | 'number' | 'neighborhood'>>>({})
   const [aiError, setAiError] = useState('')
   const [aiResult, setAiResult] = useState<{
     title: string
@@ -104,17 +98,22 @@ function CreateComplaintPage() {
 
   // ===== LOCALIZAÇÃO E GEOCODIFICAÇÃO =====
   // Usa coordenadas para sugerir endereço e bairro, sem impedir ajustes manuais.
-  async function fillAddressFromCoordinates(latitude: number, longitude: number) {
+  async function fillAddressFromCoordinates(latitude: number, longitude: number, overwrite = true) {
     try {
       const found = await reverseGeocode(latitude, longitude)
       const street = found.street
       const neighborhood = found.neighborhood
+      automaticLocation.current = overwrite ? {} : {
+        address: street || undefined,
+        number: found.houseNumber || undefined,
+        neighborhood: neighborhood || undefined,
+      }
 
       setForm((current) => ({
         ...current,
-        address: street || current.address,
-        number: found.houseNumber || current.number,
-        neighborhood: neighborhood ?? current.neighborhood,
+        address: (overwrite || !current.address.trim()) ? street || current.address : current.address,
+        number: (overwrite || !current.number.trim()) ? found.houseNumber || current.number : current.number,
+        neighborhood: (overwrite || !current.neighborhood.trim()) ? neighborhood ?? current.neighborhood : current.neighborhood,
       }))
       if (street) {
         setErrors((current) => ({ ...current, address: undefined, number: undefined, neighborhood: undefined }))
@@ -131,7 +130,7 @@ function CreateComplaintPage() {
   }
 
   // Solicita permissão de geolocalização e converte falhas em instruções ao cidadão.
-  function requestLocation() {
+  function requestLocation(overwrite = true) {
     if (!navigator.geolocation) {
       setLocationMessage('Este navegador não oferece geolocalização. Informe o endereço manualmente.')
       return
@@ -143,7 +142,7 @@ function CreateComplaintPage() {
       ({ coords }) => {
         setCoordinates({ latitude: coords.latitude, longitude: coords.longitude })
         setIsLocating(false)
-        void fillAddressFromCoordinates(coords.latitude, coords.longitude)
+        void fillAddressFromCoordinates(coords.latitude, coords.longitude, overwrite)
       },
       () => {
         setIsLocating(false)
@@ -155,7 +154,7 @@ function CreateComplaintPage() {
 
   // Tenta preencher a localização ao abrir a página quando ainda não há coordenadas.
   useEffect(() => {
-    if (!coordinates) requestLocation()
+    if (!coordinates) requestLocation(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -165,6 +164,9 @@ function CreateComplaintPage() {
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) {
     const { name, value } = event.target
+    if (name === 'address' || name === 'number' || name === 'neighborhood') {
+      delete automaticLocation.current[name]
+    }
 
     setForm((current) => ({
       ...current,
@@ -194,15 +196,10 @@ function CreateComplaintPage() {
     setAiResult(null)
     setIsAnalyzing(true)
     try {
-      const result = await apiRequest<{
-        title: string
-        categories: string[]
-        priority: string
-        improvedDescription: string
-      }>('/api/ai/complaint-draft', {
+      const result = await apiRequest<AiComplaintDraft>('/api/ai/complaint-draft', {
         method: 'POST',
         body: JSON.stringify({
-          description: form.description.trim(),
+          description: form.description,
           address: form.address.trim(),
           neighborhood: form.neighborhood.trim(),
           type: form.type.trim(),
@@ -210,18 +207,14 @@ function CreateComplaintPage() {
         }),
       })
       const categories = Array.isArray(result.categories) ? result.categories : []
-      setForm((current) => ({
-        ...current,
-        title: result.title?.trim() || current.title,
-        description: result.improvedDescription?.trim() || current.description,
-        categories,
-        type: categories[0] ?? current.type,
-      }))
+      const autoFilled = automaticLocation.current
+      setForm((current) => applyAiComplaintDraft(current, result, autoFilled))
+      automaticLocation.current = {}
       setAiResult({
         title: result.title?.trim() || form.title,
         categories,
-        priority: result.priority,
-        improvedDescription: result.improvedDescription?.trim() || form.description,
+        priority: result.priority ?? '',
+        improvedDescription: result.improvedDescription?.trim() || result.summary?.trim() || form.description,
       })
     } catch (error) {
       setAiError(error instanceof Error ? error.message : 'Não foi possível melhorar a denúncia agora.')
@@ -351,7 +344,7 @@ function CreateComplaintPage() {
       complement: form.complement.trim(),
       photoName: photo?.name ?? null,
       photoData,
-      priority: aiResult?.priority ?? null,
+      priority: form.priority || null,
       ...(coordinates ?? {}),
     }
 
@@ -541,7 +534,7 @@ function CreateComplaintPage() {
               <button
                 className="secondary-action"
                 type="button"
-                onClick={requestLocation}
+                onClick={() => requestLocation()}
                 disabled={isLocating}
               >
                 {isLocating ? 'Obtendo localização...' : coordinates ? 'Atualizar localização' : 'Obter localização atual'}
@@ -564,7 +557,7 @@ function CreateComplaintPage() {
                   setLocationMessage('')
                   void fillAddressFromCoordinates(lat, lng)
                 }}
-                onRequestLocation={requestLocation}
+                onRequestLocation={() => requestLocation()}
                 isLocating={isLocating}
               />
               </Suspense>
