@@ -1,5 +1,5 @@
 import { aiRateLimit } from '../../middlewares/rateLimits.js'
-import { complaintPriorityLabels, normalizePriority, supportedComplaintCategories } from '../../utils/complaints.js'
+import { complaintPriorityLabels, normalizePriority, normalizeRoutingText, supportedComplaintCategories } from '../../utils/complaints.js'
 import type { RouteContext } from '../context.js'
 
 // ===== USUÁRIO: IA (SUGESTÃO DE RASCUNHO DE DENÚNCIA) =====
@@ -10,14 +10,20 @@ export function registerAiDraftRoutes({ app, authenticate }: RouteContext) {
   // MIDDLEWARE: authenticate, aiRateLimit. CHAMA: API externa de IA (fetch /chat/completions),
   // normalizePriority. Prisma: nenhum. Não grava nada: só devolve o rascunho.
   app.post('/api/ai/complaint-draft', authenticate, aiRateLimit, async (request, response) => {
+    const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
     const description =
-      typeof request.body?.description === 'string'
-        ? request.body.description.trim()
-        : ''
+      text(request.body?.description)
+    const address = text(request.body?.address)
+    const neighborhood = text(request.body?.neighborhood)
+    const type = text(request.body?.type)
+    const categoriesInput = Array.isArray(request.body?.categories)
+      ? [...new Set((request.body.categories as unknown[]).filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))]
+      : []
+    const inputCategories = categoriesInput.filter((category) => supportedComplaintCategories.includes(category))
 
-    if (description.length < 10 || description.length > 1000) {
+    if (description.length < 20 || description.length > 1000) {
       response.status(400).json({
-        error: 'Descreva o problema com 10 a 1.000 caracteres.',
+        error: 'Descreva o problema com 20 a 1.000 caracteres.',
       })
       return
     }
@@ -31,8 +37,8 @@ export function registerAiDraftRoutes({ app, authenticate }: RouteContext) {
       return
     }
 
-    // 2) Chama a API de IA (compatível com OpenAI) pedindo resposta em JSON.
-    //    O prompt limita as categorias às de supportedComplaintCategories.
+      // 2) Chama a API de IA (compatível com OpenAI) pedindo resposta em JSON.
+      //    O prompt limita as categorias às de supportedComplaintCategories e proíbe invenções.
     try {
       const baseUrl = (process.env.AI_BASE_URL ?? 'https://api.openai.com/v1').replace(
         /\/$/,
@@ -53,13 +59,22 @@ export function registerAiDraftRoutes({ app, authenticate }: RouteContext) {
             {
               role: 'system',
               content:
-                'Você estrutura denúncias cidadãs em JSON. Não invente informações. Responda somente com as propriedades title, categories, priority e summary. ' +
-                `"categories" é uma lista com uma ou mais opções copiadas exatamente desta lista: ${supportedComplaintCategories.map((category) => `"${category}"`).join(', ')}. ` +
-                '"priority" é "Baixa", "Média" ou "Alta". "summary" é a descrição clara do problema, em até 1.000 caracteres, com o local se ele foi informado. Use português do Brasil.',
+                'Você é um assistente para organizar denúncias urbanas. Analise a descrição, rua, bairro e tipo ou tipos informados. ' +
+                'Melhore a descrição sem inventar informações, crie um título curto, identifique uma ou mais categorias válidas e sugira uma prioridade. ' +
+                'Mantenha rua e bairro quando informados. Não invente número, ponto de referência, órgão, local, medidas, datas ou fatos. ' +
+                'Responda somente em JSON válido, sem texto fora do JSON, com as propriedades title, categories, priority e improvedDescription. ' +
+                `"categories" deve usar somente esta lista: ${supportedComplaintCategories.map((category) => `"${category}"`).join(', ')}. ` +
+                '"priority" deve ser "Baixa", "Média" ou "Alta". Use português do Brasil.',
             },
             {
               role: 'user',
-              content: `Denúncia: ${description}`,
+              content: [
+                'Descrição original:', description,
+                '', 'Rua:', address || 'não informada',
+                '', 'Bairro:', neighborhood || 'não informado',
+                '', 'Tipo informado pelo cidadão:', type || 'não informado',
+                '', 'Categorias já selecionadas:', inputCategories.length ? inputCategories.join(', ') : 'nenhuma',
+              ].join('\n'),
             },
           ],
         }),
@@ -75,22 +90,33 @@ export function registerAiDraftRoutes({ app, authenticate }: RouteContext) {
         choices?: Array<{ message?: { content?: string | null } }>
       }
       const content = completion.choices?.[0]?.message?.content ?? '{}'
-      const draft = JSON.parse(content) as Record<string, unknown>
-      const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
-      // Mantém só as ocorrências aceitas pelo formulário; sem nenhuma válida, usa "Outro problema urbano".
+      const normalizedContent = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+      const draft = JSON.parse(normalizedContent) as Record<string, unknown>
+      // Mantém só as ocorrências aceitas pelo formulário; se a IA não retornar nenhuma,
+      // preserva as categorias já escolhidas pelo cidadão ou usa a categoria genérica segura.
       const suggested = Array.isArray(draft.categories) ? draft.categories : [draft.category]
       const validCategories = [...new Set(suggested.map(text).filter((category) => supportedComplaintCategories.includes(category)))]
-      const categories = validCategories.length ? validCategories : ['Outro problema urbano']
+      const categories = validCategories.length ? validCategories : inputCategories.length ? inputCategories : ['Outro problema urbano']
+      const title = text(draft.title).slice(0, 200) || description.slice(0, 120)
+      let improvedDescription = text(draft.improvedDescription) || text(draft.summary) || description
+      if (address && !normalizeRoutingText(improvedDescription).includes(normalizeRoutingText(address))) {
+        improvedDescription += ` Local informado: ${address}.`
+      }
+      if (neighborhood && !normalizeRoutingText(improvedDescription).includes(normalizeRoutingText(neighborhood))) {
+        improvedDescription += ` Bairro informado: ${neighborhood}.`
+      }
+      improvedDescription = improvedDescription.slice(0, 1000)
+      const priorityCode = normalizePriority(draft.priority)
+      const priority = priorityCode ? complaintPriorityLabels[priorityCode] : complaintPriorityLabels.MEDIA
 
       response.json({
-        title: text(draft.title),
+        title,
         category: categories[0],
         categories,
-        priority: (() => {
-          const priority = normalizePriority(draft.priority)
-          return priority ? complaintPriorityLabels[priority] : ''
-        })(),
-        summary: text(draft.summary).slice(0, 1000),
+        priority,
+        improvedDescription,
+        // Mantém summary para clientes antigos do dashboard.
+        summary: improvedDescription,
       })
     } catch (error) {
       console.error('Falha ao gerar rascunho de denúncia com IA.', error instanceof Error ? error.message : error)

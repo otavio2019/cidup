@@ -178,6 +178,9 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     const tituloValue = body.titulo ?? body.title ?? tipoValue
     const descricaoValue = body.descricao ?? body.description
     const enderecoValue = body.endereco ?? body.address
+    const neighborhoodValue = body.bairro ?? body.neighborhood ?? (
+      typeof enderecoValue === 'string' ? enderecoValue.split(',').map((part) => part.trim()).filter(Boolean).at(-1) : undefined
+    )
     const latitude = body.latitude
     const longitude = body.longitude
     const photoValue = body.foto ?? body.photo
@@ -196,7 +199,9 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     }
     if (typeof tipoValue !== 'string' || !tipoValue.trim() || tipoValue.trim().length > 100 ||
         typeof tituloValue !== 'string' || !tituloValue.trim() || tituloValue.trim().length > 200 ||
-        typeof descricaoValue !== 'string' || !descricaoValue.trim() ||
+        typeof descricaoValue !== 'string' || descricaoValue.trim().length < 20 || descricaoValue.trim().length > 1000 ||
+        typeof enderecoValue !== 'string' || !enderecoValue.trim() || enderecoValue.trim().length > 300 ||
+        typeof neighborhoodValue !== 'string' || !neighborhoodValue.trim() || neighborhoodValue.trim().length > 150 ||
         categories.length === 0 || categories.length > supportedComplaintCategories.length ||
         (hasExplicitCategories && categories.some((category) => !supportedComplaintCategories.includes(category))) ||
         (typeof tipoValue === 'string' && categories[0] !== tipoValue.trim()) ||
@@ -215,7 +220,7 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     const legacyAddress = [
       enderecoValue,
       body.number,
-      body.neighborhood,
+      neighborhoodValue,
       body.complement,
     ].filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
       .map((part) => part.trim())

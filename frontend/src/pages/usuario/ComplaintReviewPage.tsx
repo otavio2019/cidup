@@ -12,6 +12,7 @@ import '../../App.css'
 
 // ===== MODELO DO RASCUNHO E ORGANIZAÇÃO RESPONSÁVEL =====
 type ComplaintDraft = {
+  title?: string
   type?: string
   categories?: string[]
   description?: string
@@ -165,6 +166,7 @@ function ComplaintReviewPage() {
           {/* Resume relato e anexo recebidos da etapa de criação. */}
           <section className="review-card">
             <h2>Sobre o problema</h2>
+            {draft.title && <ReviewField label="Título" value={draft.title} />}
             <ReviewField label="Ocorrências" value={(draft.categories?.length ? draft.categories : [draft.type]).filter(Boolean).join(', ')} />
             <ReviewField label="Descrição" value={draft.description} />
             {draft.priority && <ReviewField label="Prioridade sugerida pela IA" value={draft.priority} />}

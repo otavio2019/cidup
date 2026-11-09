@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { apiRequest } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
@@ -13,6 +14,7 @@ const InteractiveLocationMap = lazy(() => import('../../components/usuario/Inter
 
 // ===== TIPOS E OPÇÕES DO FORMULÁRIO =====
 type ComplaintFormData = {
+  title: string
   type: string
   categories: string[]
   description: string
@@ -25,6 +27,7 @@ type ComplaintFormData = {
 type ComplaintErrors = Partial<Record<keyof ComplaintFormData | 'photo', string>>
 
 const initialForm: ComplaintFormData = {
+  title: '',
   type: '',
   categories: [],
   description: '',
@@ -90,6 +93,14 @@ function CreateComplaintPage() {
   const [isLocating, setIsLocating] = useState(false)
   const [locationMessage, setLocationMessage] = useState('')
   const [draftMessage, setDraftMessage] = useState('')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [aiResult, setAiResult] = useState<{
+    title: string
+    categories: string[]
+    priority: string
+    improvedDescription: string
+  } | null>(null)
 
   // ===== LOCALIZAÇÃO E GEOCODIFICAÇÃO =====
   // Usa coordenadas para sugerir endereço e bairro, sem impedir ajustes manuais.
@@ -176,6 +187,47 @@ function CreateComplaintPage() {
     })
     setErrors((current) => ({ ...current, type: undefined }))
     setSubmitError('')
+  }
+
+  async function analyzeComplaint() {
+    setAiError('')
+    setAiResult(null)
+    setIsAnalyzing(true)
+    try {
+      const result = await apiRequest<{
+        title: string
+        categories: string[]
+        priority: string
+        improvedDescription: string
+      }>('/api/ai/complaint-draft', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: form.description.trim(),
+          address: form.address.trim(),
+          neighborhood: form.neighborhood.trim(),
+          type: form.type.trim(),
+          categories: form.categories.map((category) => category.trim()).filter(Boolean),
+        }),
+      })
+      const categories = Array.isArray(result.categories) ? result.categories : []
+      setForm((current) => ({
+        ...current,
+        title: result.title?.trim() || current.title,
+        description: result.improvedDescription?.trim() || current.description,
+        categories,
+        type: categories[0] ?? current.type,
+      }))
+      setAiResult({
+        title: result.title?.trim() || form.title,
+        categories,
+        priority: result.priority,
+        improvedDescription: result.improvedDescription?.trim() || form.description,
+      })
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'Não foi possível melhorar a denúncia agora.')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   // Aceita somente imagens dentro do limite de tamanho definido para anexos.
@@ -299,6 +351,7 @@ function CreateComplaintPage() {
       complement: form.complement.trim(),
       photoName: photo?.name ?? null,
       photoData,
+      priority: aiResult?.priority ?? null,
       ...(coordinates ?? {}),
     }
 
@@ -368,6 +421,43 @@ function CreateComplaintPage() {
                 aria-describedby={errors.description ? 'description-error' : undefined}
               />
               {errors.description && <p className="field-error" id="description-error">{errors.description}</p>}
+              <div className="ai-report-section complaint-ai-section">
+                <div className="section-heading">
+                  <div>
+                    <p className="ai-kicker">ASSISTENTE DE DENÚNCIA</p>
+                    <h3>Melhore seu relato com IA</h3>
+                  </div>
+                  <span className="ai-badge">IA</span>
+                </div>
+                <p className="ai-description">A IA organiza o texto sem inventar informações. Você revisará tudo antes do envio.</p>
+                <button
+                  className="ai-button"
+                  type="button"
+                  onClick={() => void analyzeComplaint()}
+                  disabled={isAnalyzing || form.description.trim().length < 20}
+                >
+                  {isAnalyzing ? 'Analisando denúncia...' : 'Melhorar denúncia com IA'}
+                </button>
+                {aiError && <p className="ai-message" role="alert">{aiError}</p>}
+                {aiResult && (
+                  <div className="ai-draft" aria-live="polite">
+                    <span className="draft-label">SUGESTÃO DA IA</span>
+                    <h4>{aiResult.title}</h4>
+                    <div className="draft-meta">
+                      {aiResult.categories.map((category) => <span key={category}>{category}</span>)}
+                      <span>Prioridade: {aiResult.priority}</span>
+                    </div>
+                    <p>{aiResult.improvedDescription}</p>
+                    <small>Confira as informações antes de enviar a denúncia.</small>
+                  </div>
+                )}
+              </div>
+              {aiResult && (
+                <div className="complaint-field">
+                  <label htmlFor="title">Título da denúncia</label>
+                  <input id="title" name="title" type="text" value={form.title} onChange={handleChange} maxLength={200} placeholder="Título sugerido pela IA" />
+                </div>
+              )}
             </div>
           </div>
 
