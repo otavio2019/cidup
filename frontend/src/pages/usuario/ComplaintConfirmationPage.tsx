@@ -50,6 +50,7 @@ function ComplaintConfirmationPage() {
     : complaint.type?.name ?? 'Não informado'
 
   // ===== AÇÕES DO PROTOCOLO =====
+  // Abre a impressão do navegador para salvar ou imprimir o protocolo.
   function exportProtocolPdf() {
     window.print()
   }

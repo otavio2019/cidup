@@ -19,6 +19,7 @@ const complaintStatusLabels: Record<string, string> = {
   CANCELED: 'Cancelada',
 }
 
+// Lê o primeiro nome salvo no perfil para saudar o cidadão.
 function readStoredCitizenName() {
   try {
     const profile = JSON.parse(localStorage.getItem('cidup-profile') ?? '{}') as { name?: unknown }
@@ -66,6 +67,7 @@ function DashboardPage() {
       .catch(() => undefined)
   }, [])
 
+  // Encerra a sessão no servidor, limpa dados locais e volta ao login.
   async function handleLogout() {
     setLogoutError('')
     try {
@@ -138,6 +140,7 @@ function DashboardPage() {
     })
   }
 
+  // Conta quantas denúncias têm o status informado.
   const countStatus = (status: string) => complaints.filter((complaint) => complaint.status === status).length
   const deniedCount = countStatus('NOT_SERVED') + countStatus('CANCELLED') + countStatus('CANCELED')
 

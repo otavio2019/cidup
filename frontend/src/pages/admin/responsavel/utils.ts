@@ -8,17 +8,20 @@ export const statusOptions: ComplaintStatus[] = ['Recebida', 'Em análise', 'Enc
 
 export const priorityLabels = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' } as const
 
+// Converte uma data ISO na chave ano-mês usada pelos filtros.
 export function monthKey(isoDate: string) {
   const date = new Date(isoDate)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Formata a chave ano-mês como nome do mês e ano em português.
 export function monthLabel(key: string) {
   const [year, month] = key.split('-').map(Number)
   const label = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   return label.charAt(0).toLocaleUpperCase('pt-BR') + label.slice(1)
 }
 
+// Mostra há quanto tempo a data ocorreu, em minutos, horas ou dias.
 export function relativeTime(isoDate: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(isoDate).getTime()) / 60000))
   if (minutes < 60) return `há ${Math.max(minutes, 1)} min`
@@ -26,14 +29,17 @@ export function relativeTime(isoDate: string) {
   return `há ${Math.floor(minutes / 1440)} d`
 }
 
+// Calcula a participação percentual e evita divisão por zero.
 export function percent(part: number, total: number) {
   return total === 0 ? 0 : (part / total) * 100
 }
 
 const NEARBY_RADIUS_METERS = 50
 
+// Mede a distância entre duas denúncias usando suas coordenadas.
 function distanceInMeters(first: AdminComplaint, second: AdminComplaint) {
   const earthRadius = 6371000
+  // Converte graus para radianos antes do cálculo de distância.
   const radians = (value: number) => value * Math.PI / 180
   const latitudeDelta = radians(second.latitude - first.latitude)
   const longitudeDelta = radians(second.longitude - first.longitude)
@@ -44,6 +50,7 @@ function distanceInMeters(first: AdminComplaint, second: AdminComplaint) {
   return 2 * earthRadius * Math.asin(Math.sqrt(value))
 }
 
+// Confere se duas denúncias têm pelo menos uma categoria em comum.
 function shareCategory(first: AdminComplaint, second: AdminComplaint) {
   return first.categories.some((category) => second.categories.includes(category))
 }
@@ -76,6 +83,7 @@ export function groupNearbyComplaints(records: AdminComplaint[]) {
   return groups
 }
 
+// Traduz o status da API para o rótulo exibido no painel.
 export function apiStatusToLabel(status: string): ComplaintStatus {
   return ({
     RECEIVED: 'Recebida',
@@ -87,6 +95,7 @@ export function apiStatusToLabel(status: string): ComplaintStatus {
   } as Record<string, ComplaintStatus>)[status] ?? 'Recebida'
 }
 
+// Converte o rótulo do painel para o código aceito pela API.
 export function labelToApiStatus(status: ComplaintStatus) {
   return ({
     Recebida: 'RECEIVED',

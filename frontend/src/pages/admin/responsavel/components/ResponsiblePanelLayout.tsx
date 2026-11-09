@@ -26,6 +26,7 @@ type ResponsiblePanelLayoutProps = {
   onNavigate: () => void
 }
 
+// Monta a navegação, o cabeçalho e a área de conteúdo do painel responsável.
 export function ResponsiblePanelLayout({
   children,
   section,

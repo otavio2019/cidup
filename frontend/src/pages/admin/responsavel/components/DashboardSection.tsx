@@ -1,11 +1,12 @@
 import type { AdminComplaint } from '../types'
 import { NavLink } from 'react-router-dom'
-import { percent, relativeTime } from '../utils'
+import { percent, relativeTime } from '../utilitarios'
 import { Metric } from './PanelPrimitives'
 
 // ===== RESPONSÁVEL: VISÃO GERAL =====
 // QUEM USA: ResponsiblePanelPage.tsx. DADOS: denúncias carregadas de /api/complaints.
 
+// Resume o volume, os status e as denúncias recentes do painel.
 export function DashboardSection({ complaints }: { complaints: AdminComplaint[] }) {
   const total = complaints.length
   const pendingCount = complaints.filter((complaint) => complaint.status === 'Recebida' || complaint.status === 'Em análise').length

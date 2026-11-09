@@ -80,6 +80,7 @@ function ComplaintLocationPage() {
     }
   }, [])
 
+  // Atualiza as coordenadas escolhidas no mapa e busca o endereço correspondente.
   const handleMapPositionChange = useCallback((latitude: number, longitude: number) => {
     const nextCoordinates = { latitude, longitude }
     setCoordinates(nextCoordinates)

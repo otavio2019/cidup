@@ -43,6 +43,7 @@ const complaintTypes = [
 
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024
 
+// Garante que o rascunho carregado tenha os campos e categorias esperados.
 function normalizeComplaintForm(source: unknown): ComplaintFormData {
   if (!source || typeof source !== 'object') return initialForm
   const draft = source as Partial<ComplaintFormData>
@@ -180,6 +181,7 @@ function CreateComplaintPage() {
     setSubmitError('')
   }
 
+  // Atualiza as categorias selecionadas e mantém a primeira como tipo principal.
   function handleCategoryChange(category: string, checked: boolean) {
     setForm((current) => {
       const categories = checked
@@ -191,6 +193,7 @@ function CreateComplaintPage() {
     setSubmitError('')
   }
 
+  // Pede à IA uma sugestão e aplica os campos retornados ao formulário.
   async function analyzeComplaint() {
     setAiError('')
     setAiResult(null)

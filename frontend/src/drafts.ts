@@ -25,6 +25,7 @@ function currentOwner() {
   }
 }
 
+// Lê a lista salva e retorna uma lista vazia quando o conteúdo é inválido.
 function readAll(): StoredDraft[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? '[]') as unknown
@@ -34,6 +35,7 @@ function readAll(): StoredDraft[] {
   }
 }
 
+// Grava a lista de rascunhos e informa se o armazenamento funcionou.
 function writeAll(drafts: StoredDraft[]) {
   try {
     localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
@@ -52,6 +54,7 @@ export function listDrafts(): ComplaintDraftRecord[] {
     .map(({ id, updatedAt, data }) => ({ id, updatedAt, data }))
 }
 
+// Encontra um rascunho do usuário atual pelo identificador.
 export function getDraft(id: string): ComplaintDraftRecord | null {
   return listDrafts().find((draft) => draft.id === id) ?? null
 }
@@ -69,16 +72,19 @@ export function saveDraft(data: DraftData, id?: string | null): string {
   return draftId
 }
 
+// Remove o rascunho do usuário e encerra sua edição se estiver ativo.
 export function deleteDraft(id: string) {
   const owner = currentOwner()
   writeAll(readAll().filter((draft) => !(draft.id === id && draft.owner === owner)))
   if (getActiveDraftId() === id) clearActiveDraft()
 }
 
+// Retorna o identificador do rascunho em edição nesta aba.
 export function getActiveDraftId() {
   return sessionStorage.getItem(ACTIVE_DRAFT_KEY)
 }
 
+// Marca qual rascunho está aberto para edição nesta aba.
 function setActiveDraftId(id: string) {
   sessionStorage.setItem(ACTIVE_DRAFT_KEY, id)
 }

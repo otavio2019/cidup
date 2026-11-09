@@ -29,10 +29,12 @@ type ComplaintDraft = {
 
 type Organization = { nome: string }
 
+// Remove acentos e padroniza o texto para comparar nomes de categorias e órgãos.
 function normalizeText(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
 }
 
+// Sugere um órgão para uma categoria de denúncia.
 function findResponsibleOrganization(type: string, organizations: Organization[]) {
   const normalizedType = normalizeText(type)
   const rules = [
@@ -49,6 +51,7 @@ function findResponsibleOrganization(type: string, organizations: Organization[]
   })?.nome
 }
 
+// Retorna os órgãos sugeridos sem repetir nomes.
 function findResponsibleOrganizations(types: string[], organizations: Organization[]) {
   return [...new Set(types
     .map((type) => findResponsibleOrganization(type, organizations))

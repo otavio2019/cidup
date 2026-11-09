@@ -25,12 +25,14 @@ export type AiComplaintForm = {
   priority: string
 }
 
+// Combina a sugestão da IA com o formulário sem apagar dados preenchidos.
 export function applyAiComplaintDraft(
   form: AiComplaintForm,
   draft: AiComplaintDraft,
   automaticLocation: Partial<Pick<AiComplaintForm, 'address' | 'number' | 'neighborhood'>> = {},
 ): AiComplaintForm {
   const categories = draft.categories?.length ? draft.categories : draft.category ? [draft.category] : form.categories
+  // Permite substituir só campos vazios ou preenchidos automaticamente pelo GPS.
   const canReplace = (field: 'address' | 'number' | 'neighborhood') =>
     !form[field].trim() || (Boolean(automaticLocation[field]) && form[field] === automaticLocation[field])
   return {

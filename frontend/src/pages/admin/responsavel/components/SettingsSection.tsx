@@ -4,6 +4,7 @@ import { Info } from './PanelPrimitives'
 // ===== RESPONSÁVEL: CONFIGURAÇÕES DA CONTA =====
 // QUEM USA: ResponsiblePanelPage.tsx. DADOS: sessão autenticada em /api/auth/session.
 
+// Apresenta os dados da conta autenticada do responsável.
 export function SettingsSection({ profile }: { profile: ResponsibleProfile | null }) {
   return (
     <>

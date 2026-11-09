@@ -1,5 +1,5 @@
 import type { AdminComplaint } from '../types'
-import { ALL_PERIODS, monthLabel, percent } from '../utils'
+import { ALL_PERIODS, monthLabel, percent } from '../utilitarios'
 import { Metric } from './PanelPrimitives'
 
 // ===== RESPONSÁVEL: RELATÓRIOS E INDICADORES =====
@@ -14,6 +14,7 @@ type ReportsSectionProps = {
   onExport: () => void
 }
 
+// Exibe métricas e gráficos das denúncias no período selecionado.
 export function ReportsSection({ complaints, categories, period, periodOptions, onPeriodChange, onExport }: ReportsSectionProps) {
   const total = complaints.length
   const resolved = complaints.filter((complaint) => complaint.status === 'Resolvida').length
@@ -24,6 +25,7 @@ export function ReportsSection({ complaints, categories, period, periodOptions, 
   })
   const maxWeek = Math.max(...weekCounts, 1)
   const maxCategory = Math.max(...categories.map(([, count]) => count), 1)
+  // Formata percentuais com uma casa decimal e vírgula.
   const format = (value: number) => `${value.toFixed(1).replace('.', ',')}%`
 
   return (

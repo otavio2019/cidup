@@ -18,6 +18,7 @@ type CitizenProfile = {
   registeredAt?: string
 }
 
+// Recupera o perfil em cache e usa um objeto vazio se os dados não forem válidos.
 function readProfile(): CitizenProfile {
   try {
     const storedProfile = localStorage.getItem('cidup-profile')
@@ -29,16 +30,19 @@ function readProfile(): CitizenProfile {
   }
 }
 
+// Formata a data de cadastro ou informa que ela não está disponível.
 function formatRegistrationDate(value?: string) {
   if (!value) return 'Não informada'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? 'Não informada' : new Intl.DateTimeFormat('pt-BR').format(date)
 }
 
+// Remove tudo que não for número de um campo de documento ou telefone.
 function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
+// Limita e aplica a máscara de CPF enquanto o cidadão digita.
 function formatInputCpf(value: string) {
   return onlyDigits(value).slice(0, 11)
     .replace(/(\d{3})(\d)/, '$1.$2')
@@ -46,10 +50,12 @@ function formatInputCpf(value: string) {
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
 }
 
+// Limita e aplica a máscara de CEP enquanto o cidadão digita.
 function formatInputCep(value: string) {
   return onlyDigits(value).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+// Formata o telefone durante a edição, conforme a quantidade de dígitos.
 function formatInputPhone(value: string) {
   const digits = onlyDigits(value).slice(0, 11)
   if (digits.length <= 2) return digits ? `(${digits}` : ''
@@ -58,16 +64,19 @@ function formatInputPhone(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
+// Exibe o CPF com máscara ou um texto para dados ausentes.
 function formatCpf(value?: string | null) {
   const digits = onlyDigits(value ?? '')
   return digits.length === 11 ? digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : value || 'Não informado'
 }
 
+// Exibe o CEP com máscara ou um texto para dados ausentes.
 function formatCep(value?: string | null) {
   const digits = onlyDigits(value ?? '')
   return digits.length === 8 ? digits.replace(/(\d{5})(\d{3})/, '$1-$2') : value || 'Não informado'
 }
 
+// Converte o arquivo da foto em texto para envio e armazenamento local.
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -77,6 +86,7 @@ function readFileAsDataUrl(file: File) {
   })
 }
 
+// Exibe o perfil, sincroniza os dados da sessão e permite editá-los.
 function ProfilePage() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState<CitizenProfile>(() => readProfile())
@@ -106,6 +116,7 @@ function ProfilePage() {
       .catch(() => undefined)
   }, [])
 
+  // Valida a foto escolhida e carrega sua prévia no formulário.
   async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return

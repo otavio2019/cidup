@@ -1,6 +1,7 @@
 // ===== RESPONSÁVEL: CATEGORIAS DE DENÚNCIA =====
 // QUEM USA: ResponsiblePanelPage.tsx. DADOS: categorias contadas a partir de /api/complaints.
 
+// Lista as categorias registradas e a quantidade de denúncias em cada uma.
 export function ComplaintTypesSection({ categories }: { categories: Array<[string, number]> }) {
   return (
     <>

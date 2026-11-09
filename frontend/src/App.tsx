@@ -65,6 +65,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   return children
 }
 
+// Libera a troca de senha somente para cidadãos com senha temporária pendente.
 export function TemporaryPasswordRoute({ children }: { children: ReactNode }) {
   const { loading, user } = useSession()
 

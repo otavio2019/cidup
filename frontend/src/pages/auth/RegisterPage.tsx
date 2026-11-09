@@ -17,10 +17,12 @@ function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
   )
 }
 
+// Remove caracteres de formatação para validar documentos.
 function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
+// Limita e aplica a máscara de CPF no formulário.
 function formatCpf(value: string) {
   const digits = onlyDigits(value).slice(0, 11)
   return digits
@@ -29,11 +31,13 @@ function formatCpf(value: string) {
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
 }
 
+// Limita e aplica a máscara de CEP no formulário.
 function formatCep(value: string) {
   const digits = onlyDigits(value).slice(0, 8)
   return digits.replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+// Formata o telefone conforme os dígitos informados.
 function formatPhone(value: string) {
   const digits = onlyDigits(value).slice(0, 11)
   if (digits.length <= 2) return digits ? `(${digits}` : ''
@@ -42,6 +46,7 @@ function formatPhone(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
+// Confere os dígitos verificadores do CPF.
 function isValidCpf(value: string) {
   const cpf = onlyDigits(value)
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false

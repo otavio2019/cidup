@@ -12,6 +12,7 @@ type PasswordRecoverySectionProps = {
   onSubmit: (event: FormEvent<HTMLFormElement>, requestId: number) => void
 }
 
+// Lista pedidos de recuperação e recebe a senha temporária definida pelo responsável.
 export function PasswordRecoverySection({
   requests,
   temporaryPasswords,

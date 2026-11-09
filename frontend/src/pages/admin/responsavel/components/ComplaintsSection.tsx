@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import type { AdminComplaint, ComplaintStatus, Organization } from '../types'
-import { ALL_PERIODS, monthLabel, priorityLabels, statusOptions } from '../utils'
+import { ALL_PERIODS, monthLabel, priorityLabels, statusOptions } from '../utilitarios'
 import { Info, PriorityBadge, StatusBadge } from './PanelPrimitives'
 
 // ===== RESPONSÁVEL: LISTA E DETALHES DAS DENÚNCIAS =====
@@ -31,6 +31,7 @@ type ComplaintsSectionProps = {
   onExport: () => void
 }
 
+// Exibe a lista filtrada de denúncias ou os detalhes da selecionada.
 export function ComplaintsSection({
   selectedComplaint,
   visibleComplaints,

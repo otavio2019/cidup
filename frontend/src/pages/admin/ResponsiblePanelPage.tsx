@@ -34,6 +34,7 @@ const sectionHeadings: Record<string, string> = {
   configuracoes: 'Configurações',
 }
 
+// Carrega os dados administrativos e coordena as seções do painel.
 function ResponsiblePanelPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -106,6 +107,7 @@ function ResponsiblePanelPage() {
   }, [])
 
   const selectedComplaint = complaints.find((complaint) => complaint.protocol === selectedProtocol)
+  // Monta a lista de meses disponíveis para o filtro do painel.
   const periodOptions = useMemo(
     () => [...new Set(complaints.map((complaint) => monthKey(complaint.createdAt)))].sort().reverse(),
     [complaints],
@@ -114,6 +116,7 @@ function ResponsiblePanelPage() {
     () => period === ALL_PERIODS ? complaints : complaints.filter((complaint) => monthKey(complaint.createdAt) === period),
     [complaints, period],
   )
+  // Conta as categorias presentes nas denúncias do período selecionado.
   const categories = useMemo(() => {
     const counts = new Map<string, number>()
     periodComplaints.forEach((complaint) => {

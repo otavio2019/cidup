@@ -11,6 +11,7 @@ export class ApiError extends Error {
   status: number
   retryAfterSeconds: number | null
 
+  // Guarda a mensagem HTTP, o status e o tempo de espera informado pelo servidor.
   constructor(message: string, status: number, retryAfterSeconds: number | null) {
     super(message)
     this.name = 'ApiError'

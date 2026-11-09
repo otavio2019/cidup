@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 
+// Anima cada letra e mantém uma cópia acessível para leitores de tela.
 export default function BouncingText({ children }: { children: string }) {
   return (
     <span className="bouncing-text">

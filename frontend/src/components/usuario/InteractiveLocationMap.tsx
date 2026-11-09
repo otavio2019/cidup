@@ -10,6 +10,7 @@ type InteractiveLocationMapProps = {
   isLocating?: boolean
 }
 
+// Centraliza o mapa quando as coordenadas da denúncia mudam.
 function MapCenterUpdater({ coordinates }: { coordinates: LatLngLiteral }) {
   const map = useMap()
 
@@ -20,6 +21,7 @@ function MapCenterUpdater({ coordinates }: { coordinates: LatLngLiteral }) {
   return null
 }
 
+// Envia ao formulário o ponto escolhido com um clique no mapa.
 function MapClickHandler({ onPositionChange }: { onPositionChange: (coordinates: LatLngLiteral) => void }) {
   useMapEvents({
     click: (event) => onPositionChange({ lat: event.latlng.lat, lng: event.latlng.lng }),
@@ -27,8 +29,10 @@ function MapClickHandler({ onPositionChange }: { onPositionChange: (coordinates:
   return null
 }
 
+// Exibe o mapa, o marcador ajustável e o atalho para obter a localização atual.
 function InteractiveLocationMap({ coordinates, onPositionChange, onRequestLocation, isLocating = false }: InteractiveLocationMapProps) {
   const defaultCenter = useMemo<LatLngLiteral>(() => ({ lat: -7.23056, lng: -35.88111 }), [])
+  // Cria o ícone visual usado no marcador da denúncia.
   const markerIcon = useMemo(() => L.divIcon({
     className: 'cidup-map-marker',
     html: '<span aria-hidden="true">⌖</span>',
