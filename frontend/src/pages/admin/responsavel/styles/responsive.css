@@ -104,6 +104,10 @@
       min-height: auto;
     }
 
+    .rp-information-heading {
+      align-items: flex-start;
+    }
+
     .rp-update-panel {
       gap: 12px;
     }
@@ -152,6 +156,25 @@
 
     .rp-topbar-actions {
       gap: 8px;
+    }
+
+    .rp-information-heading {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .rp-information-heading .complaint-pdf-share {
+      align-items: stretch;
+    }
+
+    .rp-complaint-pdf-button {
+      width: 100%;
+      white-space: normal;
+    }
+
+    .rp-information-heading .complaint-pdf-share-message {
+      max-width: none;
+      text-align: left;
     }
 
     .rp-profile-button {
