@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../api'
 import { applyAiComplaintDraft, type AiComplaintDraft, type AiComplaintForm } from '../../aiComplaintDraft'
+import { validateComplaintForm } from '../../complaintValidation'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { getActiveDraftId, saveDraft } from '../../drafts'
@@ -257,49 +258,6 @@ function CreateComplaintPage() {
     }))
   }
 
-  // Verifica os campos obrigatórios e os limites da descrição antes do avanço.
-  function validateForm(): ComplaintErrors {
-    const nextErrors: ComplaintErrors = {}
-    const trimmedDescription = form.description.trim()
-
-    if (errors.photo) {
-      nextErrors.photo = errors.photo
-    }
-
-    if (form.categories.length === 0) {
-      nextErrors.type = 'Selecione ao menos uma ocorrência.'
-    }
-
-    if (!trimmedDescription) {
-      nextErrors.description = 'Descreva o problema encontrado.'
-    } else if (trimmedDescription.length < 20) {
-      nextErrors.description = 'A descrição deve ter pelo menos 20 caracteres.'
-    } else if (trimmedDescription.length > 1000) {
-      nextErrors.description = 'A descrição deve ter no máximo 1.000 caracteres.'
-    }
-
-    if (!form.address.trim()) {
-      nextErrors.address = 'Informe o nome da rua ou avenida.'
-    }
-
-    const normalizedNumber = form.number.trim().toUpperCase()
-    const hasNoNumber = normalizedNumber === 'S/N'
-
-    if (!normalizedNumber) {
-      nextErrors.number = 'Informe o número ou digite “S/N”.'
-    }
-
-    if (hasNoNumber && !form.complement.trim()) {
-      nextErrors.complement = 'Informe um ponto de referência quando o local não tiver número.'
-    }
-
-    if (!form.neighborhood.trim()) {
-      nextErrors.neighborhood = 'Informe o bairro.'
-    }
-
-    return nextErrors
-  }
-
   // ===== VALIDAÇÃO E PRÓXIMA ETAPA =====
   // Salva o que já foi preenchido (sem validar) para o cidadão continuar depois em /rascunhos.
   function handleSaveDraft() {
@@ -317,7 +275,7 @@ function CreateComplaintPage() {
   // Persiste o rascunho validado e encaminha o cidadão à confirmação da localização.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const nextErrors = validateForm()
+    const nextErrors = validateComplaintForm(form, errors.photo)
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
