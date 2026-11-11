@@ -324,6 +324,38 @@
     margin-bottom: 16px;
   }
 
+  .rp-information-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .rp-information-heading h2 {
+    margin: 0;
+  }
+
+  .rp-information-heading .complaint-pdf-share {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 7px;
+  }
+
+  .rp-complaint-pdf-button {
+    min-height: 36px;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  .rp-information-heading .complaint-pdf-share-message {
+    max-width: 280px;
+    color: var(--rp-muted);
+    font-size: 10px;
+    text-align: right;
+  }
+
   .rp-info-row {
     padding: 13px 0 10px;
     border-bottom: 1px solid var(--rp-line);
@@ -418,4 +450,3 @@
     font-size: 10px;
     font-weight: 650;
   }
-

@@ -867,6 +867,18 @@
   width: auto;
 }
 
+.complaint-pdf-share {
+  display: contents;
+}
+
+.complaint-pdf-share-message {
+  max-width: 360px;
+  margin: 0;
+  color: var(--citizen-muted);
+  font-size: 13px;
+  text-align: left;
+}
+
 .complaint-detail-heading-actions {
   display: flex;
   flex-direction: column;

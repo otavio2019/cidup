@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import type { AdminComplaint, ComplaintStatus, Organization } from '../types'
-import { ALL_PERIODS, monthLabel, priorityLabels, statusOptions } from '../utilitarios'
+import ComplaintPdfShareButton from '../../../../components/ComplaintPdfShareButton'
+import { ALL_PERIODS, monthLabel, priorityLabels, statusOptions } from '../utils'
 import { Info, PriorityBadge, StatusBadge } from './PanelPrimitives'
 
 // ===== RESPONSÁVEL: LISTA E DETALHES DAS DENÚNCIAS =====
@@ -66,7 +67,22 @@ export function ComplaintsSection({
         </div>
         <div className="rp-detail-grid">
           <section className="rp-panel rp-information-panel">
-            <h2>Informações da denúncia</h2>
+            <div className="rp-information-heading">
+              <h2>Informações da denúncia</h2>
+              <ComplaintPdfShareButton
+                buttonClassName="rp-outline-button rp-complaint-pdf-button"
+                complaint={{
+                  protocol: selectedComplaint.protocol,
+                  registeredAt: selectedComplaint.date,
+                  status: selectedComplaint.status,
+                  description: selectedComplaint.description,
+                  address: selectedComplaint.address,
+                  neighborhood: selectedComplaint.neighborhood,
+                  type: selectedComplaint.category,
+                  categories: selectedComplaint.categories,
+                }}
+              />
+            </div>
             <Info label="Descrição" value={selectedComplaint.description} />
             <Info label="Endereço" value={selectedComplaint.address} />
             <Info label="Cidadão" value={selectedComplaint.citizen} />

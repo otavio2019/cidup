@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
-import { deleteDraft, listDrafts, resumeDraft } from '../../drafts'
+import { clearActiveDraft, deleteDraft, listDrafts, resumeDraft } from '../../drafts'
 import '../../App.css'
 
 // ===== PÁGINA DE RASCUNHOS =====
@@ -44,7 +44,7 @@ function DraftsPage() {
             <p>Denúncias que você começou e ainda não enviou. Ficam salvas neste navegador.</p>
           </div>
           {/* "Nova denúncia": limpa o rascunho ativo para abrir o formulário em branco. */}
-          <Link className="primary-action" to="/registrar-denuncia" onClick={() => { sessionStorage.removeItem('cidup-complaint-draft'); sessionStorage.removeItem('cidup-active-draft-id') }}>
+          <Link className="primary-action" to="/registrar-denuncia" onClick={clearActiveDraft}>
             Nova denúncia
           </Link>
         </div>
