@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../../../api'
 
 // Notificação entregue pelo endpoint /api/notifications.
@@ -22,10 +22,22 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
+  const [toast, setToast] = useState<NotificationItem | null>(null)
+  const knownIds = useRef<Set<number> | null>(null)
+  const toastTimer = useRef<number | null>(null)
 
   async function loadNotifications() {
     try {
       const data = await apiRequest<NotificationResponse>('/api/notifications')
+      const incoming = knownIds.current
+        ? data.notifications.find((item) => !item.read && !knownIds.current?.has(item.id))
+        : null
+      if (incoming) {
+        setToast(incoming)
+        if (toastTimer.current) window.clearTimeout(toastTimer.current)
+        toastTimer.current = window.setTimeout(() => setToast(null), 8000)
+      }
+      knownIds.current = new Set(data.notifications.map((item) => item.id))
       setNotifications(data.notifications)
       setUnreadCount(data.unreadCount)
     } catch {
@@ -36,7 +48,10 @@ export function NotificationBell() {
   useEffect(() => {
     void loadNotifications()
     const interval = window.setInterval(() => { void loadNotifications() }, 30000)
-    return () => window.clearInterval(interval)
+    return () => {
+      window.clearInterval(interval)
+      if (toastTimer.current) window.clearTimeout(toastTimer.current)
+    }
   }, [])
 
   async function markAsRead(id: number) {
@@ -61,6 +76,24 @@ export function NotificationBell() {
 
   return (
     <div className="rp-notification-wrap">
+      {toast && (
+        <div className="rp-notification-toast" role="alert" aria-live="assertive">
+          <button
+            type="button"
+            className="rp-notification-toast-content"
+            onClick={() => {
+              setIsOpen(true)
+              void markAsRead(toast.id)
+              setToast(null)
+            }}
+          >
+            <strong>{toast.title}</strong>
+            <span>{toast.message}</span>
+            <small>Clique para visualizar</small>
+          </button>
+          <button type="button" className="rp-notification-toast-close" aria-label="Fechar aviso" onClick={() => setToast(null)}>×</button>
+        </div>
+      )}
       <button
         className="rp-notification-button"
         type="button"

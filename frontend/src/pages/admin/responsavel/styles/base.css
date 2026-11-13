@@ -274,6 +274,67 @@
     box-shadow: 0 12px 32px rgb(16 47 73 / 18%);
   }
 
+  .rp-notification-toast {
+    position: fixed;
+    z-index: 30;
+    top: 74px;
+    right: 30px;
+    display: flex;
+    width: min(390px, calc(100vw - 32px));
+    border: 1px solid #9bc9e7;
+    border-left: 4px solid var(--rp-blue);
+    border-radius: 9px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgb(16 47 73 / 22%);
+  }
+
+  .rp-notification-toast-content {
+    display: grid;
+    flex: 1;
+    gap: 4px;
+    padding: 13px 10px 13px 14px;
+    border: 0;
+    color: var(--rp-ink);
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .rp-notification-toast-content:hover,
+  .rp-notification-toast-content:focus-visible {
+    background: #f0f7fc;
+    outline: none;
+  }
+
+  .rp-notification-toast-content strong {
+    font-size: 13px;
+  }
+
+  .rp-notification-toast-content span,
+  .rp-notification-toast-content small {
+    color: var(--rp-muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .rp-notification-toast-close {
+    align-self: start;
+    padding: 7px 10px;
+    border: 0;
+    color: var(--rp-muted);
+    background: transparent;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .rp-notification-toast-close:hover,
+  .rp-notification-toast-close:focus-visible {
+    color: var(--rp-ink);
+    outline: none;
+  }
+
   .rp-notification-heading {
     display: flex;
     align-items: center;
