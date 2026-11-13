@@ -13,6 +13,7 @@ import { registerRegisterRoutes } from './rotas/auth/register.js'
 import { registerSessionRoutes } from './rotas/auth/session.js'
 import { registerOrganizationRoutes } from './rotas/admin/organizations.js'
 import { registerPasswordRecoveryRequestRoutes } from './rotas/admin/passwordRecoveryRequests.js'
+import { registerNotificationRoutes } from './rotas/notifications.js'
 import { registerAiDraftRoutes } from './rotas/usuario/aiDraft.js'
 import { registerComplaintRoutes } from './rotas/usuario/complaints.js'
 import { registerHistoryRoutes } from './rotas/usuario/history.js'
@@ -131,6 +132,7 @@ export function createApp(
   // admin
   registerPasswordRecoveryRequestRoutes(context)
   registerOrganizationRoutes(context)
+  registerNotificationRoutes(context)
   // usuario
   registerProfileRoutes(context)
   registerComplaintRoutes(context)

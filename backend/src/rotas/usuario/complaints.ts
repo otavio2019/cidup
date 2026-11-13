@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client'
 import { readAuthUserId } from '../../auth.js'
 import { notifySafely, sendComplaintReceivedEmail, sendComplaintStatusEmail } from '../../email.js'
 import { isResponsibleRequest } from '../../intermediarios/authenticate.js'
+import { createNotification, notifyResponsibleOrganizations, notifySafely as notifyNotificationSafely } from '../../notifications.js'
 import {
   complaintResponse,
   distanceInMeters,
@@ -272,6 +273,22 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
           usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
         },
       })
+      void notifyNotificationSafely(() => createNotification(database, {
+        title: 'Denúncia recebida',
+        message: `Sua denúncia CIDUP-${denuncia.id_denuncia} foi registrada e encaminhada para atendimento.`,
+        type: 'COMPLAINT_RECEIVED',
+        userId: denuncia.id_usuario,
+        complaintId: denuncia.id_denuncia,
+      }))
+      void notifyNotificationSafely(() => notifyResponsibleOrganizations(database,
+        routedOrganizations.map((item) => item.id_orgao),
+        {
+          title: 'Nova denúncia recebida',
+          message: `A denúncia CIDUP-${denuncia.id_denuncia} foi encaminhada para atendimento.`,
+          type: 'COMPLAINT_RECEIVED',
+          complaintId: denuncia.id_denuncia,
+        },
+      ))
       if (denuncia.usuario?.email) {
         void notifySafely(() => sendComplaintReceivedEmail(denuncia.usuario.email, `CIDUP-${denuncia.id_denuncia}`, denuncia.status))
       }
@@ -374,6 +391,15 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
       })
       // 3) Só avisa o cidadão por e-mail quando o status realmente mudou.
       const statusChanged = typeof data.status === 'string' && data.status !== existing.status
+      if (statusChanged && denuncia.usuario?.id_usuario) {
+        void notifyNotificationSafely(() => createNotification(database, {
+          title: 'Atualização da denúncia',
+          message: `A denúncia CIDUP-${denuncia.id_denuncia} foi atualizada para ${denuncia.status}.`,
+          type: 'COMPLAINT_STATUS',
+          userId: denuncia.usuario.id_usuario,
+          complaintId: denuncia.id_denuncia,
+        }))
+      }
       if (statusChanged && denuncia.usuario?.email) {
         void notifySafely(() => sendComplaintStatusEmail(
           denuncia.usuario.email,

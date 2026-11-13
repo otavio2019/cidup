@@ -90,12 +90,25 @@ export type StoredComplaint = {
   orgao: { id_orgao: number; nome: string }
 }
 
+export type StoredNotification = {
+  id: number
+  titulo: string
+  mensagem: string
+  tipo: string
+  lida: boolean
+  data_criacao: Date
+  id_usuario: number | null
+  id_responsavel: number | null
+  id_denuncia: number | null
+}
+
 export const users = new Map<number, StoredUser>()
 export const resetTokens = new Map<number, StoredResetToken>()
 export const recoveryRequests = new Map<number, StoredRecoveryRequest>()
 export const responsibleAccounts = new Map<number, StoredResponsible>()
 export const complaints = new Map<number, StoredComplaint>()
 export const histories = new Map<number, RecordValue>()
+export const notifications = new Map<number, StoredNotification>()
 export const calls: Array<{ model: string; method: string; args: RecordValue }> = []
 export let nextUserId = 3
 export let nextHistoryId = 1
@@ -278,6 +291,13 @@ export function installDatabaseMocks(database: PrismaClient) {
   })
 
   installDelegate(database, 'responsavel', {
+    async findMany(args) {
+      remember('responsavel', 'findMany', args)
+      const organizationIds = record(record(args.where).id_orgao).in
+      return [...responsibleAccounts.values()].filter((item) =>
+        !Array.isArray(organizationIds) || organizationIds.includes(item.id_orgao),
+      )
+    },
     async findUnique(args) {
       remember('responsavel', 'findUnique', args)
       const where = record(args.where)
@@ -290,6 +310,10 @@ export function installDatabaseMocks(database: PrismaClient) {
   })
 
   installDelegate(database, 'denuncia', {
+    async findUnique(args) {
+      remember('denuncia', 'findUnique', args)
+      return complaints.get(Number(record(args.where).id_denuncia)) ?? null
+    },
     async count(args) {
       remember('denuncia', 'count', args)
       const where = record(args.where)
@@ -363,6 +387,52 @@ export function installDatabaseMocks(database: PrismaClient) {
       remember('denuncia', 'delete', args)
       const where = record(args.where)
       complaints.delete(Number(where.id_denuncia))
+    },
+  })
+
+  const matchingNotifications = (where: RecordValue) => [...notifications.values()].filter((item) =>
+    (!('id' in where) || item.id === where.id) &&
+    (!('id_usuario' in where) || item.id_usuario === where.id_usuario) &&
+    (!('id_responsavel' in where) || item.id_responsavel === where.id_responsavel) &&
+    (!('lida' in where) || item.lida === where.lida),
+  )
+  installDelegate(database, 'notificacao', {
+    async create(args) {
+      remember('notificacao', 'create', args)
+      const data = record(args.data)
+      const item: StoredNotification = {
+        id: Math.max(0, ...notifications.keys()) + 1,
+        titulo: String(data.titulo),
+        mensagem: String(data.mensagem),
+        tipo: String(data.tipo),
+        lida: false,
+        data_criacao: new Date(),
+        id_usuario: Number(record(record(data.usuario).connect).id_usuario) || null,
+        id_responsavel: Number(record(record(data.responsavel).connect).id_responsavel) || null,
+        id_denuncia: Number(record(record(data.denuncia).connect).id_denuncia) || null,
+      }
+      notifications.set(item.id, item)
+      return item
+    },
+    async findMany(args) {
+      return matchingNotifications(record(args.where))
+        .sort((a, b) => b.data_criacao.getTime() - a.data_criacao.getTime())
+        .slice(0, Number(args.take))
+    },
+    async count(args) {
+      return matchingNotifications(record(args.where)).length
+    },
+    async groupBy(args) {
+      const counts = new Map<string, number>()
+      for (const item of matchingNotifications(record(args.where))) {
+        counts.set(item.tipo, (counts.get(item.tipo) ?? 0) + 1)
+      }
+      return [...counts].map(([tipo, count]) => ({ tipo, _count: { _all: count } }))
+    },
+    async updateMany(args) {
+      const items = matchingNotifications(record(args.where))
+      for (const item of items) Object.assign(item, record(args.data))
+      return { count: items.length }
     },
   })
 

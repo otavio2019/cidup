@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { readAuthPrincipalType, readAuthUserId } from '../../auth.js'
 import { isResponsibleRequest } from '../../intermediarios/authenticate.js'
+import { createNotification, notifySafely } from '../../notifications.js'
 import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
 import { isRecord, readPositiveInt } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
@@ -102,6 +103,14 @@ export function registerHistoryRoutes({ app, database, authenticate }: RouteCont
           return
         }
       }
+      const complaintForNotification = await database.denuncia.findUnique({
+        where: { id_denuncia },
+        select: { id_usuario: true },
+      })
+      if (!complaintForNotification) {
+        response.status(404).json({ error: 'Denúncia não encontrada.' })
+        return
+      }
       const historico = await database.historico.create({
         data: {
           descricao: body.descricao.trim(),
@@ -113,6 +122,15 @@ export function registerHistoryRoutes({ app, database, authenticate }: RouteCont
           denuncia: { connect: { id_denuncia } },
         },
       })
+      if (responsible) {
+        void notifySafely(() => createNotification(database, {
+          title: 'Nova observação na denúncia',
+          message: `O responsável adicionou uma observação à denúncia CIDUP-${id_denuncia}.`,
+          type: 'COMPLAINT_OBSERVATION',
+          userId: complaintForNotification.id_usuario,
+          complaintId: id_denuncia,
+        }))
+      }
       response.status(201).json({ historico })
     } catch (error) {
       handlePrismaError(error, response, 'create-history')

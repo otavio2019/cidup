@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { AUTH_COOKIE_NAME, AUTH_TOKEN_TTL_SECONDS, createAuthToken, readAuthPrincipalType, readAuthUserId } from '../../auth.js'
 import { notifySafely, sendPasswordResetEmail } from '../../email.js'
 import { passwordResetRateLimit } from '../../intermediarios/rateLimits.js'
+import { notifyAllResponsibles, notifySafely as notifyNotificationSafely } from '../../notifications.js'
 import { hashPassword, hashResetToken, verifyPassword } from '../../utilitarios/passwords.js'
 import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
 import { digits, isRecord, isValidCpf } from '../../utilitarios/validation.js'
@@ -48,6 +49,11 @@ export function registerPasswordRecoveryRoutes({ app, database, authenticate, se
                 id_responsavel: null,
               },
             })
+            void notifyNotificationSafely(() => notifyAllResponsibles(database, {
+              title: 'Nova recuperação de senha',
+              message: 'Um cidadão solicitou ajuda para recuperar o acesso à conta.',
+              type: 'PASSWORD_RECOVERY',
+            }))
           }
         }
         response.status(202).json({
