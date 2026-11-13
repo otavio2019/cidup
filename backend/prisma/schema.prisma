@@ -16,6 +16,7 @@ model denuncia {
   tipo          String        @db.VarChar(100)
   categorias    String[]      @default([])
   status        String        @db.VarChar(50)
+  arquivada     Boolean       @default(false)
   data_registro DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
   atualizada_em DateTime      @default(now()) @updatedAt @db.Timestamp(3)
   endereco      String

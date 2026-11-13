@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { callApi, calls, complaints, cookieFor, record, setupTestServer, type RecordValue } from '../helpers/testServer.js'
+import { callApi, calls, complaints, cookieFor, record, responsibleCookieFor, setupTestServer, type RecordValue } from '../helpers/testServer.js'
 
 // ===== TESTES: DENÚNCIAS (src/routes/usuario/complaints.ts) =====
 setupTestServer()
@@ -264,4 +264,33 @@ test('usuários não podem consultar, atualizar ou excluir denúncias de outras 
   assert.equal(remove.status, 404)
   assert.equal(calls.some((call) => call.model === 'denuncia' && ['update', 'delete'].includes(call.method)), false)
   assert.equal(complaints.get(202)?.descricao, 'Relato privado do cidadão dois')
+})
+
+test('arquivar mantém a denúncia no banco e remove-a da listagem do cidadão', async () => {
+  calls.length = 0
+  const response = await callApi('/api/complaints/101/archive', {
+    method: 'PATCH',
+    headers: { Cookie: await cookieFor(1) },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(complaints.get(101)?.arquivada, true)
+  assert.equal(calls.some((call) => call.model === 'denuncia' && call.method === 'delete'), false)
+  assert.equal(calls.some((call) => call.model === 'denuncia' && call.method === 'update'), true)
+
+  const list = await callApi('/api/complaints', { headers: { Cookie: await cookieFor(1) } })
+  const body = await list.json() as RecordValue
+  assert.equal(list.status, 200)
+  assert.equal((body.complaints as RecordValue[]).some((item) => item.id === 101), false)
+  assert.equal(complaints.has(101), true)
+})
+
+test('resposta do responsável altera o estado da denúncia sem apagar o registro', async () => {
+  const response = await callApi('/api/complaints/202', {
+    method: 'PATCH',
+    headers: { Cookie: await responsibleCookieFor(99) },
+    body: JSON.stringify({ status: 'FORWARDED' }),
+  })
+  assert.equal(response.status, 200)
+  assert.equal(complaints.get(202)?.status, 'FORWARDED')
+  assert.equal(complaints.has(202), true)
 })

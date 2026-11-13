@@ -52,6 +52,20 @@ export function normalizeComplaintCategory(value: string) {
 export const complaintPriorityLabels = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' } as const
 export type ComplaintPriority = keyof typeof complaintPriorityLabels
 
+// Traduz os códigos internos de status antes de enviá-los ao cidadão.
+export function rotuloStatusDenuncia(status: string) {
+  return ({
+    RECEIVED: 'Recebida',
+    IN_ANALYSIS: 'Em análise',
+    FORWARDED: 'Encaminhada',
+    IN_SERVICE: 'Em atendimento',
+    RESOLVED: 'Resolvida',
+    NOT_SERVED: 'Não atendida',
+    CANCELLED: 'Cancelada',
+    CANCELED: 'Cancelada',
+  } as Record<string, string>)[status] ?? status
+}
+
 // Aceita "Alta", "média", "MEDIA" etc. e devolve o código, ou null se não for uma prioridade válida.
 export function normalizePriority(value: unknown): ComplaintPriority | null {
   if (typeof value !== 'string') return null
@@ -87,6 +101,7 @@ export function complaintResponse(complaint: {
   tipo: string
   categorias?: string[]
   status: string
+  arquivada?: boolean
   data_registro: Date
   atualizada_em?: Date
   endereco: string
@@ -99,7 +114,7 @@ export function complaintResponse(complaint: {
   orgao?: { id_orgao: number; nome: string } | null
   orgaos_extras?: Array<{ id_orgao: number; nome: string }>
   usuario?: { id_usuario: number; nome: string; email: string; telefone?: string | null; cpf?: string | null; foto?: string | null } | null
-  historico?: Array<{ id_historico: number; descricao: string; observacao: string; foto?: string; data_criacao?: Date }>
+  historico?: Array<{ id_historico: number; descricao: string; observacao: string; foto?: string; data_criacao?: Date; id_responsavel?: number | null }>
 }) {
   // 1) "Atualizada em" = a data mais recente entre registro, edição e histórico.
   const updatedAtValues = [
@@ -141,6 +156,7 @@ export function complaintResponse(complaint: {
       id: item.id_historico,
       description: item.descricao,
       observation: item.observacao,
+      responsibleId: item.id_responsavel ?? null,
       photo: item.foto ?? '',
       createdAt: item.data_criacao?.toISOString() ?? complaint.data_registro.toISOString(),
     })),

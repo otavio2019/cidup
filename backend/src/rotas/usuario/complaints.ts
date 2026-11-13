@@ -5,6 +5,7 @@ import { isResponsibleRequest } from '../../intermediarios/authenticate.js'
 import { createNotification, notifyAllResponsibles, notifySafely as notifyNotificationSafely } from '../../notifications.js'
 import {
   complaintResponse,
+  rotuloStatusDenuncia,
   distanceInMeters,
   findOrganizationByComplaintType,
   NEARBY_COMPLAINT_RADIUS_METERS,
@@ -32,14 +33,14 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     const responsibleUser = isResponsibleRequest(request)
     try {
       const denuncias = await database.denuncia.findMany({
-        where: responsibleUser ? {} : { id_usuario },
+        where: responsibleUser ? {} : { id_usuario, arquivada: false },
         include: {
           orgao: { select: { id_orgao: true, nome: true } },
           orgaos_extras: { select: { id_orgao: true, nome: true } },
           usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
           historico: {
             orderBy: { id_historico: 'desc' },
-            select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true },
+            select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true, id_responsavel: true },
           },
         },
         orderBy: { data_registro: 'desc' },
@@ -77,7 +78,7 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
           usuario: { select: { id_usuario: true, nome: true, email: true, telefone: true, cpf: true, foto: true } },
           historico: {
             orderBy: { id_historico: 'desc' },
-            select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true },
+            select: { id_historico: true, descricao: true, observacao: true, foto: true, data_criacao: true, id_responsavel: true },
           },
         },
       })
@@ -410,7 +411,7 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
       if (statusChanged && denuncia.usuario?.id_usuario) {
         void notifyNotificationSafely(() => createNotification(database, {
           title: 'Atualização da denúncia',
-          message: `A denúncia CIDUP-${denuncia.id_denuncia} foi atualizada para ${denuncia.status}.`,
+          message: `A denúncia CIDUP-${denuncia.id_denuncia} foi atualizada para ${rotuloStatusDenuncia(denuncia.status)}.`,
           type: 'COMPLAINT_STATUS',
           userId: denuncia.usuario.id_usuario,
           complaintId: denuncia.id_denuncia,
@@ -430,10 +431,10 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     }
   })
 
-  // Exclui uma denúncia própria ou administrativa somente se não houver histórico associado.
-  // QUEM USA: DashboardPage.tsx (excluir). MIDDLEWARE: authenticate.
-  // PRISMA: denuncia (findFirst, delete), historico (count).
-  app.delete(['/api/complaints/:id', '/api/denuncias/:id'], authenticate, async (request, response) => {
+  // Arquiva uma denúncia sem apagar o registro nem o histórico do banco.
+  // QUEM USA: DashboardPage.tsx (arquivar). MIDDLEWARE: authenticate.
+  // PRISMA: denuncia (findFirst, update).
+  app.patch(['/api/complaints/:id/archive', '/api/denuncias/:id/arquivar'], authenticate, async (request, response) => {
     const id_usuario = readAuthUserId(request)
     const id_denuncia = readPositiveInt(request.params.id)
     if (!id_usuario) {
@@ -456,14 +457,13 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
         response.status(404).json({ error: 'Denúncia não encontrada.' })
         return
       }
-      if (await database.historico.count({ where: { id_denuncia } })) {
-        response.status(409).json({ error: 'Não é possível excluir uma denúncia com históricos vinculados.' })
-        return
-      }
-      await database.denuncia.delete({ where: { id_denuncia } })
-      response.status(204).send()
+      const denuncia = await database.denuncia.update({
+        where: { id_denuncia },
+        data: { arquivada: true },
+      })
+      response.json({ denuncia: complaintResponse(denuncia) })
     } catch (error) {
-      handlePrismaError(error, response, 'delete-complaint')
+      handlePrismaError(error, response, 'archive-complaint')
     }
   })
 }

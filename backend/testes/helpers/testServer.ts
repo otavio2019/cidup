@@ -82,6 +82,7 @@ export type StoredComplaint = {
   descricao: string
   tipo: string
   status: string
+  arquivada: boolean
   data_registro: Date
   endereco: string
   latitude: number
@@ -331,6 +332,7 @@ export function installDatabaseMocks(database: PrismaClient) {
       const longitudeFilter = record(where.longitude)
       return [...complaints.values()].filter((complaint) =>
         (!('id_usuario' in where) || complaint.id_usuario === where.id_usuario) &&
+        (!('arquivada' in where) || complaint.arquivada === where.arquivada) &&
         (excludedId === undefined || complaint.id_denuncia !== Number(excludedId)) &&
         (!Array.isArray(categoryMatches) || categoryMatches.some((category) => complaint.categorias.includes(String(category)))) &&
         (latitudeFilter.gte === undefined || complaint.latitude >= Number(latitudeFilter.gte)) &&
@@ -363,6 +365,7 @@ export function installDatabaseMocks(database: PrismaClient) {
         descricao: String(data.descricao),
         tipo: String(data.tipo),
         status: String(data.status),
+        arquivada: Boolean(data.arquivada ?? false),
         data_registro: new Date(),
         endereco: String(data.endereco),
         latitude: Number(data.latitude),
@@ -526,6 +529,7 @@ export function setupTestServer() {
       descricao: 'Relato privado do cidadão um',
       tipo: 'Iluminação',
       status: 'RECEIVED',
+      arquivada: false,
       data_registro: new Date('2026-01-01T00:00:00.000Z'),
       endereco: 'Rua de teste',
       latitude: -23,

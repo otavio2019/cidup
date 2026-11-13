@@ -1,3 +1,5 @@
+import { rotuloStatusDenuncia } from './utilitarios/complaints.js'
+
 type EmailMessage = {
   to: string
   subject: string
@@ -127,11 +129,12 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 // QUEM USA: backend/src/routes/usuario/complaints.ts, rota POST /api/complaints (cidadão e órgão).
 // CHAMA: sendEmail.
 export async function sendComplaintReceivedEmail(to: string, protocol: string, status: string) {
+  const rotuloStatus = rotuloStatusDenuncia(status)
   return sendEmail({
     to,
     subject: `Denúncia ${protocol} recebida — CidUp`,
-    text: `Sua denúncia ${protocol} foi recebida pelo CidUp. Status atual: ${status}.`,
-    html: `<p>Sua denúncia <strong>${escapeHtml(protocol)}</strong> foi recebida pelo CidUp.</p><p>Status atual: <strong>${escapeHtml(status)}</strong>.</p>`,
+    text: `Sua denúncia ${protocol} foi recebida pelo CidUp. Status atual: ${rotuloStatus}.`,
+    html: `<p>Sua denúncia <strong>${escapeHtml(protocol)}</strong> foi recebida pelo CidUp.</p><p>Status atual: <strong>${escapeHtml(rotuloStatus)}</strong>.</p>`,
   })
 }
 
@@ -139,11 +142,12 @@ export async function sendComplaintReceivedEmail(to: string, protocol: string, s
 // QUEM USA: backend/src/routes/usuario/complaints.ts, rota PATCH /api/complaints/:id; backend/tests/email.test.ts.
 // CHAMA: sendEmail.
 export async function sendComplaintStatusEmail(to: string, protocol: string, status: string, observation?: string) {
+  const rotuloStatus = rotuloStatusDenuncia(status)
   return sendEmail({
     to,
     subject: `Atualização da denúncia ${protocol} — CidUp`,
-    text: `A denúncia ${protocol} foi atualizada para: ${status}.${observation ? ` Observação: ${observation}` : ''}`,
-    html: `<p>A denúncia <strong>${escapeHtml(protocol)}</strong> foi atualizada para:</p><p><strong>${escapeHtml(status)}</strong></p>${observation ? `<p>Observação: ${escapeHtml(observation)}</p>` : ''}`,
+    text: `A denúncia ${protocol} foi atualizada para: ${rotuloStatus}.${observation ? ` Observação: ${observation}` : ''}`,
+    html: `<p>A denúncia <strong>${escapeHtml(protocol)}</strong> foi atualizada para:</p><p><strong>${escapeHtml(rotuloStatus)}</strong></p>${observation ? `<p>Observação: ${escapeHtml(observation)}</p>` : ''}`,
   })
 }
 

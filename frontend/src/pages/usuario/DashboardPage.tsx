@@ -86,14 +86,14 @@ function DashboardPage() {
     navigate('/login', { replace: true })
   }
 
-  // Pede confirmação antes de excluir e remove da tela apenas após sucesso na API.
-  async function removeComplaint(id: number) {
-    if (!window.confirm('Excluir esta denúncia?')) return
+  // Arquiva a denúncia sem apagar seus dados nem seu histórico no banco.
+  async function arquivarDenuncia(id: number) {
+    if (!window.confirm('Arquivar esta denúncia? Ela continuará salva no sistema.')) return
     try {
-      await apiRequest(`/api/complaints/${id}`, { method: 'DELETE' })
+      await apiRequest(`/api/complaints/${id}/archive`, { method: 'PATCH' })
       setComplaints((current) => current.filter((complaint) => complaint.id !== id))
     } catch (error) {
-      setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível excluir a denúncia.')
+      setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível arquivar a denúncia.')
     }
   }
 
@@ -268,7 +268,9 @@ function DashboardPage() {
                   <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
                 </div>
                 <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : ['NOT_SERVED', 'CANCELLED', 'CANCELED'].includes(complaint.status) ? 'status-canceled' : complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE' ? 'status-service' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
-                <button className="dashboard-delete-button" type="button" onClick={() => removeComplaint(complaint.id)}>Excluir</button>
+                {!complaint.history.some((item) => item.responsibleId) && (
+                  <button className="dashboard-delete-button" type="button" onClick={() => void arquivarDenuncia(complaint.id)}>Arquivar</button>
+                )}
               </article>
             ))}
           </section>

@@ -1,5 +1,16 @@
 import { jsPDF } from 'jspdf'
 
+const rotulosDeStatus: Record<string, string> = {
+  RECEIVED: 'Recebida',
+  IN_ANALYSIS: 'Em análise',
+  FORWARDED: 'Encaminhada',
+  IN_SERVICE: 'Em atendimento',
+  RESOLVED: 'Resolvida',
+  NOT_SERVED: 'Não atendida',
+  CANCELLED: 'Cancelada',
+  CANCELED: 'Cancelada',
+}
+
 export type ComplaintPdfData = {
   protocol: string
   registeredAt?: string
@@ -60,7 +71,7 @@ export function generateComplaintConfirmationPdf(complaint: ComplaintPdfData) {
   }
 
   writeField('Data do registro', complaint.registeredAt)
-  writeField('Status', complaint.status)
+  writeField('Status', complaint.status ? rotulosDeStatus[complaint.status] ?? complaint.status : undefined)
   writeField('Ocorrências', complaint.categories?.join(', ') || complaint.type)
   writeField('Descrição', complaint.description)
   writeField('Endereço', [complaint.address, complaint.number].filter(Boolean).join(', '))

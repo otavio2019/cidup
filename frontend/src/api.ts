@@ -72,6 +72,7 @@ export type Complaint = {
   number: string
   neighborhood: string
   status: string
+  arquivada?: boolean
   createdAt: string
   registeredAt: string
   type: { name: string }
@@ -87,6 +88,7 @@ export type ComplaintHistory = {
   id: number
   description: string
   observation: string
+  responsibleId?: number | null
   createdAt: string
   photo: string
 }
