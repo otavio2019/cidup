@@ -188,7 +188,7 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     // Opcional: prioridade vinda do rascunho da IA; valores inválidos são ignorados.
     const prioridade = normalizePriority(body.prioridade ?? body.priority)
     const categories = categoriesValue === undefined
-      ? (typeof tipoInput === 'string' ? [normalizeComplaintCategory(tipoInput)] : [])
+      ? (typeof tipoInput === 'string' ? [tipoInput.trim()] : [])
       : Array.isArray(categoriesValue)
         ? [...new Set(categoriesValue
           .filter((value): value is string => typeof value === 'string')
