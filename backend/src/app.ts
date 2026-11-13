@@ -13,6 +13,7 @@ import { registerRegisterRoutes } from './routes/auth/register.js'
 import { registerSessionRoutes } from './routes/auth/session.js'
 import { registerOrganizationRoutes } from './routes/admin/organizations.js'
 import { registerPasswordRecoveryRequestRoutes } from './routes/admin/passwordRecoveryRequests.js'
+import { registerNotificationRoutes } from './routes/notifications.js'
 import { registerAiDraftRoutes } from './routes/usuario/aiDraft.js'
 import { registerComplaintRoutes } from './routes/usuario/complaints.js'
 import { registerHistoryRoutes } from './routes/usuario/history.js'
@@ -131,6 +132,7 @@ export function createApp(
   // admin
   registerPasswordRecoveryRequestRoutes(context)
   registerOrganizationRoutes(context)
+  registerNotificationRoutes(context)
   // usuario
   registerProfileRoutes(context)
   registerComplaintRoutes(context)

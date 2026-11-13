@@ -29,6 +29,7 @@ model denuncia {
   orgaos_extras orgao[]     @relation("DenunciaOrgaosExtras")
   usuario       usuario     @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
   historico     historico[]
+  notificacoes  notificacao[]
 }
 
 /// Atualização ou observação de atendimento vinculada a uma denúncia.
@@ -68,6 +69,7 @@ model responsavel {
   id_orgao       Int
   orgao          orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
   historicos     historico[]
+  notificacoes    notificacao[]
   recovery_requests_resolved password_recovery_request[] @relation("RecoveryRequestResolvedBy")
 }
 
@@ -84,8 +86,29 @@ model usuario {
   must_change_password Boolean @default(false)
   denuncia   denuncia[]
   historico  historico[]
+  notificacoes notificacao[]
   passwordResetTokens password_reset_token[]
   passwordRecoveryRequest password_recovery_request?
+}
+
+/// Notificação interna exibida no painel do cidadão ou do responsável.
+model notificacao {
+  id              Int           @id @default(autoincrement())
+  titulo          String        @db.VarChar(200)
+  mensagem        String
+  tipo            String        @db.VarChar(50)
+  lida            Boolean       @default(false)
+  data_criacao    DateTime      @default(now()) @db.Timestamp(3)
+  id_usuario      Int?
+  id_responsavel  Int?
+  id_denuncia     Int?
+  usuario         usuario?      @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  responsavel     responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: Cascade)
+  denuncia        denuncia?     @relation(fields: [id_denuncia], references: [id_denuncia], onDelete: Cascade)
+
+  @@index([id_usuario, lida, data_criacao])
+  @@index([id_responsavel, lida, data_criacao])
+  @@index([id_denuncia, data_criacao])
 }
 
 /// Solicitação de recuperação analisada manualmente por um responsável.
