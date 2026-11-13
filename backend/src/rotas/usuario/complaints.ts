@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client'
 import { readAuthUserId } from '../../auth.js'
 import { notifySafely, sendComplaintReceivedEmail, sendComplaintStatusEmail } from '../../email.js'
 import { isResponsibleRequest } from '../../intermediarios/authenticate.js'
-import { createNotification, notifyResponsibleOrganizations, notifySafely as notifyNotificationSafely } from '../../notifications.js'
+import { createNotification, notifyAllResponsibles, notifySafely as notifyNotificationSafely } from '../../notifications.js'
 import {
   complaintResponse,
   distanceInMeters,
@@ -295,8 +295,9 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
         userId: denuncia.id_usuario,
         complaintId: denuncia.id_denuncia,
       }))
-      void notifyNotificationSafely(() => notifyResponsibleOrganizations(database,
-        routedOrganizations.map((item) => item.id_orgao),
+      // O painel responsável acompanha todas as denúncias. Portanto, o alerta
+      // administrativo não pode depender do órgão ao qual a denúncia foi roteada.
+      void notifyNotificationSafely(() => notifyAllResponsibles(database,
         {
           title: 'Nova denúncia recebida',
           message: `A denúncia CIDUP-${denuncia.id_denuncia} foi encaminhada para atendimento.`,
