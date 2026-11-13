@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateComplaintConfirmationPdf } from '../../complaintPdf'
+import { generateComplaintConfirmationPdf } from './complaintPdf'
 
 describe('generateComplaintConfirmationPdf', () => {
   it('creates a PDF with the complaint protocol and summary', async () => {
