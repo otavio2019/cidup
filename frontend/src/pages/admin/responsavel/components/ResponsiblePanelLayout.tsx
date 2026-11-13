@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
+import { NotificationBell } from './NotificationBell'
 
 // ===== RESPONSÁVEL: ESTRUTURA E NAVEGAÇÃO =====
 // QUEM USA: ResponsiblePanelPage.tsx. DADOS: perfil autenticado e ações da sessão.
@@ -72,6 +73,7 @@ export function ResponsiblePanelLayout({
         <header className="rp-topbar">
           <h2>{heading}</h2>
           <div className="rp-topbar-actions">
+            <NotificationBell />
             <span className="rp-profile-button">{profileName}</span>
           </div>
         </header>

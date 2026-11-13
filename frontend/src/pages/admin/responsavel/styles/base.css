@@ -210,6 +210,142 @@
     gap: 16px;
   }
 
+  .rp-notification-wrap {
+    position: relative;
+  }
+
+  .rp-notification-button {
+    position: relative;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid var(--rp-line);
+    border-radius: 50%;
+    color: var(--rp-blue);
+    background: #ffffff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .rp-notification-button:hover,
+  .rp-notification-button:focus-visible {
+    background: #eef6fc;
+    outline: 2px solid #8cbce1;
+    outline-offset: 2px;
+  }
+
+  .rp-notification-icon {
+    display: grid;
+    width: 15px;
+    height: 15px;
+    place-items: center;
+    border: 2px solid currentColor;
+    border-radius: 50% 50% 45% 45%;
+    font-size: 0;
+  }
+
+  .rp-notification-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 17px;
+    padding: 2px 4px;
+    border-radius: 10px;
+    color: #ffffff;
+    background: #c43d47;
+    font-size: 9px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .rp-notification-panel {
+    position: absolute;
+    z-index: 10;
+    top: 42px;
+    right: 0;
+    width: min(360px, calc(100vw - 32px));
+    max-height: 430px;
+    overflow: auto;
+    border: 1px solid var(--rp-line);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgb(16 47 73 / 18%);
+  }
+
+  .rp-notification-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--rp-line);
+    font-size: 13px;
+  }
+
+  .rp-notification-heading button {
+    border: 0;
+    color: var(--rp-blue);
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+  }
+
+  .rp-notification-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rp-notification-item {
+    border-bottom: 1px solid #edf2f5;
+  }
+
+  .rp-notification-item.is-unread {
+    background: #f0f7fc;
+  }
+
+  .rp-notification-item button {
+    display: grid;
+    width: 100%;
+    gap: 4px;
+    padding: 12px 15px;
+    border: 0;
+    color: var(--rp-ink);
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .rp-notification-item button:hover,
+  .rp-notification-item button:focus-visible {
+    background: #e7f2f9;
+    outline: none;
+  }
+
+  .rp-notification-item strong {
+    font-size: 12px;
+  }
+
+  .rp-notification-item span,
+  .rp-notification-item small,
+  .rp-notification-empty {
+    color: var(--rp-muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .rp-notification-empty {
+    margin: 0;
+    padding: 20px 15px;
+    text-align: center;
+  }
+
   .rp-logout-button {
     width: 100%;
     border: 0;
