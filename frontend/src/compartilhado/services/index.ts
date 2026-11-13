@@ -1,7 +1,1 @@
-/**
- * Serviços compartilhados do Frontend
- */
-
-export { apiClient } from './api'
-export { geocodeAddress, reverseGeocode } from './geocoding'
-export { storageService } from './storage'
+/** Ponto de extensão para serviços compartilhados ainda não utilizados. */

@@ -1,6 +1,6 @@
 import type { AdminComplaint } from '../types'
 import { NavLink } from 'react-router-dom'
-import { percent, relativeTime } from '../utilitarios'
+import { percent, relativeTime } from '../utils'
 import { Metric } from './PanelPrimitives'
 
 // ===== RESPONSÁVEL: VISÃO GERAL =====

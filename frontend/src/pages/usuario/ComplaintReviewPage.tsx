@@ -110,6 +110,7 @@ function ComplaintReviewPage() {
     setIsSubmitting(true)
 
     try {
+      const categories = draft.categories?.length ? draft.categories.filter(Boolean) : (draft.type ? [draft.type] : [])
       const data = await apiRequest<{
         complaint: {
           id: number
@@ -121,7 +122,12 @@ function ComplaintReviewPage() {
         }
       }>('/api/complaints', {
         method: 'POST',
-        body: JSON.stringify({ ...draft, photo: draft!.photoData ?? null }),
+        body: JSON.stringify({
+          ...draft,
+          type: categories[0] ?? draft.type,
+          categories,
+          photo: draft!.photoData ?? null,
+        }),
       })
 
       const registeredComplaint = {

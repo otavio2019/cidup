@@ -1,7 +1,1 @@
-/**
- * Hooks compartilhados
- */
-
-export { useApi } from './useApi'
-export { useForm } from './useForm'
-export { useGeolocation } from './useGeolocation'
+/** Ponto de extensão para hooks compartilhados ainda não utilizados. */

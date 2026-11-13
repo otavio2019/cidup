@@ -1,5 +1,5 @@
 import type { ComplaintPriority, ComplaintStatus } from '../types'
-import { priorityLabels } from '../utilitarios'
+import { priorityLabels } from '../utils'
 
 // ===== RESPONSÁVEL: ELEMENTOS COMPARTILHADOS =====
 // Usado pelas telas de denúncias, visão geral, relatórios e configurações.

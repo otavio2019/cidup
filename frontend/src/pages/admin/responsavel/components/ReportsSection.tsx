@@ -1,5 +1,5 @@
 import type { AdminComplaint } from '../types'
-import { ALL_PERIODS, monthLabel, percent } from '../utilitarios'
+import { ALL_PERIODS, monthLabel, percent } from '../utils'
 import { Metric } from './PanelPrimitives'
 
 // ===== RESPONSÁVEL: RELATÓRIOS E INDICADORES =====

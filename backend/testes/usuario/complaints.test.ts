@@ -76,6 +76,27 @@ test('mantém compatibilidade com clientes antigos que enviam uma categoria em t
   assert.deepEqual(record(body.complaint).categories, ['Iluminação'])
 })
 
+test('aceita rascunho quando type antigo difere da primeira categoria selecionada', async () => {
+  const response = await callApi('/api/complaints', {
+    method: 'POST',
+    headers: { Cookie: await cookieFor(1) },
+    body: JSON.stringify({
+      type: 'Buraco',
+      categories: ['Buraco ou problema na via'],
+      title: 'Buraco na via',
+      description: 'Há um buraco na rua impedindo a passagem de veículos.',
+      address: 'Rua de teste',
+      number: '0',
+      neighborhood: 'Centro',
+      latitude: -7.01654,
+      longitude: -37.29125,
+    }),
+  })
+  assert.equal(response.status, 201)
+  const body = await response.json() as RecordValue
+  assert.equal(record(body.complaint).type.name, 'Buraco ou problema na via')
+})
+
 test('salva várias categorias e encaminha para todos os órgãos correspondentes', async () => {
   calls.length = 0
   const response = await callApi('/api/complaints', {

@@ -173,10 +173,9 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     // 1) Lê os campos aceitando nomes em português e inglês (tipo/type, foto/photo...).
     const body = isRecord(request.body) ? request.body : {}
     const id_usuario = readAuthUserId(request)
-    const tipoValue = body.tipo ?? body.type
+    const tipoInput = body.tipo ?? body.type
     const categoriesValue = body.categorias ?? body.categories
     const hasExplicitCategories = categoriesValue !== undefined
-    const tituloValue = body.titulo ?? body.title ?? tipoValue
     const descricaoValue = body.descricao ?? body.description
     const enderecoValue = body.endereco ?? body.address
     const neighborhoodValue = body.bairro ?? body.neighborhood ?? (
@@ -188,10 +187,14 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     // Opcional: prioridade vinda do rascunho da IA; valores inválidos são ignorados.
     const prioridade = normalizePriority(body.prioridade ?? body.priority)
     const categories = categoriesValue === undefined
-      ? (typeof tipoValue === 'string' ? [tipoValue.trim()] : [])
+      ? (typeof tipoInput === 'string' ? [tipoInput.trim()] : [])
       : Array.isArray(categoriesValue)
         ? [...new Set(categoriesValue.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))]
         : []
+    // Rascunhos antigos ou respostas da IA podem manter um `type` diferente
+    // da categoria selecionada. A primeira categoria é a fonte canônica.
+    const tipoValue = categories[0] ?? tipoInput
+    const tituloValue = body.titulo ?? body.title ?? tipoValue
 
     // 2) Valida tipo, título, descrição, categorias (lista suportada) e coordenadas de GPS.
     if (!id_usuario) {
