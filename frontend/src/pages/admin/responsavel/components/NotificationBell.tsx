@@ -39,7 +39,9 @@ export function NotificationBell() {
         toastTimer.current = window.setTimeout(() => setToast(null), 8000)
       }
       knownIds.current = new Set(data.notifications.map((item) => item.id))
-      setNotifications(data.notifications)
+      // O painel exibe somente notificações pendentes. As lidas continuam
+      // salvas no banco, mas não reaparecem na lista do sino.
+      setNotifications(data.notifications.filter((item) => !item.read))
       setUnreadCount(data.unreadCount)
     } catch {
       // A falha da área de notificações não deve impedir o uso do painel.
@@ -66,7 +68,7 @@ export function NotificationBell() {
   async function markAsRead(id: number) {
     try {
       await apiRequest(`/api/notifications/${id}/read`, { method: 'PATCH' })
-      setNotifications((current) => current.map((item) => item.id === id ? { ...item, read: true } : item))
+      setNotifications((current) => current.filter((item) => item.id !== id))
       setUnreadCount((current) => Math.max(0, current - 1))
     } catch {
       // Mantém o item não lido se a API falhar.
@@ -76,7 +78,7 @@ export function NotificationBell() {
   async function markAllAsRead() {
     try {
       await apiRequest('/api/notifications/read-all', { method: 'PATCH' })
-      setNotifications((current) => current.map((item) => ({ ...item, read: true })))
+      setNotifications([])
       setUnreadCount(0)
     } catch {
       // Mantém o contador se a API falhar.
