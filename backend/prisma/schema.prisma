@@ -10,24 +10,24 @@ datasource db {
 
 /// Registro de uma ocorrência cidadã, incluindo localização, foto, órgão e status.
 model denuncia {
-  id_denuncia   Int         @id @default(autoincrement())
-  titulo        String      @db.VarChar(200)
+  id_denuncia   Int           @id @default(autoincrement())
+  titulo        String        @db.VarChar(200)
   descricao     String
-  tipo          String      @db.VarChar(100)
-  categorias    String[]    @default([])
-  status        String      @db.VarChar(50)
-  data_registro DateTime    @default(dbgenerated("CURRENT_DATE")) @db.Date
-  atualizada_em DateTime    @default(now()) @updatedAt @db.Timestamp(3)
+  tipo          String        @db.VarChar(100)
+  categorias    String[]      @default([])
+  status        String        @db.VarChar(50)
+  data_registro DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  atualizada_em DateTime      @default(now()) @updatedAt @db.Timestamp(3)
   endereco      String
   latitude      Float
   longitude     Float
-  foto          String?     @db.Text
-  prioridade    String?     @db.VarChar(10)
+  foto          String?       @db.Text
+  prioridade    String?       @db.VarChar(10)
   id_usuario    Int
   id_orgao      Int
-  orgao         orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
-  orgaos_extras orgao[]     @relation("DenunciaOrgaosExtras")
-  usuario       usuario     @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  orgao         orgao         @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
+  orgaos_extras orgao[]       @relation("DenunciaOrgaosExtras")
+  usuario       usuario       @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
   historico     historico[]
   notificacoes  notificacao[]
 }
@@ -61,54 +61,72 @@ model orgao {
 
 /// Conta administrativa vinculada a um órgão.
 model responsavel {
-  id_responsavel Int         @id @default(autoincrement())
-  nome           String      @db.VarChar(150)
-  email          String      @unique @db.VarChar(255)
-  telefone       String      @db.VarChar(20)
-  senha          String      @db.VarChar(255)
-  id_orgao       Int
-  orgao          orgao       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
-  historicos     historico[]
-  notificacoes    notificacao[]
+  id_responsavel             Int                         @id @default(autoincrement())
+  nome                       String                      @db.VarChar(150)
+  email                      String                      @unique @db.VarChar(255)
+  telefone                   String                      @db.VarChar(20)
+  senha                      String                      @db.VarChar(255)
+  id_orgao                   Int
+  orgao                      orgao                       @relation(fields: [id_orgao], references: [id_orgao], onDelete: NoAction, onUpdate: NoAction)
+  historicos                 historico[]
+  notificacoes               notificacao[]
+  pushSubscriptions          push_subscription[]
   recovery_requests_resolved password_recovery_request[] @relation("RecoveryRequestResolvedBy")
 }
 
 /// Conta do cidadão que registra e acompanha denúncias.
 model usuario {
-  id_usuario Int         @id @default(autoincrement())
-  cpf        String?     @unique @db.VarChar(11)
-  nome       String      @db.VarChar(150)
-  email      String      @unique @db.VarChar(255)
-  telefone   String?     @unique @db.VarChar(20)
-  cep        String?     @db.VarChar(8)
-  foto       String?     @db.Text
-  senha      String      @db.VarChar(255)
-  must_change_password Boolean @default(false)
-  denuncia   denuncia[]
-  historico  historico[]
-  notificacoes notificacao[]
-  passwordResetTokens password_reset_token[]
+  id_usuario              Int                        @id @default(autoincrement())
+  cpf                     String?                    @unique @db.VarChar(11)
+  nome                    String                     @db.VarChar(150)
+  email                   String                     @unique @db.VarChar(255)
+  telefone                String?                    @unique @db.VarChar(20)
+  cep                     String?                    @db.VarChar(8)
+  foto                    String?                    @db.Text
+  senha                   String                     @db.VarChar(255)
+  must_change_password    Boolean                    @default(false)
+  denuncia                denuncia[]
+  historico               historico[]
+  notificacoes            notificacao[]
+  pushSubscriptions       push_subscription[]
+  passwordResetTokens     password_reset_token[]
   passwordRecoveryRequest password_recovery_request?
 }
 
 /// Notificação interna exibida no painel do cidadão ou do responsável.
 model notificacao {
-  id              Int           @id @default(autoincrement())
-  titulo          String        @db.VarChar(200)
-  mensagem        String
-  tipo            String        @db.VarChar(50)
-  lida            Boolean       @default(false)
-  data_criacao    DateTime      @default(now()) @db.Timestamp(3)
-  id_usuario      Int?
-  id_responsavel  Int?
-  id_denuncia     Int?
-  usuario         usuario?      @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
-  responsavel     responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: Cascade)
-  denuncia        denuncia?     @relation(fields: [id_denuncia], references: [id_denuncia], onDelete: Cascade)
+  id             Int          @id @default(autoincrement())
+  titulo         String       @db.VarChar(200)
+  mensagem       String
+  tipo           String       @db.VarChar(50)
+  lida           Boolean      @default(false)
+  data_criacao   DateTime     @default(now()) @db.Timestamp(3)
+  id_usuario     Int?
+  id_responsavel Int?
+  id_denuncia    Int?
+  usuario        usuario?     @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  responsavel    responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: Cascade)
+  denuncia       denuncia?    @relation(fields: [id_denuncia], references: [id_denuncia], onDelete: Cascade)
 
   @@index([id_usuario, lida, data_criacao])
   @@index([id_responsavel, lida, data_criacao])
   @@index([id_denuncia, data_criacao])
+}
+
+/// Inscrição de um navegador para receber Web Push.
+model push_subscription {
+  id             Int          @id @default(autoincrement())
+  endpoint       String       @unique @db.Text
+  p256dh         String       @db.Text
+  auth           String       @db.Text
+  id_usuario     Int?
+  id_responsavel Int?
+  criado_em      DateTime     @default(now()) @db.Timestamp(3)
+  usuario        usuario?     @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  responsavel    responsavel? @relation(fields: [id_responsavel], references: [id_responsavel], onDelete: Cascade)
+
+  @@index([id_usuario])
+  @@index([id_responsavel])
 }
 
 /// Solicitação de recuperação analisada manualmente por um responsável.
@@ -127,13 +145,13 @@ model password_recovery_request {
 
 /// Token temporário armazenado somente como hash para recuperação de senha.
 model password_reset_token {
-  id           Int       @id @default(autoincrement())
-  token_hash   String    @unique @db.VarChar(64)
-  expires_at   DateTime  @db.Timestamp(3)
-  used_at      DateTime? @db.Timestamp(3)
-  created_at   DateTime  @default(now()) @db.Timestamp(3)
-  id_usuario   Int
-  usuario      usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: Cascade)
+  id         Int       @id @default(autoincrement())
+  token_hash String    @unique @db.VarChar(64)
+  expires_at DateTime  @db.Timestamp(3)
+  used_at    DateTime? @db.Timestamp(3)
+  created_at DateTime  @default(now()) @db.Timestamp(3)
+  id_usuario Int
+  usuario    usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([id_usuario, expires_at])
 }

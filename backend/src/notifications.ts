@@ -1,4 +1,13 @@
 import type { PrismaClient } from '@prisma/client'
+import webpush from 'web-push'
+
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+const vapidSubject = process.env.VAPID_SUBJECT
+
+if (vapidPublicKey && vapidPrivateKey && vapidSubject) {
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+}
 
 export type NotificationInput = {
   title: string
@@ -10,7 +19,7 @@ export type NotificationInput = {
 }
 
 export async function createNotification(database: PrismaClient, input: NotificationInput) {
-  return database.notificacao.create({
+  const notification = await database.notificacao.create({
     data: {
       titulo: input.title,
       mensagem: input.message,
@@ -20,6 +29,54 @@ export async function createNotification(database: PrismaClient, input: Notifica
       ...(input.complaintId ? { denuncia: { connect: { id_denuncia: input.complaintId } } } : {}),
     },
   })
+
+  await notifySafely(
+    () => sendPushForNotification(database, notification.id, input),
+    'envio de notificação Push',
+  )
+  return notification
+}
+
+async function sendPushForNotification(
+  database: PrismaClient,
+  notificationId: number,
+  input: NotificationInput,
+) {
+  if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) return
+  const target = input.responsibleId
+    ? { id_responsavel: input.responsibleId }
+    : input.userId
+      ? { id_usuario: input.userId }
+      : null
+  if (!target) return
+
+  const subscriptions = await database.push_subscription.findMany({ where: target })
+  await Promise.all(subscriptions.map(async (subscription) => {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+        },
+        JSON.stringify({
+          id: notificationId,
+          title: input.title,
+          message: input.message,
+          complaintId: input.complaintId ?? null,
+          url: input.responsibleId ? '/responsavel/denuncias' : '/minhas-denuncias',
+        }),
+      )
+    } catch (error: unknown) {
+      const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
+        ? Number(error.statusCode)
+        : null
+      if (statusCode === 404 || statusCode === 410) {
+        await database.push_subscription.delete({ where: { id: subscription.id } })
+        return
+      }
+      throw error
+    }
+  }))
 }
 
 export async function notifyResponsibleOrganizations(

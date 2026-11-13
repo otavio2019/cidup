@@ -23,7 +23,8 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.1",
     "jose": "^6.2.12",
-    "nodemailer": "^10.3.1"
+    "nodemailer": "^10.3.1",
+    "web-push": "^4.0.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
@@ -31,6 +32,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",
     "@types/nodemailer": "^8.0.2",
+    "@types/web-push": "^3.6.4",
     "prisma": "^6.19.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"

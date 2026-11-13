@@ -2,10 +2,58 @@ import { readAuthUserId } from '../auth.js'
 import { isResponsibleRequest } from '../intermediarios/authenticate.js'
 import { notificationResponse } from '../notifications.js'
 import { handlePrismaError } from '../utilitarios/prismaErrors.js'
-import { readPositiveInt } from '../utilitarios/validation.js'
+import { isRecord, readPositiveInt } from '../utilitarios/validation.js'
 import type { RouteContext } from './context.js'
 
 export function registerNotificationRoutes({ app, database, authenticate }: RouteContext) {
+  app.post(['/api/push-subscriptions', '/api/inscricoes-push'], authenticate, async (request, response) => {
+    const principalId = readAuthUserId(request)
+    const body = isRecord(request.body) ? request.body : {}
+    const keys = isRecord(body.keys) ? body.keys : {}
+    const endpoint = typeof body.endpoint === 'string' ? body.endpoint.trim() : ''
+    const p256dh = typeof keys.p256dh === 'string' ? keys.p256dh.trim() : ''
+    const auth = typeof keys.auth === 'string' ? keys.auth.trim() : ''
+    if (!principalId) {
+      response.status(401).json({ error: 'Autenticação necessária.' })
+      return
+    }
+    if (!endpoint || endpoint.length > 2000 || !p256dh || !auth) {
+      response.status(400).json({ error: 'Inscrição de notificações inválida.' })
+      return
+    }
+    try {
+      const owner = isResponsibleRequest(request)
+        ? { id_responsavel: principalId, id_usuario: null }
+        : { id_usuario: principalId, id_responsavel: null }
+      await database.push_subscription.upsert({
+        where: { endpoint },
+        update: { p256dh, auth, ...owner },
+        create: { endpoint, p256dh, auth, ...owner },
+      })
+      response.status(204).send()
+    } catch (error) {
+      handlePrismaError(error, response, 'save-push-subscription')
+    }
+  })
+
+  app.delete(['/api/push-subscriptions', '/api/inscricoes-push'], authenticate, async (request, response) => {
+    const principalId = readAuthUserId(request)
+    const endpoint = typeof request.body?.endpoint === 'string' ? request.body.endpoint.trim() : ''
+    if (!principalId || !endpoint) {
+      response.status(400).json({ error: 'Inscrição de notificações inválida.' })
+      return
+    }
+    try {
+      const where = isResponsibleRequest(request)
+        ? { endpoint, id_responsavel: principalId }
+        : { endpoint, id_usuario: principalId }
+      await database.push_subscription.deleteMany({ where })
+      response.status(204).send()
+    } catch (error) {
+      handlePrismaError(error, response, 'delete-push-subscription')
+    }
+  })
+
   app.get(['/api/notifications', '/api/notificacoes'], authenticate, async (request, response) => {
     const principalId = readAuthUserId(request)
     if (!principalId) {
