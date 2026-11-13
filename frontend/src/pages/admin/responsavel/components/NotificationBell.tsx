@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../../../api'
+import { sincronizarNotificacoesPush } from '../../../../pushNotifications'
 
 // Notificação entregue pelo endpoint /api/notifications.
 type NotificationItem = {
@@ -47,9 +48,17 @@ export function NotificationBell() {
 
   useEffect(() => {
     void loadNotifications()
-    const interval = window.setInterval(() => { void loadNotifications() }, 30000)
+    void sincronizarNotificacoesPush().catch(() => undefined)
+    const interval = window.setInterval(() => { void loadNotifications() }, 10000)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadNotifications()
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('focus', refreshWhenVisible)
     return () => {
       window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('focus', refreshWhenVisible)
       if (toastTimer.current) window.clearTimeout(toastTimer.current)
     }
   }, [])

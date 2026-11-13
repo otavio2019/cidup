@@ -19,6 +19,19 @@ export async function ativarNotificacoesPush() {
     throw new Error('Permissão para notificações não concedida. Altere essa opção nas configurações do navegador.')
   }
 
+  return registrarInscricaoPush(chavePublica)
+}
+
+// Reaproveita uma permissão já concedida sem abrir novo diálogo ao usuário.
+export async function sincronizarNotificacoesPush() {
+  const chavePublica = import.meta.env.VITE_VAPID_PUBLIC_KEY
+  if (!chavePublica || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false
+  if (Notification.permission !== 'granted') return false
+  await registrarInscricaoPush(chavePublica)
+  return true
+}
+
+async function registrarInscricaoPush(chavePublica: string) {
   const registro = await navigator.serviceWorker.register('/sw.js')
   const existente = await registro.pushManager.getSubscription()
   const inscricao = existente ?? await registro.pushManager.subscribe({

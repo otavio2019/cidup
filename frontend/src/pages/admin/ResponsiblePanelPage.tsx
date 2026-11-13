@@ -80,30 +80,44 @@ function ResponsiblePanelPage() {
     navigate('/login', { replace: true })
   }
 
-  // Carrega os dados usados pelas seções administrativas em uma única montagem.
+  // Carrega os dados administrativos e repete a consulta para manter cards e atividade atualizados.
   useEffect(() => {
     let active = true
-    Promise.all([
-      apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
-      apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
-      apiRequest<{ user: ResponsibleProfile }>('/api/auth/session'),
-      apiRequest<{ requests: PasswordRecoveryRequest[] }>('/api/admin/password-recovery-requests'),
-    ])
-      .then(([complaintData, organizationData, sessionData, recoveryData]) => {
+    const loadPanelData = async () => {
+      try {
+        const [complaintData, organizationData, sessionData, recoveryData] = await Promise.all([
+          apiRequest<{ complaints: ApiComplaint[] }>('/api/complaints'),
+          apiRequest<{ orgaos: Organization[] }>('/api/orgaos'),
+          apiRequest<{ user: ResponsibleProfile }>('/api/auth/session'),
+          apiRequest<{ requests: PasswordRecoveryRequest[] }>('/api/admin/password-recovery-requests'),
+        ])
         if (!active) return
         setComplaints(complaintData.complaints.map(mapApiComplaint))
         setOrganizations(organizationData.orgaos)
         setProfile(sessionData.user)
         setRecoveryRequests(recoveryData.requests)
-      })
-      .catch((error) => {
+        setLoadError('')
+      } catch (error) {
         if (!active) return
         setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar os dados.')
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false)
-      })
-    return () => { active = false }
+      }
+    }
+
+    void loadPanelData()
+    const interval = window.setInterval(() => { void loadPanelData() }, 15000)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadPanelData()
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('focus', refreshWhenVisible)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('focus', refreshWhenVisible)
+    }
   }, [])
 
   const selectedComplaint = complaints.find((complaint) => complaint.protocol === selectedProtocol)
