@@ -2,7 +2,7 @@
  * Utilitários compartilhados
  */
 
-export { validateEmail, validatePassword, validateInput } from './validation'
-export { hashPassword, verifyPassword } from './passwords'
-export { handlePrismaError } from './prismaErrors'
-export { parseAddress, geocodeAddress } from './aiAddress'
+export { digits, isRecord, isValidCpf, readPositiveInt } from '../../utilitarios/validation.js'
+export { hashPassword, hashResetToken, verifyPassword } from '../../utilitarios/passwords.js'
+export { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+export { extractAiAddress } from '../../utilitarios/aiAddress.js'

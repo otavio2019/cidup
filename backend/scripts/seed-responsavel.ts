@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { randomBytes, scrypt as scryptCallback } from 'node:crypto'
 import { promisify } from 'node:util'
-import { prisma } from '../src/lib/prisma.js'
+import { prisma } from '../src/biblioteca/prisma.js'
 
 // ===== SEED DO RESPONSÁVEL =====
 // Rodar com: npm run seed:responsavel (package.json do backend).

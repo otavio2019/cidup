@@ -8,7 +8,7 @@
     "prestart": "prisma migrate deploy --schema prisma/schema.prisma",
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "tsx --test \"tests/**/*.test.ts\"",
+    "test": "tsx --test \"testes/**/*.test.ts\"",
     "seed:responsavel": "tsx scripts/seed-responsavel.ts"
   },
   "keywords": [],

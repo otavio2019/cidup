@@ -2,5 +2,5 @@
  * Autenticação - Serviços
  */
 
-export { createAuthToken, requireAuthentication } from './auth.service'
-export type { AuthPrincipalType } from './auth.types'
+export { createAuthToken, requireAuthentication } from './auth.service.js'
+export type { AuthPrincipalType } from './auth.types.js'

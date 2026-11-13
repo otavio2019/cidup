@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { callApi, cookieFor, setupTestServer, type RecordValue } from '../helpers/testServer.js'
-import { extractAiAddress } from '../../src/utils/aiAddress.js'
+import { extractAiAddress } from '../../src/utilitarios/aiAddress.js'
 
 // ===== TESTES: RASCUNHO COM IA (src/routes/usuario/aiDraft.ts) =====
 setupTestServer()
