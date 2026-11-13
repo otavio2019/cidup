@@ -126,6 +126,8 @@ function ComplaintReviewPage() {
           ...draft,
           type: categories[0] ?? draft.type,
           categories,
+          latitude: Number(draft.latitude),
+          longitude: Number(draft.longitude),
           photo: draft!.photoData ?? null,
         }),
       })

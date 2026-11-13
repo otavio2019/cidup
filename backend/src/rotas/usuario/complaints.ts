@@ -9,6 +9,7 @@ import {
   findOrganizationByComplaintType,
   NEARBY_COMPLAINT_RADIUS_METERS,
   normalizePriority,
+  normalizeComplaintCategory,
   supportedComplaintCategories,
 } from '../../utilitarios/complaints.js'
 import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
@@ -181,15 +182,18 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     const neighborhoodValue = body.bairro ?? body.neighborhood ?? (
       typeof enderecoValue === 'string' ? enderecoValue.split(',').map((part) => part.trim()).filter(Boolean).at(-1) : undefined
     )
-    const latitude = body.latitude
-    const longitude = body.longitude
+    const latitude = typeof body.latitude === 'number' ? body.latitude : Number(body.latitude)
+    const longitude = typeof body.longitude === 'number' ? body.longitude : Number(body.longitude)
     const photoValue = body.foto ?? body.photo
     // Opcional: prioridade vinda do rascunho da IA; valores inválidos são ignorados.
     const prioridade = normalizePriority(body.prioridade ?? body.priority)
     const categories = categoriesValue === undefined
-      ? (typeof tipoInput === 'string' ? [tipoInput.trim()] : [])
+      ? (typeof tipoInput === 'string' ? [normalizeComplaintCategory(tipoInput)] : [])
       : Array.isArray(categoriesValue)
-        ? [...new Set(categoriesValue.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))]
+        ? [...new Set(categoriesValue
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => normalizeComplaintCategory(value))
+          .filter(Boolean))]
         : []
     // Rascunhos antigos ou respostas da IA podem manter um `type` diferente
     // da categoria selecionada. A primeira categoria é a fonte canônica.
@@ -213,7 +217,15 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
         latitude < -90 || latitude > 90 ||
         typeof longitude !== 'number' || !Number.isFinite(longitude) ||
         longitude < -180 || longitude > 180) {
-      response.status(400).json({ error: 'Informe uma ou mais categorias, descrição, latitude e longitude válidas.' })
+      response.status(400).json({
+        error: 'Confira as categorias, a descrição e a localização da denúncia.',
+        fields: {
+          categories: categories.length > 0,
+          description: typeof descricaoValue === 'string' && descricaoValue.trim().length >= 20,
+          latitude: Number.isFinite(latitude) && latitude >= -90 && latitude <= 90,
+          longitude: Number.isFinite(longitude) && longitude >= -180 && longitude <= 180,
+        },
+      })
       return
     }
     if (photoValue !== undefined && photoValue !== null && !isValidImageData(photoValue)) {

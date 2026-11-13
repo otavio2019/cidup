@@ -30,6 +30,24 @@ export const supportedComplaintCategories = [
   'Sinalização de trânsito',
   'Outro problema urbano',
 ]
+
+// Converte variações curtas ou sem acento, comuns em rascunhos antigos e respostas da IA,
+// para o nome oficial que o banco e o roteamento usam.
+export function normalizeComplaintCategory(value: string) {
+  const normalized = normalizeRoutingText(value).trim()
+  const exact = supportedComplaintCategories.find((category) => normalizeRoutingText(category) === normalized)
+  if (exact) return exact
+  const aliases: Array<[string[], string]> = [
+    [['buraco', 'via', 'pavimento'], 'Buraco ou problema na via'],
+    [['iluminacao', 'poste', 'lampada'], 'Iluminação pública'],
+    [['lixo', 'descarte', 'entulho', 'limpeza'], 'Lixo ou descarte irregular'],
+    [['calcada', 'acessibilidade'], 'Calçada ou acessibilidade'],
+    [['arvore', 'verde', 'ambiental'], 'Árvore ou área verde'],
+    [['alagamento', 'drenagem'], 'Alagamento ou drenagem'],
+    [['sinalizacao', 'transito'], 'Sinalização de trânsito'],
+  ]
+  return aliases.find(([keywords]) => keywords.some((keyword) => normalized.includes(keyword)))?.[1] ?? value.trim()
+}
 // Prioridade sugerida pela IA: gravada como código e exibida com acento.
 export const complaintPriorityLabels = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' } as const
 export type ComplaintPriority = keyof typeof complaintPriorityLabels

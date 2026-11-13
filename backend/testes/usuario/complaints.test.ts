@@ -94,7 +94,28 @@ test('aceita rascunho quando type antigo difere da primeira categoria selecionad
   })
   assert.equal(response.status, 201)
   const body = await response.json() as RecordValue
-  assert.equal(record(body.complaint).type.name, 'Buraco ou problema na via')
+  assert.equal(record(record(body.complaint).type).name, 'Buraco ou problema na via')
+})
+
+test('normaliza categoria curta da IA e coordenadas salvas como texto', async () => {
+  const response = await callApi('/api/complaints', {
+    method: 'POST',
+    headers: { Cookie: await cookieFor(1) },
+    body: JSON.stringify({
+      type: 'Buraco',
+      categories: ['Buraco'],
+      title: 'Buraco na rua',
+      description: 'Há um buraco grande na rua impedindo a passagem de veículos.',
+      address: 'Rua de teste',
+      number: '10',
+      neighborhood: 'Centro',
+      latitude: '-7.01654',
+      longitude: '-37.29125',
+    }),
+  })
+  assert.equal(response.status, 201)
+  const body = await response.json() as RecordValue
+  assert.equal(record(record(body.complaint).type).name, 'Buraco ou problema na via')
 })
 
 test('salva várias categorias e encaminha para todos os órgãos correspondentes', async () => {
