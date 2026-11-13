@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../api'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
@@ -59,9 +59,10 @@ function Header() {
 	// ===== ESTADO E CONSULTA DE DETALHES =====
 	// Usa o identificador da rota em GET /api/complaints/{id}; a lista de origem é MyComplaintsPage.
 	// Carrega uma denúncia do protocolo informado e monta sua linha do tempo de status.
-	function ComplaintDetailsPage() {
-		const { protocol } = useParams()
-		const [complaint, setComplaint] = useState<Complaint | null>(null)
+		function ComplaintDetailsPage() {
+			const { protocol } = useParams()
+			const navigate = useNavigate()
+			const [complaint, setComplaint] = useState<Complaint | null>(null)
 		const [relatedComplaints, setRelatedComplaints] = useState<RelatedComplaint[]>([])
 		const [relatedForId, setRelatedForId] = useState<number | null>(null)
 		const [relatedError, setRelatedError] = useState('')
@@ -113,9 +114,20 @@ function Header() {
 	const status = complaint
 		? statusLabels[complaint.status] ?? complaint.status as ComplaintStatus
 		: 'Recebida'
-		const currentStep = status === 'Cancelada' || status === 'Negada'
-		? -1
-		: statusSteps.indexOf(status)
+			const currentStep = status === 'Cancelada' || status === 'Negada'
+			? -1
+			: statusSteps.indexOf(status)
+		const hasResponsibleResponse = Boolean(complaint?.history.some((item) => item.responsibleId))
+
+		async function arquivarDenuncia() {
+			if (!complaint || !window.confirm('Arquivar esta denúncia? Ela continuará salva no sistema.')) return
+			try {
+				await apiRequest(`/api/complaints/${complaint.id}/archive`, { method: 'PATCH' })
+				navigate('/minhas-denuncias')
+			} catch (requestError) {
+				setError(requestError instanceof Error ? requestError.message : 'Não foi possível arquivar a denúncia.')
+			}
+		}
 
 	return (
 		<main className="my-complaints-page">
@@ -141,10 +153,15 @@ function Header() {
 								</div>
 								<div className="complaint-detail-heading-actions">
 									<span className={`status ${statusClasses[status] ?? 'status-received'}`}>{status}</span>
-									<button className="secondary-action complaint-detail-print" type="button" onClick={() => window.print()}>
-										Imprimir protocolo / Salvar em PDF
-									</button>
-								</div>
+										<button className="secondary-action complaint-detail-print" type="button" onClick={() => window.print()}>
+											Imprimir protocolo / Salvar em PDF
+										</button>
+										{!hasResponsibleResponse && (
+											<button className="secondary-action complaint-detail-archive" type="button" onClick={() => void arquivarDenuncia()}>
+												Arquivar denúncia
+											</button>
+										)}
+									</div>
 							</div>
 
 						{/* Linha do tempo traduz o status retornado pela API em etapas visuais. */}

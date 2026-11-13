@@ -881,8 +881,9 @@
 
 .complaint-detail-heading-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -902,11 +903,28 @@
   background: #f4f9ff;
 }
 
+.complaint-detail-archive {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #b9c4ce;
+  border-radius: 6px;
+  color: #8a4b08;
+  background: #fffaf2;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.complaint-detail-archive:hover {
+  border-color: #c47a24;
+  background: #fff3df;
+}
+
 @media print {
   .citizen-header,
   .citizen-mobile-nav,
   .confirmation-actions,
-  .complaint-detail-print {
+  .complaint-detail-print,
+  .complaint-detail-archive {
     display: none !important;
   }
 
