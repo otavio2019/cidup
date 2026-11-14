@@ -1,6 +1,5 @@
 import type { FormEvent } from 'react'
 import type { AdminComplaint, ComplaintStatus, Organization } from '../types'
-import ComplaintPdfShareButton from '../../../../components/ComplaintPdfShareButton'
 import { ALL_PERIODS, monthLabel, priorityLabels, statusOptions } from '../utils'
 import { Info, PriorityBadge, StatusBadge } from './PanelPrimitives'
 
@@ -59,7 +58,7 @@ export function ComplaintsSection({
 }: ComplaintsSectionProps) {
   if (selectedComplaint) {
     return (
-      <>
+      <div className="rp-complaint-detail-view">
         <button className="rp-back-link" type="button" onClick={onBack}>← Voltar para denúncias</button>
         <div className="rp-detail-heading">
           <div><h1>{selectedComplaint.title}</h1><p>{selectedComplaint.protocol} · recebido em {selectedComplaint.date}</p></div>
@@ -69,19 +68,13 @@ export function ComplaintsSection({
           <section className="rp-panel rp-information-panel">
             <div className="rp-information-heading">
               <h2>Informações da denúncia</h2>
-              <ComplaintPdfShareButton
-                buttonClassName="rp-outline-button rp-complaint-pdf-button"
-                complaint={{
-                  protocol: selectedComplaint.protocol,
-                  registeredAt: selectedComplaint.date,
-                  status: selectedComplaint.status,
-                  description: selectedComplaint.description,
-                  address: selectedComplaint.address,
-                  neighborhood: selectedComplaint.neighborhood,
-                  type: selectedComplaint.category,
-                  categories: selectedComplaint.categories,
-                }}
-              />
+              <button
+                className="rp-outline-button rp-complaint-pdf-button"
+                type="button"
+                onClick={() => window.print()}
+              >
+                Imprimir protocolo / Salvar em PDF
+              </button>
             </div>
             <Info label="Descrição" value={selectedComplaint.description} />
             <Info label="Endereço" value={selectedComplaint.address} />
@@ -117,7 +110,20 @@ export function ComplaintsSection({
             </div>
           )}
         </section>
-      </>
+        <section className="rp-protocol-print" aria-label="Protocolo para impressão">
+          <h1>CidUp — Comprovante de denúncia</h1>
+          <p className="rp-protocol-print-number"><strong>Protocolo:</strong> {selectedComplaint.protocol}</p>
+          <div className="rp-protocol-print-fields">
+            <div className="rp-protocol-print-field"><strong>Data do registro</strong><span>{selectedComplaint.date || 'Não informado'}</span></div>
+            <div className="rp-protocol-print-field"><strong>Status</strong><span>{selectedComplaint.status || 'Não informado'}</span></div>
+            <div className="rp-protocol-print-field"><strong>Ocorrências</strong><span>{selectedComplaint.categories.join(', ') || selectedComplaint.category || 'Não informado'}</span></div>
+            <div className="rp-protocol-print-field"><strong>Descrição</strong><span>{selectedComplaint.description || 'Não informado'}</span></div>
+            <div className="rp-protocol-print-field"><strong>Endereço</strong><span>{selectedComplaint.address || 'Não informado'}</span></div>
+            <div className="rp-protocol-print-field"><strong>Bairro</strong><span>{selectedComplaint.neighborhood || 'Não informado'}</span></div>
+            <div className="rp-protocol-print-field"><strong>Ponto de referência</strong><span>Não informado</span></div>
+          </div>
+        </section>
+      </div>
     )
   }
 

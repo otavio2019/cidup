@@ -336,24 +336,14 @@
     margin: 0;
   }
 
-  .rp-information-heading .complaint-pdf-share {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 7px;
-  }
-
   .rp-complaint-pdf-button {
     min-height: 36px;
     padding: 0 12px;
     white-space: nowrap;
   }
 
-  .rp-information-heading .complaint-pdf-share-message {
-    max-width: 280px;
-    color: var(--rp-muted);
-    font-size: 10px;
-    text-align: right;
+  .rp-protocol-print {
+    display: none;
   }
 
   .rp-info-row {
@@ -374,6 +364,73 @@
     font-size: 11px;
     font-weight: 700;
     overflow-wrap: anywhere;
+  }
+
+  @media print {
+    .rp-shell {
+      display: block;
+      min-height: 0;
+      color: #263238;
+      background: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    .rp-sidebar,
+    .rp-topbar,
+    .rp-content > :not(.rp-complaint-detail-view) {
+      display: none !important;
+    }
+
+    .rp-main-column,
+    .rp-content {
+      display: block;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      overflow: visible;
+    }
+
+    .rp-complaint-detail-view > :not(.rp-protocol-print) {
+      display: none !important;
+    }
+
+    .rp-protocol-print {
+      display: block !important;
+      padding: 8mm;
+      color: #263238;
+      font: 11pt Arial, sans-serif;
+    }
+
+    .rp-protocol-print h1 {
+      margin: 0 0 16px;
+      color: #1565c0;
+      font-size: 18pt;
+    }
+
+    .rp-protocol-print-number {
+      margin: 0 0 22px;
+      font-size: 11pt;
+    }
+
+    .rp-protocol-print-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+      break-inside: avoid;
+    }
+
+    .rp-protocol-print-field strong {
+      color: #546e7a;
+      font-size: 10pt;
+    }
+
+    .rp-protocol-print-field span {
+      font-size: 11pt;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
   }
 
   .rp-update-panel,
