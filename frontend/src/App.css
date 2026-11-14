@@ -2433,9 +2433,9 @@ a {
     font-size: 13px;
   }
 
-  .dashboard-content {
+  .dashboard-page .dashboard-content {
     display: block;
-    padding: 20px 14px 110px;
+    padding: 20px 14px calc(80px + env(safe-area-inset-bottom));
   }
 
   .welcome-section {

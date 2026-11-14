@@ -108,7 +108,7 @@
   grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
   gap: clamp(24px, 5vw, 70px);
   max-width: 1190px;
-  padding: 48px 24px 64px;
+  padding: 48px 24px 24px;
 }
 
 .dashboard-utility-grid {
@@ -1382,10 +1382,6 @@
 
 /* Ajustes para celulares (320px a 430px): evita rolagem horizontal e empilha os cards em uma coluna. */
 @media (max-width: 680px) {
-  .dashboard-utility-grid {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
-  }
-
   .section-heading {
     gap: 12px;
   }
