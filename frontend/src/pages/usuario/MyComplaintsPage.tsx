@@ -104,7 +104,13 @@ function MyComplaintsPage() {
 							return (
 								<article className="my-complaint-item" key={complaint.id}>
 									<div className="my-complaint-main">
-										<span className="complaint-protocol">{complaint.protocol}</span>
+										{/* Antonio - Atividade 6: protocolo e etiqueta de status na mesma linha (original: só o protocolo aqui; o status ficava embaixo, junto de "Ver detalhes"). */}
+										<div className="my-complaint-header">
+											<span className="complaint-protocol">{complaint.protocol}</span>
+											<span className={`status ${statusClasses[status] ?? 'status-received'}`}>
+												{status}
+											</span>
+										</div>
 										<h3>{complaint.type.name || 'Tipo não informado'}</h3>
 										<small>{complaint.categories.join(', ')}</small>
 										<p className="my-complaint-description">
@@ -119,9 +125,7 @@ function MyComplaintsPage() {
 										</p>
 									</div>
 									<div className="my-complaint-actions">
-										<span className={`status ${statusClasses[status] ?? 'status-received'}`}>
-											{status}
-										</span>
+										{/* Antonio - Atividade 6: etiqueta de status removida daqui e movida para a linha do protocolo, para não aparecer duas vezes. */}
 										<Link
 											className="complaint-details-link"
 											to={`/denuncias/${complaint.id}`}

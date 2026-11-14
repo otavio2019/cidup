@@ -5,6 +5,16 @@
   --citizen-muted: #667789;
   --citizen-canvas: #f2f6fb;
   --citizen-line: #d5dce6;
+  /* Antonio - Atividade 1: paleta única de cores dos status, usada nos cards de resumo da tela inicial do cidadão. */
+  --status-recebida: #6366f1;
+  --status-em-analise: #2563eb;
+  --status-em-atendimento: #d97706;
+  --status-resolvida: #16a34a;
+  --status-negada: #dc2626;
+  /* Antonio - Atividade 7: largura máxima única do conteúdo do cabeçalho e das telas do cidadão no desktop (antes cada tela tinha a sua: 1190px, 1040px, 1000px, 850px; o cabeçalho não tinha limite). */
+  --citizen-container-width: 1320px;
+  /* Antonio - Atividade 7: margem lateral única, igual ao padding lateral que o cabeçalho já usava (clamp(22px, 4vw, 58px)). */
+  --citizen-container-padding: clamp(22px, 4vw, 58px);
 }
 
 .dashboard-page,
@@ -325,49 +335,64 @@
   line-height: 1.25;
 }
 
+/* Antonio - Atividade 1: card "Recebida" com borda na cor do status (original: border-color #321ce4). */
 .progress-card {
-  border-color: #321ce4;
+  border: 1px solid var(--status-recebida);
+  border-left-width: 4px;
 }
 
+/* Antonio - Atividade 1: bolinha sólida na cor do status e símbolo branco (original: background #321ce4). */
 .progress-card .summary-icon {
-  color: #fff;
-  background: #321ce4;
+  color: #ffffff;
+  background: var(--status-recebida);
 }
 
+/* Antonio - Atividade 1: card "Em análise" com borda na cor do status (original: border-color #f01822). */
 .open-card {
-  border-color: #f01822;
+  border: 1px solid var(--status-em-analise);
+  border-left-width: 4px;
 }
 
+/* Antonio - Atividade 1: bolinha sólida na cor do status e símbolo branco (original: background #f01822). */
 .open-card .summary-icon {
-  color: #fff;
-  background: #f01822;
+  color: #ffffff;
+  background: var(--status-em-analise);
 }
 
+/* Antonio - Atividade 1: card "Em atendimento" com borda na cor do status (original: border-color #f49b00). */
 .yellow-card {
-  border-color: #f49b00;
+  border: 1px solid var(--status-em-atendimento);
+  border-left-width: 4px;
 }
 
+/* Antonio - Atividade 1: bolinha sólida na cor do status e símbolo branco (original: color #13314c, background #f8a51a). */
 .yellow-card .summary-icon {
-  color: #13314c;
-  background: #f8a51a;
+  color: #ffffff;
+  background: var(--status-em-atendimento);
 }
 
+/* Antonio - Atividade 1: card "Resolvida" com borda na cor do status (original: border-color #77ed83). */
 .green-card {
-  border-color: #77ed83;
+  border: 1px solid var(--status-resolvida);
+  border-left-width: 4px;
 }
 
+/* Antonio - Atividade 1: bolinha sólida na cor do status e símbolo branco (original: color #13314c, background #8eff8e). */
 .green-card .summary-icon {
-  color: #13314c;
-  background: #8eff8e;
+  color: #ffffff;
+  background: var(--status-resolvida);
 }
 
+/* Antonio - Atividade 1: card "Negadas" com borda na cor do status (original: border-color #c62828). */
 .denied-card {
-  border-color: #c62828;
+  border: 1px solid var(--status-negada);
+  border-left-width: 4px;
 }
 
+/* Antonio - Atividade 1: bolinha sólida na cor do status e símbolo branco (original: background #c62828). */
 .denied-card .summary-icon {
-  color: #fff;
-  background: #c62828;
+  color: #ffffff;
+  background: var(--status-negada);
 }
 
 .complaints-section {
@@ -383,6 +408,13 @@
 .dashboard-sidebar {
   gap: 14px;
   padding-top: 82px;
+}
+
+/* Antonio - Atividade 3: no desktop (duas colunas, acima de 980px) remove o padding-top de 82px da coluna lateral para o card "Juntos por cidades melhores" ficar nivelado com a saudação "Olá, [nome]". */
+@media (min-width: 981px) {
+  .dashboard-sidebar {
+    padding-top: 0;
+  }
 }
 
 .city-card {
@@ -523,6 +555,54 @@
 
 .complaint-protocol {
   color: var(--citizen-blue);
+}
+
+/* Antonio - Atividade 6 (ajuste): no desktop (acima de 680px) o card vira grid de 2 colunas para o cabeçalho ocupar a largura total e a etiqueta ficar na borda direita, acima de "Ver detalhes →". Substitui a regra anterior da Atividade 6 ".my-complaint-main { flex: 1 1 auto; }". O celular continua com o layout em coluna. */
+@media (min-width: 681px) {
+  /* Antonio - Atividade 6 (ajuste): card em grid, texto à esquerda e "Ver detalhes →" à direita (original: display flex, gap 28px, align-items center). */
+  .my-complaint-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 28px;
+    row-gap: 0;
+  }
+
+  /* Antonio - Atividade 6 (ajuste): o bloco principal "some" do layout para os filhos dele (cabeçalho, título, textos) virarem itens do grid do card, sem mudar o HTML. */
+  .my-complaint-main {
+    display: contents;
+  }
+
+  /* Antonio - Atividade 6 (ajuste): cabeçalho (protocolo + status) ocupa as duas colunas, alinhando o status à borda direita do card. */
+  .my-complaint-header {
+    grid-column: 1 / -1;
+  }
+
+  /* Antonio - Atividade 6 (ajuste): título, categoria, descrição, endereço e data ficam na coluna da esquerda. */
+  .my-complaint-main > :not(.my-complaint-header) {
+    grid-column: 1;
+  }
+
+  /* Antonio - Atividade 6 (ajuste): "Ver detalhes →" continua na coluna da direita, centralizado ao lado do texto e abaixo do status (5 linhas: título, categoria, descrição, endereço e data). */
+  .my-complaint-actions {
+    grid-column: 2;
+    grid-row: 2 / span 5;
+    align-self: center;
+  }
+}
+
+/* Antonio - Atividade 6: protocolo à esquerda e status à direita na mesma linha; com flex-wrap a etiqueta desce para baixo do protocolo se faltar espaço. */
+.my-complaint-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+/* Antonio - Atividade 6: protocolos longos quebram em vez de estourar o card. */
+.my-complaint-header .complaint-protocol {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .profile-content {
@@ -1325,6 +1405,11 @@
     flex-direction: row;
   }
 
+  /* Antonio - Atividade 6: no celular o card vira coluna; o bloco principal estica na largura toda para o status continuar alinhado à direita (original: herdava align-items flex-start). */
+  .my-complaint-main {
+    align-self: stretch;
+  }
+
   .profile-panel {
     padding: 7px 18px 20px;
   }
@@ -1404,47 +1489,53 @@
 }
 
 @media (max-width: 480px) {
+  /* Antonio - Atividade 4: cards de resumo em grade de 2 colunas no celular (original: grid-template-columns 1fr, um abaixo do outro). */
   .summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
+  /* Antonio - Atividade 4: card compacto e empilhado (ícone, título, número, legenda) (original: display grid em linha, padding 12px 14px). */
   .summary-card {
-    display: grid;
+    display: block;
+    min-width: 0;
     min-height: 0;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    column-gap: 12px;
-    row-gap: 2px;
-    padding: 12px 14px;
+    padding: 10px;
   }
 
+  /* Antonio - Atividade 4: como são 5 cards, o último (Negadas) ocupa a linha inteira para a grade ficar organizada. */
+  .summary-grid .denied-card {
+    grid-column: 1 / -1;
+  }
+
+  /* Antonio - Atividade 4: ícone menor e acima do texto (original: 32px, font-size 16px, grid-row 1 / 3). */
   .summary-icon {
-    width: 32px;
-    height: 32px;
-    grid-row: 1 / 3;
-    margin-bottom: 0;
-    font-size: 16px;
-  }
-
-  .summary-card p {
-    grid-column: 2;
-    grid-row: 1;
-    min-height: 0;
-    margin: 0;
+    width: 26px;
+    height: 26px;
+    margin-bottom: 6px;
     font-size: 14px;
   }
 
-  .summary-card > span:last-child {
-    grid-column: 2;
-    grid-row: 2;
-    font-size: 12px;
+  /* Antonio - Atividade 4: título menor e com quebra segura para não estourar o card (original: font-size 14px, grid-column 2). */
+  .summary-card p {
+    min-height: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 
+  /* Antonio - Atividade 4: legenda menor e com quebra segura (original: font-size 12px, grid-column 2). */
+  .summary-card > span:last-child {
+    font-size: 11px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  /* Antonio - Atividade 4: número proporcionalmente menor, mantendo a cor original (original: font-size 26px, grid-column 3). */
   .summary-card strong {
-    grid-column: 3;
-    grid-row: 1 / 3;
-    font-size: 26px;
+    font-size: 22px;
+    line-height: 1.2;
   }
 
   .organization-options,
@@ -1500,14 +1591,51 @@
     overflow-wrap: anywhere;
   }
 
+  /* Antonio - Atividade 4: mantém o ícone compacto nos cards em 2 colunas em telas muito estreitas (original: 28px, font-size 14px). */
   .summary-icon {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
   }
 
   .password-toggle {
     min-width: 40px;
     min-height: 40px;
+  }
+}
+
+/* Antonio - Atividade 7: no desktop (acima de 980px), cabeçalho e telas do cidadão usam o mesmo container (largura máxima 1320px e a mesma margem lateral), alinhando a borda esquerda do conteúdo com a logo e a direita com o botão "Meu perfil". Celular e tablet não mudam. */
+@media (min-width: 981px) {
+  /* Antonio - Atividade 7: o fundo do cabeçalho continua ocupando a tela toda; só o conteúdo (logo, menu, "Meu perfil") fica limitado a 1320px e centralizado (original: padding lateral clamp(22px, 4vw, 58px), sem largura máxima). */
+  .citizen-header {
+    padding-inline: max(var(--citizen-container-padding), calc((100% - var(--citizen-container-width)) / 2));
+  }
+
+  /* Antonio - Atividade 7: tela inicial no container padrão (original: max-width 1190px e padding lateral 24px). As colunas (1.65fr / minmax(280px, 1fr)) continuam iguais. */
+  .dashboard-content {
+    width: min(var(--citizen-container-width), calc(100% - 2 * var(--citizen-container-padding)));
+    max-width: none;
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+
+  /* Antonio - Atividade 7: Minhas denúncias, Rascunhos e Detalhes da denúncia no container padrão (original: width min(1040px, calc(100% - 40px))). */
+  .complaints-page-content {
+    width: min(var(--citizen-container-width), calc(100% - 2 * var(--citizen-container-padding)));
+    margin-inline: auto;
+  }
+
+  /* Antonio - Atividade 7: Meu perfil no container padrão (original: width min(850px, calc(100% - 40px))). */
+  .profile-content {
+    width: min(var(--citizen-container-width), calc(100% - 2 * var(--citizen-container-padding)));
+    margin-inline: auto;
+  }
+
+  /* Antonio - Atividade 7: Registrar denúncia, Localização e Revisão no container padrão (original: width min(1000px, calc(100% - 40px))). */
+  .complaint-shell,
+  .location-shell,
+  .review-shell {
+    width: min(var(--citizen-container-width), calc(100% - 2 * var(--citizen-container-padding)));
+    margin-inline: auto;
   }
 }

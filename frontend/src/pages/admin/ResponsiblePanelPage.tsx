@@ -57,6 +57,8 @@ function ResponsiblePanelPage() {
   const [status, setStatus] = useState<ComplaintStatus>('Recebida')
   const [observation, setObservation] = useState('')
   const [savedUpdate, setSavedUpdate] = useState(false)
+  // Antonio - Atividade 2: indica que a atualização da denúncia está sendo salva, para mostrar o feedback "Salvando..." no botão.
+  const [isSaving, setIsSaving] = useState(false)
 
   // Encerra a sessão no servidor e remove os dados locais antes de voltar ao login.
   async function handleLogout() {
@@ -173,6 +175,8 @@ function ResponsiblePanelPage() {
     const formData = new FormData(event.currentTarget)
     const nextStatus = formData.get('status') as ComplaintStatus
     const selectedOrganization = organizations.find((organization) => organization.nome === sector)
+    // Antonio - Atividade 2: liga o estado de salvamento antes das chamadas à API.
+    setIsSaving(true)
     try {
       await apiRequest(`/api/complaints/${selectedComplaint.id}`, {
         method: 'PATCH',
@@ -200,6 +204,9 @@ function ResponsiblePanelPage() {
     } catch (error) {
       setSavedUpdate(false)
       setLoadError(error instanceof Error ? error.message : 'Não foi possível salvar a atualização.')
+    // Antonio - Atividade 2: desliga o estado de salvamento tanto em sucesso quanto em erro.
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -283,6 +290,8 @@ function ResponsiblePanelPage() {
         sector={sector}
         observation={observation}
         savedUpdate={savedUpdate}
+        // Antonio - Atividade 2: repassa o estado de salvamento para o botão "Salvar atualização".
+        isSaving={isSaving}
         onSelectComplaint={(complaint) => {
           setSelectedProtocol(complaint.protocol)
           setStatus(complaint.status)

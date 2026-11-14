@@ -19,6 +19,8 @@ type ComplaintsSectionProps = {
   sector: string
   observation: string
   savedUpdate: boolean
+  // Antonio - Atividade 2: informa se a atualização está sendo salva, para o feedback "Salvando..." no botão.
+  isSaving: boolean
   onSelectComplaint: (complaint: AdminComplaint) => void
   onBack: () => void
   onStatusChange: (status: ComplaintStatus) => void
@@ -45,6 +47,8 @@ export function ComplaintsSection({
   sector,
   observation,
   savedUpdate,
+  // Antonio - Atividade 2: recebe o estado de salvamento vindo do ResponsiblePanelPage.
+  isSaving,
   onSelectComplaint,
   onBack,
   onStatusChange,
@@ -92,7 +96,10 @@ export function ComplaintsSection({
             <label>Setor responsável<select value={sector} onChange={(event) => onSectorChange(event.target.value)}><option value="">Não encaminhada</option>{organizations.map((organization) => <option key={organization.id_orgao} value={organization.nome}>{organization.nome}</option>)}</select></label>
             <label>Observação<textarea value={observation} onChange={(event) => onObservationChange(event.target.value)} placeholder="Inclua uma atualização para o cidadão acompanhar." rows={3} /></label>
             {savedUpdate && <p className="rp-success-message" role="status">Atualização salva com sucesso.</p>}
-            <button className="rp-primary-button" type="submit">Salvar atualização</button>
+            {/* Antonio - Atividade 2: enquanto salva, o botão fica desabilitado, mais escuro (classe is-saving) e mostra "Salvando..." (original: só o texto fixo "Salvar atualização"). */}
+            <button className={`rp-primary-button${isSaving ? ' is-saving' : ''}`} type="submit" disabled={isSaving} aria-busy={isSaving}>
+              {isSaving ? 'Salvando...' : 'Salvar atualização'}
+            </button>
           </form>
         </div>
         <section className="rp-panel rp-history-panel" aria-labelledby="responsible-history-title">

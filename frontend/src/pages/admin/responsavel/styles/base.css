@@ -78,6 +78,34 @@
     text-transform: uppercase;
   }
 
+  /* Antonio - Atividade 5: ajustes da marca só no desktop (barra lateral fixa de 188px); no celular (até 760px) nada muda. */
+  @media (min-width: 761px) {
+    /* Antonio - Atividade 5: mais respiro à esquerda e menos à direita para sobrar espaço ao texto (original: padding 0 12px, gap 10px). */
+    .rp-brand {
+      gap: 8px;
+      padding: 0 0 0 14px;
+    }
+
+    /* Antonio - Atividade 5: logo um pouco menor para o texto caber ao lado (original: width 102px, height 40px). */
+    .rp-brand-logo {
+      width: 74px;
+      height: 32px;
+      flex: 0 0 74px;
+    }
+
+    /* Antonio - Atividade 5: o texto pode encolher e quebrar em duas linhas ("PAINEL DO / RESPONSÁVEL") sem estourar a barra. */
+    .rp-brand > span {
+      min-width: 0;
+    }
+
+    /* Antonio - Atividade 5: alinha o texto ao centro da logo e permite quebra segura (original: margin-top 5px, sem line-height definido). */
+    .rp-brand small {
+      margin-top: 0;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+  }
+
   .rp-navigation {
     display: grid;
     gap: 7px;
