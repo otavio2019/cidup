@@ -7,17 +7,7 @@ import CitizenHeader from '../../components/usuario/CitizenHeader'
 import { clearActiveDraft } from '../../drafts'
 import '../../App.css'
 
-/** Painel do cidadão: indicadores, atalhos, denúncias recentes e rascunho opcional por IA. */
-const complaintStatusLabels: Record<string, string> = {
-  RECEIVED: 'Recebida',
-  IN_ANALYSIS: 'Em análise',
-  FORWARDED: 'Em atendimento',
-  IN_SERVICE: 'Em atendimento',
-  RESOLVED: 'Resolvida',
-  NOT_SERVED: 'Negada',
-  CANCELLED: 'Cancelada',
-  CANCELED: 'Cancelada',
-}
+/** Painel do cidadão: indicadores, atalhos e rascunho opcional por IA. */
 
 // Lê o primeiro nome salvo no perfil para saudar o cidadão.
 function readStoredCitizenName() {
@@ -29,7 +19,7 @@ function readStoredCitizenName() {
   }
 }
 
-  // Carrega o resumo das denúncias e reúne atalhos e recursos do painel cidadão.
+// Carrega os indicadores das denúncias e reúne atalhos e recursos do painel cidadão.
 function DashboardPage() {
   const navigate = useNavigate()
   const [complaints, setComplaints] = useState<Complaint[]>([])
@@ -48,7 +38,7 @@ function DashboardPage() {
   const [aiMessage, setAiMessage] = useState('')
 
 
-  // Busca as denúncias da sessão para preencher os indicadores e a lista recente.
+  // Busca as denúncias da sessão para preencher os indicadores.
   useEffect(() => {
     apiRequest<{ complaints: Complaint[] }>('/api/complaints')
       .then((data) => setComplaints(data.complaints))
@@ -84,17 +74,6 @@ function DashboardPage() {
     sessionStorage.removeItem('cidup-complaint-confirmation')
     sessionStorage.removeItem('cidup-active-draft-id')
     navigate('/login', { replace: true })
-  }
-
-  // Arquiva a denúncia sem apagar seus dados nem seu histórico no banco.
-  async function arquivarDenuncia(id: number) {
-    if (!window.confirm('Arquivar esta denúncia? Ela continuará salva no sistema.')) return
-    try {
-      await apiRequest(`/api/complaints/${id}/archive`, { method: 'PATCH' })
-      setComplaints((current) => current.filter((complaint) => complaint.id !== id))
-    } catch (error) {
-      setComplaintMessage(error instanceof Error ? error.message : 'Não foi possível arquivar a denúncia.')
-    }
   }
 
   // Solicita um rascunho à IA e apresenta falhas sem perder o controle de carregamento.
@@ -215,6 +194,7 @@ function DashboardPage() {
           </section>
 
           {/* Os cartões resumem os status das denúncias carregadas de /api/complaints. */}
+          {complaintMessage && <p className="form-message" role="alert">{complaintMessage}</p>}
           <div className="summary-grid">
             <article className="summary-card progress-card">
               <span className="summary-icon">●</span>
@@ -251,29 +231,6 @@ function DashboardPage() {
               <span>Não seguirão para atendimento</span>
             </article>
           </div>
-
-          <section className="complaints-section">
-            <div className="section-heading">
-              <h3>Acompanhe suas denúncias</h3>
-              <Link to="/minhas-denuncias">Ver todas →</Link>
-            </div>
-
-            {complaintMessage && <p className="form-message" role="alert">{complaintMessage}</p>}
-            {complaints.length === 0 && !complaintMessage && <p>Nenhuma denúncia registrada ainda.</p>}
-            {complaints.slice(0, 5).map((complaint) => (
-              <article className="complaint-item" key={complaint.id}>
-                <div>
-                  <strong>{complaint.protocol}</strong>
-                  <p>{complaint.title}</p>
-                  <small>Registrada em {new Date(complaint.createdAt).toLocaleDateString('pt-BR')}</small>
-                </div>
-                <span className={`status ${complaint.status === 'RESOLVED' ? 'status-solved' : ['NOT_SERVED', 'CANCELLED', 'CANCELED'].includes(complaint.status) ? 'status-canceled' : complaint.status === 'FORWARDED' || complaint.status === 'IN_SERVICE' ? 'status-service' : 'status-analysis'}`}>{complaintStatusLabels[complaint.status] ?? 'Em análise'}</span>
-                {!complaint.history.some((item) => item.responsibleId) && (
-                  <button className="dashboard-delete-button" type="button" onClick={() => void arquivarDenuncia(complaint.id)}>Arquivar</button>
-                )}
-              </article>
-            ))}
-          </section>
         </div>
 
         <aside className="dashboard-sidebar">
@@ -327,29 +284,29 @@ function DashboardPage() {
             </a>
             {logoutError && <p className="form-message" role="alert">{logoutError}</p>}
           </div>
-        </aside>
-      </section>
 
-      <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
-        <section className="dashboard-utility-card" id="ajuda" aria-labelledby="ajuda-title">
-          <p className="complaint-kicker">SUPORTE</p>
-          <h2 id="ajuda-title">Central de ajuda</h2>
-          <p>Encontre orientações rápidas para registrar e acompanhar uma denúncia.</p>
-          <div className="help-list">
-            <details>
-              <summary>Como registrar uma denúncia?</summary>
-              <p>Clique em “Registrar nova denúncia”, escolha o tipo do problema, descreva o ocorrido, informe o local e revise os dados antes de enviar.</p>
-            </details>
-            <details>
-              <summary>Como acompanhar uma denúncia?</summary>
-              <p>Acesse “Minhas denúncias” para consultar o protocolo, o status atual e as observações registradas pelo órgão responsável.</p>
-            </details>
-            <details>
-              <summary>Posso anexar uma foto?</summary>
-              <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
-            </details>
-          </div>
-        </section>
+          <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
+            <section className="dashboard-utility-card" id="ajuda" aria-labelledby="ajuda-title">
+              <p className="complaint-kicker">SUPORTE</p>
+              <h2 id="ajuda-title">Central de ajuda</h2>
+              <p>Encontre orientações rápidas para registrar e acompanhar uma denúncia.</p>
+              <div className="help-list">
+                <details>
+                  <summary>Como registrar uma denúncia?</summary>
+                  <p>Clique em “Registrar nova denúncia”, escolha o tipo do problema, descreva o ocorrido, informe o local e revise os dados antes de enviar.</p>
+                </details>
+                <details>
+                  <summary>Como acompanhar uma denúncia?</summary>
+                  <p>Acesse “Minhas denúncias” para consultar o protocolo, o status atual e as observações registradas pelo órgão responsável.</p>
+                </details>
+                <details>
+                  <summary>Posso anexar uma foto?</summary>
+                  <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
+                </details>
+              </div>
+            </section>
+          </section>
+        </aside>
       </section>
       <CitizenMobileNav />
     </main>
