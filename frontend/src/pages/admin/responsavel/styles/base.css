@@ -265,13 +265,8 @@
   }
 
   .rp-notification-icon {
-    display: grid;
-    width: 15px;
-    height: 15px;
-    place-items: center;
-    border: 2px solid currentColor;
-    border-radius: 50% 50% 45% 45%;
-    font-size: 0;
+    width: 18px;
+    height: 18px;
   }
 
   .rp-notification-count {

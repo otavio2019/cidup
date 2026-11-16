@@ -33,6 +33,10 @@
 
 /* Cabeçalho, navegação e identidade visual das páginas do cidadão. */
 .citizen-header {
+  --rp-ink: var(--citizen-ink);
+  --rp-muted: var(--citizen-muted);
+  --rp-line: var(--citizen-line);
+  --rp-blue: var(--citizen-blue);
   min-height: 108px;
   gap: 34px;
   padding: 12px clamp(22px, 4vw, 58px);
@@ -110,6 +114,13 @@
 .citizen-header .profile-button.is-current {
   border-color: #d9e9dc;
   background: #f4faf5;
+}
+
+.citizen-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
 }
 
 .citizen-header .profile-icon {
@@ -1347,6 +1358,10 @@
   .citizen-header .profile-button {
     justify-self: end;
   }
+
+  .citizen-header-actions {
+    justify-self: end;
+  }
 }
 
 .complaint-page .complaint-actions {
@@ -1420,6 +1435,10 @@
   .citizen-header .profile-button {
     padding: 9px 10px;
     font-size: 12px;
+  }
+
+  .citizen-header-actions {
+    gap: 8px;
   }
 
   .dashboard-content {

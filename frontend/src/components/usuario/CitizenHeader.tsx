@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { NotificationBell } from '../../pages/admin/responsavel/components/NotificationBell'
 
 type CitizenSection = 'home' | 'create' | 'complaints' | 'drafts' | 'profile'
 
@@ -20,10 +21,13 @@ function CitizenHeader({ active }: { active: CitizenSection }) {
         <Link className={active === 'complaints' ? 'active' : undefined} to="/minhas-denuncias">Minhas denúncias</Link>
                 <Link className={active === 'drafts' ? 'active' : undefined} to="/rascunhos">Rascunhos</Link>      </nav>
 
-      <Link className={`profile-button${active === 'profile' ? ' is-current' : ''}`} to="/perfil">
-        <span className="profile-icon" aria-hidden="true">●</span>
-        Meu perfil
-      </Link>
+      <div className="citizen-header-actions">
+        <NotificationBell />
+        <Link className={`profile-button${active === 'profile' ? ' is-current' : ''}`} to="/perfil">
+          <span className="profile-icon" aria-hidden="true">●</span>
+          Meu perfil
+        </Link>
+      </div>
     </header>
   )
 }

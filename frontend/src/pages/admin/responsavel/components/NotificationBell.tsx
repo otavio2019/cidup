@@ -112,7 +112,15 @@ export function NotificationBell() {
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
       >
-        <span aria-hidden="true" className="rp-notification-icon">!</span>
+        <svg aria-hidden="true" className="rp-notification-icon" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
         {unreadCount > 0 && <span className="rp-notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
