@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import BouncingText from '../../components/BouncingText'
-import { apiRequest } from '../../api'
+import { apiRequest } from '../../services/api'
 
 // ===== ESQUECI MINHA SENHA =====
 // O QUE FAZ: pede recuperação de senha informando o CPF ou o e-mail.

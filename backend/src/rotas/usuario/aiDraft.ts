@@ -1,6 +1,6 @@
 import { aiRateLimit } from '../../intermediarios/rateLimits.js'
-import { extractAiAddress } from '../../utilitarios/aiAddress.js'
-import { complaintPriorityLabels, normalizePriority, normalizeRoutingText, supportedComplaintCategories } from '../../utilitarios/complaints.js'
+import { extractAiAddress } from '../../utilitarios/complaint/aiAddress.js'
+import { complaintPriorityLabels, normalizePriority, normalizeRoutingText, supportedComplaintCategories } from '../../utilitarios/complaint/complaints.js'
 import type { RouteContext } from '../context.js'
 
 // ===== USUÁRIO: IA (SUGESTÃO DE RASCUNHO DE DENÚNCIA) =====

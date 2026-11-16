@@ -12,8 +12,8 @@ import {
   normalizePriority,
   normalizeComplaintCategory,
   supportedComplaintCategories,
-} from '../../utilitarios/complaints.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+} from '../../utilitarios/complaint/complaints.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { isRecord, isValidImageData, readPositiveInt } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

@@ -1,7 +1,7 @@
 import type express from 'express'
 import type { PrismaClient } from '@prisma/client'
 import { readAuthPrincipalType, readAuthUserId, requireAuthentication } from '../auth.js'
-import { handlePrismaError } from '../utilitarios/prismaErrors.js'
+import { handlePrismaError } from '../utilitarios/database/prismaErrors.js'
 
 // ===== MIDDLEWARES DE AUTENTICAÇÃO E PERMISSÃO =====
 

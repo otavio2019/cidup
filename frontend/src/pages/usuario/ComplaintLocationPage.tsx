@@ -3,8 +3,8 @@ import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
-import { getActiveDraftId, saveDraft } from '../../drafts'
-import { reverseGeocode } from '../../geocoding'
+import { getActiveDraftId, saveDraft } from '../../features/complaints/drafts'
+import { reverseGeocode } from '../../features/complaints/geocoding'
 import '../../App.css'
 
 const InteractiveLocationMap = lazy(() => import('../../components/usuario/InteractiveLocationMap'))

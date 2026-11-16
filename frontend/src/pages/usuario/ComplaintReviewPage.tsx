@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
+import { apiRequest } from '../../services/api'
 import BouncingText from '../../components/BouncingText'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
-import { deleteDraft, getActiveDraftId } from '../../drafts'
+import { deleteDraft, getActiveDraftId } from '../../features/complaints/drafts'
 import '../../App.css'
 
 /** Última etapa do cidadão: revisa o rascunho e cria a denúncia somente após confirmação. */

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import BouncingText from '../../components/BouncingText'
-import { apiRequest } from '../../api'
+import { apiRequest } from '../../services/api'
 
 import PasswordLockIcon from '../../components/common/PasswordLockIcon'
 // ===== REDEFINIR SENHA =====

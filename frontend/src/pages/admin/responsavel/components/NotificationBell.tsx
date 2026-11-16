@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiRequest } from '../../../../api'
-import { sincronizarNotificacoesPush } from '../../../../pushNotifications'
+import { apiRequest } from '../../../../services/api'
+import { sincronizarNotificacoesPush } from '../../../../services/pushNotifications'
 
 // Notificação entregue pelo endpoint /api/notifications.
 type NotificationItem = {

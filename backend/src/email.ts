@@ -1,4 +1,4 @@
-import { rotuloStatusDenuncia } from './utilitarios/complaints.js'
+import { rotuloStatusDenuncia } from './utilitarios/complaint/complaints.js'
 
 type EmailMessage = {
   to: string

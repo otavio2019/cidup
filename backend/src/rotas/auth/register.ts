@@ -1,7 +1,7 @@
 import type express from 'express'
 import { registerRateLimit } from '../../intermediarios/rateLimits.js'
-import { hashPassword } from '../../utilitarios/passwords.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { hashPassword } from '../../utilitarios/auth/passwords.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { digits, isRecord, isValidCep, isValidCpf } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

@@ -1,13 +1,13 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
-import { applyAiComplaintDraft, type AiComplaintDraft, type AiComplaintForm } from '../../aiComplaintDraft'
-import { validateComplaintForm } from '../../complaintValidation'
+import { apiRequest } from '../../services/api'
+import { applyAiComplaintDraft, type AiComplaintDraft, type AiComplaintForm } from '../../features/complaints/aiComplaintDraft'
+import { validateComplaintForm } from '../../features/complaints/complaintValidation'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
-import { getActiveDraftId, saveDraft } from '../../drafts'
-import { reverseGeocode } from '../../geocoding'
+import { getActiveDraftId, saveDraft } from '../../features/complaints/drafts'
+import { reverseGeocode } from '../../features/complaints/geocoding'
 import '../../App.css'
 
 const InteractiveLocationMap = lazy(() => import('../../components/usuario/InteractiveLocationMap'))

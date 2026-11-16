@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
-import { clearActiveDraft, deleteDraft, listDrafts, resumeDraft } from '../../drafts'
+import { clearActiveDraft, deleteDraft, listDrafts, resumeDraft } from '../../features/complaints/drafts'
 import '../../App.css'
 
 // ===== PÁGINA DE RASCUNHOS =====

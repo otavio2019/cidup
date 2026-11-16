@@ -3,8 +3,8 @@ import { AUTH_COOKIE_NAME, AUTH_TOKEN_TTL_SECONDS, createAuthToken, readAuthPrin
 import { notifySafely, sendPasswordResetEmail } from '../../email.js'
 import { passwordResetRateLimit } from '../../intermediarios/rateLimits.js'
 import { notifyAllResponsibles, notifySafely as notifyNotificationSafely } from '../../notifications.js'
-import { hashPassword, hashResetToken, verifyPassword } from '../../utilitarios/passwords.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { hashPassword, hashResetToken, verifyPassword } from '../../utilitarios/auth/passwords.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { digits, isRecord, isValidCpf } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

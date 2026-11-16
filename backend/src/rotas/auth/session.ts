@@ -1,5 +1,5 @@
 import { AUTH_COOKIE_NAME, readAuthPrincipalType, readAuthUserId } from '../../auth.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import type { RouteContext } from '../context.js'
 
 // ===== AUTENTICAÇÃO: SESSÃO E LOGOUT =====

@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { readAuthUserId } from '../../auth.js'
-import { hashPassword } from '../../utilitarios/passwords.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { hashPassword } from '../../utilitarios/auth/passwords.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { digits, isRecord, isValidCep, isValidCpf, isValidImageData, readPositiveInt } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

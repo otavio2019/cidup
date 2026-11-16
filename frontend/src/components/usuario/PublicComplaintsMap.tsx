@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
-import { apiRequest } from '../../api'
+import { apiRequest } from '../../services/api'
 import 'leaflet/dist/leaflet.css'
 
 type DenunciaPublica = {

@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { apiRequest, type Complaint } from '../../api'
-import { applyAiComplaintDraft, type AiComplaintDraft } from '../../aiComplaintDraft'
+import { apiRequest, type Complaint } from '../../services/api'
+import { applyAiComplaintDraft, type AiComplaintDraft } from '../../features/complaints/aiComplaintDraft'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 const PublicComplaintsMap = lazy(() => import('../../components/usuario/PublicComplaintsMap'))
-import { clearActiveDraft } from '../../drafts'
+import { clearActiveDraft } from '../../features/complaints/drafts'
 import '../../App.css'
 
 /** Painel do cidadão: indicadores, atalhos e rascunho opcional por IA. */

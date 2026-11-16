@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../api'
+import { apiRequest } from '../../services/api'
 import { ComplaintsSection } from './responsavel/components/ComplaintsSection'
 import { ComplaintTypesSection } from './responsavel/components/ComplaintTypesSection'
 import { DashboardSection } from './responsavel/components/DashboardSection'

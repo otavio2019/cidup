@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BouncingText from '../../components/BouncingText'
-import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
+import { ApiError, apiRequest, formatRateLimitMessage } from '../../services/api'
 
 import PasswordLockIcon from '../../components/common/PasswordLockIcon'
 // Ícone de olho (aberto ou riscado) usado no botão de mostrar/ocultar senha.

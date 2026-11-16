@@ -1,7 +1,7 @@
 import { AUTH_COOKIE_NAME, AUTH_TOKEN_TTL_SECONDS, createAuthToken } from '../../auth.js'
 import { loginRateLimit } from '../../intermediarios/rateLimits.js'
-import { verifyPassword } from '../../utilitarios/passwords.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { verifyPassword } from '../../utilitarios/auth/passwords.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { digits, isRecord } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

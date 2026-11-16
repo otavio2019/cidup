@@ -10,8 +10,18 @@ Permitir que o cidadão registre problemas urbanos, informe a localização, rec
 
 ```text
 cidup/
-├── backend/              # API, regras de negócio e integração com o banco
-├── frontend/             # Interface React do cidadão
+├── backend/
+│   ├── src/
+│   │   ├── rotas/         # Endpoints agrupados por domínio
+│   │   └── utilitarios/   # auth/, complaint/ e database/
+│   ├── prisma/            # Schema e migrations
+│   └── testes/            # Testes da API e helpers
+├── frontend/
+│   └── src/
+│       ├── features/      # Funcionalidades; complaints/ contém regras e testes
+│       ├── pages/         # Telas agrupadas por perfil e fluxo
+│       ├── components/    # Componentes reutilizáveis
+│       └── services/      # API e notificações push
 ├── docs/                 # Documentação do projeto (consulte docs/CODEBASE.md)
 └── docker-compose.yml    # Orquestração dos serviços locais
 ```

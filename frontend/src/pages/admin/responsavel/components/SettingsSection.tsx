@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ResponsibleProfile } from '../types'
 import { Info } from './PanelPrimitives'
-import { ativarNotificacoesPush } from '../../../../pushNotifications'
+import { ativarNotificacoesPush } from '../../../../services/pushNotifications'
 
 // ===== RESPONSÁVEL: CONFIGURAÇÕES DA CONTA =====
 // QUEM USA: ResponsiblePanelPage.tsx. DADOS: sessão autenticada em /api/auth/session.

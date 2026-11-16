@@ -3,7 +3,7 @@ import { readAuthPrincipalType, readAuthUserId } from '../../auth.js'
 import { notifySafely as notifyEmailSafely, sendComplaintStatusEmail } from '../../email.js'
 import { isResponsibleRequest } from '../../intermediarios/authenticate.js'
 import { createNotification, notifySafely } from '../../notifications.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { isRecord, readPositiveInt } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

@@ -1,7 +1,7 @@
 import { readAuthUserId } from '../../auth.js'
 import { requireAdministrator } from '../../intermediarios/authenticate.js'
-import { hashPassword } from '../../utilitarios/passwords.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { hashPassword } from '../../utilitarios/auth/passwords.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { isRecord, readPositiveInt } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

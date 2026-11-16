@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { requireAdministrator } from '../../intermediarios/authenticate.js'
-import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
+import { handlePrismaError } from '../../utilitarios/database/prismaErrors.js'
 import { isRecord, readPositiveInt } from '../../utilitarios/validation.js'
 import type { RouteContext } from '../context.js'
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { apiRequest } from './api'
+import { apiRequest } from './services/api'
 import ComplaintConfirmationPage from './pages/usuario/ComplaintConfirmationPage'
 import ComplaintDetailsPage from './pages/usuario/ComplaintDetailsPage'
 import ComplaintLocationPage from './pages/usuario/ComplaintLocationPage'

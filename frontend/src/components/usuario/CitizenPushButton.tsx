@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ativarNotificacoesPush, sincronizarNotificacoesPush } from '../../pushNotifications'
+import { ativarNotificacoesPush, sincronizarNotificacoesPush } from '../../services/pushNotifications'
 
 export default function CitizenPushButton() {
   const [ativado, setAtivado] = useState(false)
