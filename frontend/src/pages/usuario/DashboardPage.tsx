@@ -1,10 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../services/api'
 import { applyAiComplaintDraft, type AiComplaintDraft } from '../../features/complaints/aiComplaintDraft'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
-const PublicComplaintsMap = lazy(() => import('../../components/usuario/PublicComplaintsMap'))
 import { clearActiveDraft } from '../../features/complaints/drafts'
 import '../../App.css'
 
@@ -194,41 +193,6 @@ function DashboardPage() {
             )}
           </section>
 
-          <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
-            <section className="dashboard-utility-card" id="ajuda" aria-labelledby="ajuda-title">
-              <p className="complaint-kicker">SUPORTE</p>
-              <h2 id="ajuda-title">Central de ajuda</h2>
-              <p>Encontre orientações rápidas para registrar e acompanhar uma denúncia.</p>
-              <div className="help-list">
-                <details>
-                  <summary>Como registrar uma denúncia?</summary>
-                  <p>Clique em “Registrar nova denúncia”, escolha o tipo do problema, descreva o ocorrido, informe o local e revise os dados antes de enviar.</p>
-                </details>
-                <details>
-                  <summary>Como acompanhar uma denúncia?</summary>
-                  <p>Acesse “Minhas denúncias” para consultar o protocolo, o status atual e as observações registradas pelo órgão responsável.</p>
-                </details>
-                <details>
-                  <summary>Posso anexar uma foto?</summary>
-                  <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
-                </details>
-              </div>
-            </section>
-          </section>
-
-          <section className="dashboard-drafts-shortcut" aria-labelledby="rascunhos-title">
-            <div>
-              <p className="complaint-kicker">CONTINUAR DEPOIS</p>
-              <h3 id="rascunhos-title">Rascunhos</h3>
-              <p>Retome uma denúncia que você salvou para terminar depois.</p>
-            </div>
-            <Link className="secondary-action" to="/rascunhos">Ver rascunhos</Link>
-          </section>
-
-          <Suspense fallback={<section className="public-complaints-map-section" aria-busy="true">Carregando mapa das denúncias...</section>}>
-            <PublicComplaintsMap />
-          </Suspense>
-
           {/* Os cartões resumem os status das denúncias carregadas de /api/complaints. */}
           {complaintMessage && <p className="form-message" role="alert">{complaintMessage}</p>}
           <div className="summary-grid">
@@ -267,6 +231,37 @@ function DashboardPage() {
               <span>Não seguirão para atendimento</span>
             </article>
           </div>
+          <section className="dashboard-drafts-shortcut" aria-labelledby="rascunhos-title">
+            <div>
+              <p className="complaint-kicker">CONTINUAR DEPOIS</p>
+              <h3 id="rascunhos-title">Rascunhos</h3>
+              <p>Retome uma denúncia que você salvou para terminar depois.</p>
+            </div>
+            <Link className="secondary-action" to="/rascunhos">Ver rascunhos</Link>
+          </section>
+
+          <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
+            <section className="dashboard-utility-card" id="ajuda" aria-labelledby="ajuda-title">
+              <p className="complaint-kicker">SUPORTE</p>
+              <h2 id="ajuda-title">Central de ajuda</h2>
+              <p>Encontre orientações rápidas para registrar e acompanhar uma denúncia.</p>
+              <div className="help-list">
+                <details>
+                  <summary>Como registrar uma denúncia?</summary>
+                  <p>Clique em “Registrar nova denúncia”, escolha o tipo do problema, descreva o ocorrido, informe o local e revise os dados antes de enviar.</p>
+                </details>
+                <details>
+                  <summary>Como acompanhar uma denúncia?</summary>
+                  <p>Acesse “Minhas denúncias” para consultar o protocolo, o status atual e as observações registradas pelo órgão responsável.</p>
+                </details>
+                <details>
+                  <summary>Posso anexar uma foto?</summary>
+                  <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
+                </details>
+              </div>
+            </section>
+          </section>
+
         </div>
 
         <aside className="dashboard-sidebar">
@@ -288,11 +283,11 @@ function DashboardPage() {
               <b>›</b>
             </Link>
 
-            <Link to="/rascunhos">
-              <span>✎</span>
+            <Link to="/mapa">
+              <span>⌖</span>
               <div>
-                <strong>Rascunhos</strong>
-                <small>Continue denúncias salvas</small>
+                <strong>Mapa público</strong>
+                <small>Veja denúncias em aberto</small>
               </div>
               <b>›</b>
             </Link>

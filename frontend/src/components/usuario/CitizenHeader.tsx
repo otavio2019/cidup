@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { NotificationBell } from '../../pages/admin/responsavel/components/NotificationBell'
 import CitizenPushButton from './CitizenPushButton'
 
-type CitizenSection = 'home' | 'create' | 'complaints' | 'drafts' | 'profile'
+type CitizenSection = 'home' | 'create' | 'complaints' | 'map' | 'profile'
 
 // Renderiza a navegação principal do cidadão e destaca a seção em que ele está.
 function CitizenHeader({ active }: { active: CitizenSection }) {
@@ -20,7 +20,8 @@ function CitizenHeader({ active }: { active: CitizenSection }) {
         <Link className={active === 'home' ? 'active' : undefined} to="/dashboard">Início</Link>
         <Link className={active === 'create' ? 'active' : undefined} to="/registrar-denuncia">Registrar denúncia</Link>
         <Link className={active === 'complaints' ? 'active' : undefined} to="/minhas-denuncias">Minhas denúncias</Link>
-                <Link className={active === 'drafts' ? 'active' : undefined} to="/rascunhos">Rascunhos</Link>      </nav>
+        <Link className={active === 'map' ? 'active' : undefined} to="/mapa">Mapa</Link>
+      </nav>
 
       <div className="citizen-header-actions">
         <CitizenPushButton />

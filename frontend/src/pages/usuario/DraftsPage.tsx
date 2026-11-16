@@ -35,7 +35,7 @@ function DraftsPage() {
 
   return (
     <main className="my-complaints-page">
-      <CitizenHeader active="drafts" />
+      <CitizenHeader active="map" />
       <section className="complaints-page-content" aria-labelledby="drafts-title">
         <div className="my-complaints-heading">
           <div>

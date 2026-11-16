@@ -8,7 +8,7 @@ import ComplaintLocationPage from './pages/usuario/ComplaintLocationPage'
 import ComplaintReviewPage from './pages/usuario/ComplaintReviewPage'
 import CreateComplaintPage from './pages/usuario/CreateComplaintPage'
 import DashboardPage from './pages/usuario/DashboardPage'
-import DraftsPage from './pages/usuario/DraftsPage'
+import PublicMapPage from './pages/usuario/PublicMapPage'
 import LoginPage from './pages/auth/LoginPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
@@ -178,13 +178,14 @@ function App() {
       />
 
       <Route
-        path="/rascunhos"
+        path="/mapa"
         element={
           <ProtectedRoute>
-            <DraftsPage />
+            <PublicMapPage />
           </ProtectedRoute>
         }
       />
+      <Route path="/rascunhos" element={<Navigate to="/mapa" replace />} />
 
       <Route
         path="/perfil"
