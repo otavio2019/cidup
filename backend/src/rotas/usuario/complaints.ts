@@ -21,6 +21,47 @@ import type { RouteContext } from '../context.js'
 // Telas ligadas: páginas de denúncia em frontend/src/pages/usuario e,
 // para mudança de status, frontend/src/pages/admin/ResponsiblePanelPage.tsx.
 export function registerComplaintRoutes({ app, database, authenticate }: RouteContext) {
+  // Mapa público: mostra apenas localização aproximada, categoria e status.
+  // Nunca retorna nome, CPF, telefone, e-mail, descrição completa ou endereço.
+  app.get(['/api/public/complaints', '/api/public/denuncias'], async (_request, response) => {
+    try {
+      const denuncias = await database.denuncia.findMany({
+        where: {
+          arquivada: false,
+          status: { in: ['RECEIVED', 'IN_ANALYSIS', 'FORWARDED', 'IN_SERVICE'] },
+        },
+        orderBy: { atualizada_em: 'desc' },
+        take: 500,
+        select: {
+          id_denuncia: true,
+          titulo: true,
+          tipo: true,
+          categorias: true,
+          status: true,
+          latitude: true,
+          longitude: true,
+          atualizada_em: true,
+        },
+      })
+      response.json({
+        complaints: denuncias.map((denuncia) => ({
+          id: denuncia.id_denuncia,
+          protocol: `CIDUP-${denuncia.id_denuncia}`,
+          title: denuncia.titulo,
+          type: denuncia.tipo,
+          categories: denuncia.categorias?.length ? denuncia.categorias : [denuncia.tipo],
+          status: denuncia.status,
+          // Reduz a precisão para evitar expor o ponto exato de uma residência.
+          latitude: Number(denuncia.latitude.toFixed(4)),
+          longitude: Number(denuncia.longitude.toFixed(4)),
+          updatedAt: denuncia.atualizada_em,
+        })),
+      })
+    } catch (error) {
+      handlePrismaError(error, response, 'list-public-complaints')
+    }
+  })
+
   // Lista as denúncias próprias; administradores autorizados podem consultar todas.
   // QUEM USA: DashboardPage.tsx, MyComplaintsPage.tsx, ResponsiblePanelPage.tsx.
   // MIDDLEWARE: authenticate. CHAMA: complaintResponse. PRISMA: denuncia (findMany).

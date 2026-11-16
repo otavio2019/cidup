@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import BouncingText from '../../components/BouncingText'
 import { apiRequest } from '../../api'
 
+import PasswordLockIcon from '../../components/common/PasswordLockIcon'
 // ===== REDEFINIR SENHA =====
 // O QUE FAZ: define nova senha usando o token do link de recuperação.
 // QUEM USA: App.tsx, rota /recuperar-senha/nova (o token vem em ?token=).
@@ -49,8 +50,8 @@ export default function ResetPasswordPage() {
       <section className="login-panel" aria-labelledby="reset-title"><div className="mobile-brand"><img className="auth-logo" src={`${import.meta.env.BASE_URL}cidup-logo.png`} alt="CidUp" /></div><div className="login-panel-header"><p className="panel-kicker">NOVA SENHA</p><h2 id="reset-title">Redefinir senha</h2><p>Escolha uma nova senha para acessar sua conta.</p></div>
         {!token && <p className="form-message" role="alert">O link de recuperação está incompleto. Solicite um novo link.</p>}
         <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group"><label htmlFor="new-password">Nova senha</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">*</span><input id="new-password" type="password" required minLength={6} maxLength={1024} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /></div></div>
-          <div className="form-group"><label htmlFor="confirm-password">Confirmar nova senha</label><div className="input-wrap"><span className="input-icon" aria-hidden="true">*</span><input id="confirm-password" type="password" required minLength={6} maxLength={1024} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" /></div></div>
+          <div className="form-group"><label htmlFor="new-password">Nova senha</label><div className="input-wrap"><PasswordLockIcon /><input id="new-password" type="password" required minLength={6} maxLength={1024} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /></div></div>
+          <div className="form-group"><label htmlFor="confirm-password">Confirmar nova senha</label><div className="input-wrap"><PasswordLockIcon /><input id="confirm-password" type="password" required minLength={6} maxLength={1024} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" /></div></div>
           <button type="submit" className="login-button" disabled={loading || !token} aria-busy={loading}>
             {loading ? <BouncingText>Salvando...</BouncingText> : <>Salvar nova senha<span aria-hidden="true">→</span></>}
           </button>

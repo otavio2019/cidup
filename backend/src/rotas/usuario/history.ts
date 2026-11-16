@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { readAuthPrincipalType, readAuthUserId } from '../../auth.js'
+import { notifySafely as notifyEmailSafely, sendComplaintStatusEmail } from '../../email.js'
 import { isResponsibleRequest } from '../../intermediarios/authenticate.js'
 import { createNotification, notifySafely } from '../../notifications.js'
 import { handlePrismaError } from '../../utilitarios/prismaErrors.js'
@@ -105,7 +106,7 @@ export function registerHistoryRoutes({ app, database, authenticate }: RouteCont
       }
       const complaintForNotification = await database.denuncia.findUnique({
         where: { id_denuncia },
-        select: { id_usuario: true },
+        select: { id_usuario: true, status: true, usuario: { select: { email: true } } },
       })
       if (!complaintForNotification) {
         response.status(404).json({ error: 'Denúncia não encontrada.' })
@@ -130,6 +131,14 @@ export function registerHistoryRoutes({ app, database, authenticate }: RouteCont
           userId: complaintForNotification.id_usuario,
           complaintId: id_denuncia,
         }))
+        if (complaintForNotification.usuario?.email) {
+          void notifyEmailSafely(() => sendComplaintStatusEmail(
+            complaintForNotification.usuario.email,
+            `CIDUP-${id_denuncia}`,
+            complaintForNotification.status,
+            typeof body.observacao === 'string' ? body.observacao.trim() : '',
+          ))
+        }
       }
       response.status(201).json({ historico })
     } catch (error) {

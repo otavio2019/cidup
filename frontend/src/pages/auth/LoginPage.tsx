@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import BouncingText from '../../components/BouncingText'
 import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
 
+import PasswordLockIcon from '../../components/common/PasswordLockIcon'
 // Ícone de olho (aberto ou riscado) usado no botão de mostrar/ocultar senha.
 function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
   return (
@@ -137,7 +138,7 @@ function LoginPage() {
                 </Link>
               </div>
               <div className="input-wrap">
-                <span className="input-icon" aria-hidden="true">*</span>
+                <PasswordLockIcon />
                 <input
                   id="senha"
                   type={isPasswordVisible ? 'text' : 'password'}

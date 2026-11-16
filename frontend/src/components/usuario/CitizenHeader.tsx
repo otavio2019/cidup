@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { NotificationBell } from '../../pages/admin/responsavel/components/NotificationBell'
+import CitizenPushButton from './CitizenPushButton'
 
 type CitizenSection = 'home' | 'create' | 'complaints' | 'drafts' | 'profile'
 
@@ -22,6 +23,7 @@ function CitizenHeader({ active }: { active: CitizenSection }) {
                 <Link className={active === 'drafts' ? 'active' : undefined} to="/rascunhos">Rascunhos</Link>      </nav>
 
       <div className="citizen-header-actions">
+        <CitizenPushButton />
         <NotificationBell />
         <Link className={`profile-button${active === 'profile' ? ' is-current' : ''}`} to="/perfil">
           <span className="profile-icon" aria-hidden="true">●</span>

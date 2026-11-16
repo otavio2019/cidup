@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import BouncingText from '../../components/BouncingText'
 import { ApiError, apiRequest, formatRateLimitMessage } from '../../api'
 
+import PasswordLockIcon from '../../components/common/PasswordLockIcon'
 /** Cadastro do cidadão: formata documentos no navegador e persiste a conta pela API. */
 
 // Ícone de olho (aberto ou riscado) usado no botão de mostrar/ocultar senha.
@@ -238,7 +239,7 @@ function RegisterPage() {
             <div className="form-group">
               <label htmlFor="cadastro-senha">Senha</label>
               <div className="input-wrap">
-                <span className="input-icon" aria-hidden="true">*</span>
+                <PasswordLockIcon />
                 <input
                   id="cadastro-senha"
                   type={isPasswordVisible ? 'text' : 'password'}
@@ -261,7 +262,7 @@ function RegisterPage() {
             <div className="form-group">
               <label htmlFor="confirmar-senha">Confirmar senha</label>
               <div className="input-wrap">
-                <span className="input-icon" aria-hidden="true">*</span>
+                <PasswordLockIcon />
                 <input
                   id="confirmar-senha"
                   type={isConfirmPasswordVisible ? 'text' : 'password'}

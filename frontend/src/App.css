@@ -1270,6 +1270,11 @@ a {
   font-weight: 800;
 }
 
+.input-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
 .input-wrap input {
   min-width: 0;
   flex: 1;
