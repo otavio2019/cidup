@@ -362,3 +362,6 @@ aceita IDs administrativos configurados manualmente. Crie ou atualize a conta
 única com `npm run seed:responsavel` e use o e-mail e a senha configurados para
 entrar pelo mesmo endpoint de login dos cidadãos. A sessão assinada retorna
 `role: RESPONSIBLE`; o navegador não pode escolher esse papel.
+
+## Testes
+ <https://app.notion.com/p/Relat-rio-de-Testes-Sprint-5-8839426ea8238351b91901d4f6786a48?source=copy_link>
