@@ -237,7 +237,6 @@ function DashboardPage() {
               <h3 id="rascunhos-title">Rascunhos</h3>
               <p>Retome uma denúncia que você salvou para terminar depois.</p>
             </div>
-            <Link className="secondary-action" to="/rascunhos">Ver rascunhos</Link>
           </section>
 
           <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
