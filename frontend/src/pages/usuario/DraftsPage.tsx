@@ -62,7 +62,7 @@ function DraftsPage() {
               const { type, description, address, number, categories } = draft.data as Record<string, string | string[] | undefined>
               const categoryLabels = Array.isArray(categories) && categories.length ? categories.join(', ') : type
               return (
-                <article className="my-complaint-item" key={draft.id}>
+                <article className="my-complaint-item draft-card" key={draft.id}>
                   <div className="my-complaint-main">
                     <h3>{categoryLabels || 'Tipo não informado'}</h3>
                     <p className="my-complaint-description">{description || 'Sem descrição.'}</p>

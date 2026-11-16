@@ -555,12 +555,12 @@ function CreateComplaintPage() {
           {submitError && <p className="form-message complaint-submit-error" role="alert">{submitError}</p>}
 
           <div className="complaint-actions">
-            <Link className="secondary-action" to="/dashboard">Cancelar</Link>
-            <button className="secondary-action" type="button" onClick={handleSaveDraft}>Salvar rascunho</button>
-            {draftMessage && <p className="form-message" role="status">{draftMessage}</p>}
             <button className="primary-action" type="submit">
               Continuar para localização <span aria-hidden="true">→</span>
             </button>
+            <button className="secondary-action" type="button" onClick={handleSaveDraft}>Salvar rascunho</button>
+            {draftMessage && <p className="form-message" role="status">{draftMessage}</p>}
+            <Link className="secondary-action" to="/dashboard">Cancelar</Link>
           </div>
         </form>
       </section>
