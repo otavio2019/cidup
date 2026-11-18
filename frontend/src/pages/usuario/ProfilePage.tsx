@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../services/api'
+// Antonio - Atividade 10: logout compartilhado com o menu ☰ do celular.
+import { logoutCitizen } from '../../services/citizenSession'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
 import '../../App.css'
@@ -155,19 +157,13 @@ function ProfilePage() {
   // Encerra a sessão no backend e retorna à página de login após limpar os dados locais.
   async function handleLogout() {
     setLogoutError('')
+    // Antonio - Atividade 10: usa logoutCitizen() (original: apiRequest('/api/auth/logout') + remoção das chaves do localStorage/sessionStorage escritas aqui). Mensagem de erro e redirecionamento continuam iguais.
     try {
-      await apiRequest('/api/auth/logout', { method: 'POST' })
+      await logoutCitizen()
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : 'Não foi possível encerrar a sessão.')
       return
     }
-    localStorage.removeItem('cidup-role')
-    localStorage.removeItem('cidup-user-id')
-    localStorage.removeItem('cidup-complaints')
-    localStorage.removeItem('cidup-profile')
-    sessionStorage.removeItem('cidup-complaint-draft')
-    sessionStorage.removeItem('cidup-complaint-confirmation')
-    sessionStorage.removeItem('cidup-active-draft-id')
     navigate('/login', { replace: true })
   }
 

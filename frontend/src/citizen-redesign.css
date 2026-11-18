@@ -2053,3 +2053,238 @@
     white-space: nowrap;
   }
 }
+
+/* Antonio - Atividade 10: menu ☰ do cabeçalho do cidadão até 980px (o componente só é renderizado nessa faixa). Até 680px o cabeçalho fica só com a logo e o ☰; de 681 a 980px o menu de páginas continua no cabeçalho. Acima de 980px nada muda. */
+@media (max-width: 980px) {
+  /* Antonio - Atividade 10: referência de posição e camada para o painel suspenso abrir logo abaixo do cabeçalho, acima do conteúdo e da barra inferior (original: sem position/z-index). */
+  .citizen-header {
+    position: relative;
+    z-index: 30;
+  }
+
+  /* Antonio - Atividade 10: ☰ sempre encostado à direita, no lugar de "Ativar avisos", sino e "Meu perfil". */
+  .citizen-menu {
+    display: flex;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  /* Antonio - Atividade 10: botão ☰ / ✕ com área de toque de 44px e o mesmo visual do antigo botão "Meu perfil" (fundo #f5f7fa, borda var(--citizen-line), raio 10px). */
+  .citizen-menu-button {
+    position: relative;
+    display: inline-grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--citizen-line);
+    border-radius: 10px;
+    color: var(--citizen-ink);
+    background: #f5f7fa;
+    cursor: pointer;
+  }
+
+  .citizen-menu-button svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .citizen-menu-button:focus-visible {
+    outline: 3px solid rgb(21 100 192 / 25%);
+    outline-offset: 2px;
+  }
+
+  /* Antonio - Atividade 10: contador de não lidas no ☰, nas mesmas cores do contador do sino (#c43d47). */
+  .citizen-menu-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    padding: 2px 4px;
+    border-radius: 10px;
+    color: #fff;
+    background: #c43d47;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  /* Antonio - Atividade 10: painel suspenso abaixo do cabeçalho, limitado à largura da tela (sem rolagem horizontal) e com rolagem interna se a altura não couber. Fechado, fica só invisível (visibility), para o aviso flutuante de notificação continuar aparecendo. */
+  .citizen-menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 12px;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100vh - 96px);
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px 0;
+    border: 1px solid var(--citizen-line);
+    border-radius: var(--citizen-card-radius);
+    background: #fff;
+    box-shadow: 0 12px 32px rgb(16 47 73 / 18%);
+    visibility: hidden;
+  }
+
+  .citizen-menu-panel.is-open {
+    visibility: visible;
+  }
+
+  /* Antonio - Atividade 10: o aviso de nova notificação continua visível com o menu fechado e fica dentro da tela do celular (original no sino: top 74px, right 30px). */
+  .citizen-menu .rp-notification-toast {
+    top: 76px;
+    right: 12px;
+    width: min(390px, calc(100vw - 24px));
+    visibility: visible;
+  }
+
+  /* Antonio - Atividade 10: itens do menu com no mínimo 48px de altura e ícone alinhado à esquerda. */
+  .citizen-menu-item {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    border: 0;
+    color: var(--citizen-ink);
+    background: transparent;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 650;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  a.citizen-menu-item:hover,
+  a.citizen-menu-item:focus-visible,
+  button.citizen-menu-item:hover:not(:disabled),
+  button.citizen-menu-item:focus-visible {
+    color: var(--citizen-blue);
+    background: #f4f9ff;
+    outline: none;
+  }
+
+  button.citizen-menu-item:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .citizen-menu-icon {
+    display: inline-grid;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    place-items: center;
+    color: var(--citizen-blue);
+    font-size: 16px;
+  }
+
+  .citizen-menu-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Antonio - Atividade 10: o ícone de "Meu perfil" mantém o verde do antigo botão do cabeçalho (#4cb760). */
+  a.citizen-menu-item[href$="/perfil"] .citizen-menu-icon {
+    color: #4cb760;
+  }
+
+  /* Antonio - Atividade 10: grupo "Notificações" separado por linhas finas dos outros itens. */
+  .citizen-menu-notifications {
+    padding-bottom: 6px;
+    border-block: 1px solid var(--citizen-line);
+  }
+
+  .citizen-menu-heading {
+    cursor: default;
+  }
+
+  .citizen-menu-unread {
+    margin-left: auto;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: #fff;
+    background: #c43d47;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* Antonio - Atividade 10: "Ativar avisos" alinhado ao texto dos itens, com 44px de altura e mensagem de retorno no fluxo (original: mensagem absoluta abaixo do botão). */
+  .citizen-menu .citizen-push-action {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 16px 8px 52px;
+  }
+
+  .citizen-menu .citizen-push-button {
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .citizen-menu .citizen-push-message {
+    position: static;
+    width: auto;
+    max-width: none;
+    margin-top: 6px;
+  }
+
+  /* Antonio - Atividade 10: lista do sino exibida dentro do menu, sem caixa flutuante (original: position absolute, top 42px, largura min(360px, calc(100vw - 32px)), sombra). */
+  .citizen-menu .rp-notification-panel-inline {
+    position: static;
+    width: auto;
+    max-height: 260px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Antonio - Atividade 10: o título "Notificações" já aparece no item do menu; sobra só "Marcar todas como lidas" com área de toque de 44px (original: padding 13px 15px, fonte 10px). */
+  .citizen-menu .rp-notification-panel-inline .rp-notification-heading {
+    justify-content: flex-end;
+    padding: 0 12px;
+    border-bottom: 0;
+  }
+
+  .citizen-menu .rp-notification-panel-inline .rp-notification-heading strong {
+    display: none;
+  }
+
+  .citizen-menu .rp-notification-panel-inline .rp-notification-heading button {
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* Antonio - Atividade 10: notificações com toque confortável (mín. 44px) e textos legíveis no celular (original: padding 12px 15px, fontes 12px/11px). */
+  .citizen-menu .rp-notification-panel-inline .rp-notification-item button {
+    min-height: 44px;
+    padding: 10px 16px 10px 52px;
+  }
+
+  .citizen-menu .rp-notification-panel-inline .rp-notification-item strong {
+    font-size: 13px;
+  }
+
+  .citizen-menu .rp-notification-panel-inline .rp-notification-item span,
+  .citizen-menu .rp-notification-panel-inline .rp-notification-item small,
+  .citizen-menu .rp-notification-panel-inline .rp-notification-empty {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .citizen-menu .rp-notification-panel-inline .rp-notification-empty {
+    padding: 10px 16px 10px 52px;
+    text-align: left;
+  }
+
+  .citizen-menu-error {
+    margin: 0;
+    padding: 4px 16px 10px;
+  }
+}

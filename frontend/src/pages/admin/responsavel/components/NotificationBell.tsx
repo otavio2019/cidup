@@ -18,8 +18,19 @@ type NotificationResponse = {
   unreadCount: number
 }
 
+// Antonio - Atividade 10: props opcionais para reutilizar o componente dentro do menu ☰ do cidadão no celular. Sem props (como no painel do responsável e no desktop do cidadão), o comportamento é exatamente o original.
+type NotificationBellProps = {
+  // inline: mostra a lista direto (sem o botão do sino nem o painel suspenso).
+  inline?: boolean
+  // Informa o total de não lidas a quem usa o componente (ex.: contador no botão ☰).
+  onUnreadCountChange?: (count: number) => void
+  // Chamado ao tocar no aviso flutuante no modo inline (ex.: abrir o menu ☰).
+  onToastOpen?: () => void
+}
+
 // Consulta as notificações do responsável e permite marcar cada item ou todos como lidos.
-export function NotificationBell() {
+// Antonio - Atividade 10: assinatura passou a aceitar NotificationBellProps (original: NotificationBell() sem parâmetros).
+export function NotificationBell({ inline = false, onUnreadCountChange, onToastOpen }: NotificationBellProps = {}) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
@@ -65,6 +76,11 @@ export function NotificationBell() {
     }
   }, [])
 
+  // Antonio - Atividade 10: repassa o contador de não lidas quando onUnreadCountChange é informado (só no menu ☰).
+  useEffect(() => {
+    onUnreadCountChange?.(unreadCount)
+  }, [unreadCount, onUnreadCountChange])
+
   async function markAsRead(id: number) {
     try {
       await apiRequest(`/api/notifications/${id}/read`, { method: 'PATCH' })
@@ -93,6 +109,8 @@ export function NotificationBell() {
             type="button"
             className="rp-notification-toast-content"
             onClick={() => {
+              // Antonio - Atividade 10: no modo inline avisa quem usa o componente para abrir o menu (original: só setIsOpen(true)).
+              if (inline) onToastOpen?.()
               setIsOpen(true)
               void markAsRead(toast.id)
               setToast(null)
@@ -105,27 +123,31 @@ export function NotificationBell() {
           <button type="button" className="rp-notification-toast-close" aria-label="Fechar aviso" onClick={() => setToast(null)}>×</button>
         </div>
       )}
-      <button
-        className="rp-notification-button"
-        type="button"
-        aria-label={unreadCount > 0 ? `Notificações, ${unreadCount} não lidas` : 'Notificações'}
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <svg aria-hidden="true" className="rp-notification-icon" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        {unreadCount > 0 && <span className="rp-notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-      </button>
+      {/* Antonio - Atividade 10: o botão do sino só aparece fora do modo inline (original: sempre exibido). */}
+      {!inline && (
+        <button
+          className="rp-notification-button"
+          type="button"
+          aria-label={unreadCount > 0 ? `Notificações, ${unreadCount} não lidas` : 'Notificações'}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <svg aria-hidden="true" className="rp-notification-icon" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {unreadCount > 0 && <span className="rp-notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+        </button>
+      )}
 
-      {isOpen && (
-        <section className="rp-notification-panel" aria-label="Notificações">
+      {/* Antonio - Atividade 10: no modo inline a lista fica sempre visível e recebe a classe extra rp-notification-panel-inline (original: só quando isOpen, como painel suspenso). */}
+      {(inline || isOpen) && (
+        <section className={inline ? 'rp-notification-panel rp-notification-panel-inline' : 'rp-notification-panel'} aria-label="Notificações">
           <div className="rp-notification-heading">
             <strong>Notificações</strong>
             {unreadCount > 0 && <button type="button" onClick={() => void markAllAsRead()}>Marcar todas como lidas</button>}

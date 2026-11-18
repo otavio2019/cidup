@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// Antonio - Atividade 10: useLocation adicionado para ler a âncora (#ajuda) da URL (original: import { Link, useNavigate }).
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiRequest, type Complaint } from '../../services/api'
 import { applyAiComplaintDraft, type AiComplaintDraft } from '../../features/complaints/aiComplaintDraft'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
@@ -22,6 +23,8 @@ function readStoredCitizenName() {
 // Carrega os indicadores das denúncias e reúne atalhos e recursos do painel cidadão.
 function DashboardPage() {
   const navigate = useNavigate()
+  // Antonio - Atividade 10: localização atual, usada para rolar até a âncora vinda do menu ☰ ("Central de ajuda" → /dashboard#ajuda).
+  const location = useLocation()
   const [complaints, setComplaints] = useState<Complaint[]>([])
   const [complaintMessage, setComplaintMessage] = useState('')
   // Antonio - Atividade 9: removido o estado logoutError (original: const [logoutError, setLogoutError] = useState('')), sem uso após tirar "Sair" do menu lateral.
@@ -37,6 +40,13 @@ function DashboardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiMessage, setAiMessage] = useState('')
 
+
+  // Antonio - Atividade 10: o React Router não rola até a âncora sozinho; ao chegar com #ajuda (de qualquer tela ou repetindo o toque já na tela inicial), rola até o card "Central de ajuda".
+  useEffect(() => {
+    if (!location.hash) return
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)))
+    target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }, [location.hash, location.key])
 
   // Busca as denúncias da sessão para preencher os indicadores.
   useEffect(() => {
