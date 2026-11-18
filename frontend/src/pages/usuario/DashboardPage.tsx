@@ -24,7 +24,7 @@ function DashboardPage() {
   const navigate = useNavigate()
   const [complaints, setComplaints] = useState<Complaint[]>([])
   const [complaintMessage, setComplaintMessage] = useState('')
-  const [logoutError, setLogoutError] = useState('')
+  // Antonio - Atividade 9: removido o estado logoutError (original: const [logoutError, setLogoutError] = useState('')), sem uso após tirar "Sair" do menu lateral.
   const [description, setDescription] = useState('')
   const [citizenName, setCitizenName] = useState(readStoredCitizenName)
   const [draft, setDraft] = useState<AiComplaintDraft & {
@@ -57,24 +57,7 @@ function DashboardPage() {
       .catch(() => undefined)
   }, [])
 
-  // Encerra a sessão no servidor, limpa dados locais e volta ao login.
-  async function handleLogout() {
-    setLogoutError('')
-    try {
-      await apiRequest('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
-      setLogoutError(error instanceof Error ? error.message : 'Não foi possível encerrar a sessão.')
-      return
-    }
-    localStorage.removeItem('cidup-role')
-    localStorage.removeItem('cidup-user-id')
-    localStorage.removeItem('cidup-complaints')
-    localStorage.removeItem('cidup-profile')
-    sessionStorage.removeItem('cidup-complaint-draft')
-    sessionStorage.removeItem('cidup-complaint-confirmation')
-    sessionStorage.removeItem('cidup-active-draft-id')
-    navigate('/login', { replace: true })
-  }
+  // Antonio - Atividade 9: removida a função handleLogout (POST /api/auth/logout + limpeza de dados locais), sem uso após tirar "Sair" do menu lateral; o logout continua no botão "Sair" de Meu perfil (ProfilePage.tsx).
 
   // Solicita um rascunho à IA e apresenta falhas sem perder o controle de carregamento.
   async function generateDraft() {
@@ -269,28 +252,7 @@ function DashboardPage() {
               <b>›</b>
             </Link>
 
-            <a href="#ajuda">
-              <span>?</span>
-              <div>
-                <strong>Central de ajuda</strong>
-              </div>
-              <b>›</b>
-            </a>
-
-            <a
-              href="#sair"
-              onClick={(event) => {
-                event.preventDefault()
-                void handleLogout()
-              }}
-            >
-              <span>↪</span>
-              <div>
-                <strong>Sair</strong>
-              </div>
-              <b>›</b>
-            </a>
-            {logoutError && <p className="form-message" role="alert">{logoutError}</p>}
+            {/* Antonio - Atividade 9: removidos os itens "Central de ajuda" (original: link para #ajuda, já coberto pelo card de suporte abaixo) e "Sair" (original: link #sair chamando handleLogout, já disponível em Meu perfil), além da mensagem logoutError. */}
           </div>
 
           <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">

@@ -2015,3 +2015,41 @@
     font-size: 13px;
   }
 }
+
+/* Antonio - Atividade 8: no desktop (acima de 980px) todos os itens do cabeçalho (logo, menu e botões da direita) ficam na mesma linha central vertical. Celular e tablet não mudam. */
+@media (min-width: 981px) {
+  /* Antonio - Atividade 8: centralização vertical explícita do cabeçalho (vale também para o grid acima de 1180px). */
+  .citizen-header {
+    align-items: center;
+  }
+
+  /* Antonio - Atividade 8: menu centralizado na linha do cabeçalho. */
+  .citizen-header .dashboard-nav {
+    align-items: center;
+    align-self: center;
+  }
+
+  /* Antonio - Atividade 8: padding simétrico nos links do menu (original: padding 40px 0 10px, que empurrava o texto ~15px para baixo); a borda superior transparente de 2px equilibra o sublinhado de 2px do item ativo, que continua aparecendo sem deslocar o texto. */
+  .citizen-header .dashboard-nav a {
+    padding: 10px 0;
+    border-top: 2px solid transparent;
+  }
+
+  /* Antonio - Atividade 8: remove o deslocamento do texto "Cidades melhores começam com você" em relação à logo (original: margin-top 4px). */
+  .citizen-brand-copy small {
+    margin-top: 0;
+  }
+}
+
+/* Antonio - Atividade 8: a partir de 1180px (inclui 1280, 1366, 1440 e 1920px) há espaço para o texto da marca em uma linha só, sem quebrar em duas e desnivelar a logo. */
+@media (min-width: 1180px) {
+  /* Antonio - Atividade 8: libera a largura do texto da marca (original: max-width 150px). */
+  .citizen-brand-copy {
+    max-width: none;
+  }
+
+  /* Antonio - Atividade 8: texto da marca em uma linha (original: overflow-wrap anywhere, sem white-space definido). */
+  .citizen-brand-copy small {
+    white-space: nowrap;
+  }
+}
