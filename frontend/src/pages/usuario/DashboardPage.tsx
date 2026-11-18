@@ -239,28 +239,6 @@ function DashboardPage() {
             </div>
           </section>
 
-          <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
-            <section className="dashboard-utility-card" id="ajuda" aria-labelledby="ajuda-title">
-              <p className="complaint-kicker">SUPORTE</p>
-              <h2 id="ajuda-title">Central de ajuda</h2>
-              <p>Encontre orientações rápidas para registrar e acompanhar uma denúncia.</p>
-              <div className="help-list">
-                <details>
-                  <summary>Como registrar uma denúncia?</summary>
-                  <p>Clique em “Registrar nova denúncia”, escolha o tipo do problema, descreva o ocorrido, informe o local e revise os dados antes de enviar.</p>
-                </details>
-                <details>
-                  <summary>Como acompanhar uma denúncia?</summary>
-                  <p>Acesse “Minhas denúncias” para consultar o protocolo, o status atual e as observações registradas pelo órgão responsável.</p>
-                </details>
-                <details>
-                  <summary>Posso anexar uma foto?</summary>
-                  <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
-                </details>
-              </div>
-            </section>
-          </section>
-
         </div>
 
         <aside className="dashboard-sidebar">
@@ -314,6 +292,28 @@ function DashboardPage() {
             </a>
             {logoutError && <p className="form-message" role="alert">{logoutError}</p>}
           </div>
+
+          <section className="dashboard-utility-grid" aria-label="Ajuda e configurações">
+            <section className="dashboard-utility-card" id="ajuda" aria-labelledby="ajuda-title">
+              <p className="complaint-kicker">SUPORTE</p>
+              <h2 id="ajuda-title">Central de ajuda</h2>
+              <p>Encontre orientações rápidas para registrar e acompanhar uma denúncia.</p>
+              <div className="help-list">
+                <details>
+                  <summary>Como registrar uma denúncia?</summary>
+                  <p>Clique em “Registrar nova denúncia”, escolha o tipo do problema, descreva o ocorrido, informe o local e revise os dados antes de enviar.</p>
+                </details>
+                <details>
+                  <summary>Como acompanhar uma denúncia?</summary>
+                  <p>Acesse “Minhas denúncias” para consultar o protocolo, o status atual e as observações registradas pelo órgão responsável.</p>
+                </details>
+                <details>
+                  <summary>Posso anexar uma foto?</summary>
+                  <p>Sim. São aceitos arquivos PNG, JPG ou WEBP de até 2 MB. A foto é opcional e ajuda o órgão a entender o problema.</p>
+                </details>
+              </div>
+            </section>
+          </section>
 
         </aside>
       </section>
