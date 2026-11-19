@@ -27,6 +27,27 @@ test('salva os componentes do endereço da IA uma única vez', async () => {
     'Avenida Solon de Lucena, 55, Centro, próximo à praça')
 })
 
+test('usa a categoria como título quando o cidadão não usa a IA', async () => {
+  const response = await callApi('/api/complaints', {
+    method: 'POST',
+    headers: { Cookie: await cookieFor(1) },
+    body: JSON.stringify({
+      title: '',
+      type: 'Buraco ou problema na via',
+      categories: ['Buraco ou problema na via'],
+      description: 'Existe um buraco grande na rua há vários dias.',
+      address: 'PB-386',
+      number: '329',
+      neighborhood: 'Centro',
+      latitude: -7.30774,
+      longitude: -38.15414,
+    }),
+  })
+  const body = await response.json() as RecordValue
+  assert.equal(response.status, 201)
+  assert.equal(record(body.complaint).title, 'Buraco ou problema na via')
+})
+
 test('encaminha denúncias automaticamente para o órgão compatível com a categoria', async () => {
   const routingCases = [
     ['Buraco ou problema na via', 1, 'Secretaria de Infraestrutura'],

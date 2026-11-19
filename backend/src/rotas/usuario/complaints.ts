@@ -240,7 +240,10 @@ export function registerComplaintRoutes({ app, database, authenticate }: RouteCo
     // Rascunhos antigos ou respostas da IA podem manter um `type` diferente
     // da categoria selecionada. A primeira categoria é a fonte canônica.
     const tipoValue = categories[0] ?? tipoInput
-    const tituloValue = body.titulo ?? body.title ?? tipoValue
+    const tituloInput = body.titulo ?? body.title
+    const tituloValue = typeof tituloInput === 'string' && tituloInput.trim()
+      ? tituloInput.trim()
+      : tipoValue
 
     // 2) Valida tipo, título, descrição, categorias (lista suportada) e coordenadas de GPS.
     if (!id_usuario) {
