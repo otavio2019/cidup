@@ -1041,6 +1041,8 @@
 .confirmation-page {
   display: block;
   padding: 0 0 50px;
+  /* Antonio - Atividade 12 (correção): anula o alinhamento centralizado herdado de App.css (original: place-items: center em .confirmation-page). Mesmo com display: block, o justify-items: center continuava valendo e o Chrome atual o aplica também a blocos, encolhendo o cabeçalho ao tamanho da logo + ☰ e centralizando-o (o que jogava o painel do ☰ para fora da tela). O card segue centralizado pelo margin auto. */
+  place-items: normal;
 }
 
 /* Antonio - Atividade 12: o espaço lateral de 20px de cada lado passa do <main> para o card, que fica igual (original: width min(850px, 100%)). */
