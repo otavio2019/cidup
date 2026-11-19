@@ -2,6 +2,8 @@ import { useEffect, useMemo } from 'react'
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import L, { type LatLngLiteral } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+// Antonio - Atividade 13: mesma correção do Mapa público para o mapa carregar inteiro quando o container muda de tamanho.
+import MapResizeFix from './MapResizeFix'
 
 type InteractiveLocationMapProps = {
   coordinates: LatLngLiteral | null
@@ -49,6 +51,8 @@ function InteractiveLocationMap({ coordinates, onPositionChange, onRequestLocati
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {/* Antonio - Atividade 13: reajusta o tamanho do mapa após montar e a cada mudança do container, sem mudar centro, zoom nem marcador. */}
+        <MapResizeFix />
         <MapCenterUpdater coordinates={center} />
         <MapClickHandler onPositionChange={onPositionChange} />
         {coordinates && (

@@ -387,15 +387,7 @@
   line-height: 1.45;
 }
 
-.public-complaints-map-count {
-  flex: 0 0 auto;
-  padding: 7px 10px;
-  border-radius: 999px;
-  color: var(--citizen-blue);
-  background: #eef6fc;
-  font-size: 12px;
-  font-weight: 750;
-}
+/* Antonio - Atividade 13: removida a regra .public-complaints-map-count do selo "X no mapa" (original: pílula azul, padding 7px 10px, fundo #eef6fc, fonte 12px), sem uso após mover o total para baixo da legenda. */
 
 .public-complaints-map {
   height: 360px;
@@ -429,6 +421,19 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+
+/* Antonio - Atividade 13: observação com o total de denúncias em aberto, abaixo da legenda; discreta como a legenda (cor --citizen-muted), com "Observação:" em destaque. */
+.public-complaints-map-note {
+  margin: 10px 0 0;
+  color: var(--citizen-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.public-complaints-map-note strong {
+  color: var(--citizen-ink);
+  font-weight: 700;
 }
 
 .dashboard-drafts-shortcut .secondary-action {
@@ -1032,13 +1037,15 @@
 }
 
 /* Resumo do protocolo após o envio da denúncia. */
+/* Antonio - Atividade 12: sem padding lateral no <main>, para o cabeçalho ocupar a largura total como nas outras telas do cidadão e o painel do ☰ abrir inteiro (original: padding 0 20px 50px). */
 .confirmation-page {
   display: block;
-  padding: 0 20px 50px;
+  padding: 0 0 50px;
 }
 
+/* Antonio - Atividade 12: o espaço lateral de 20px de cada lado passa do <main> para o card, que fica igual (original: width min(850px, 100%)). */
 .confirmation-card {
-  width: min(850px, 100%);
+  width: min(850px, calc(100% - 40px));
   margin: 28px auto 0;
   padding: 24px 32px;
   border: 0;
@@ -1670,11 +1677,14 @@
     width: 100%;
   }
 
+  /* Antonio - Atividade 12: sem padding lateral no <main> no celular, para o cabeçalho ocupar a largura total (original: padding 0 14px 100px). */
   .confirmation-page {
-    padding: 0 14px 100px;
+    padding: 0 0 100px;
   }
 
+  /* Antonio - Atividade 12: o espaço lateral de 14px de cada lado passa para o card (original: sem width, herdando min(850px, 100%)). */
   .confirmation-card {
+    width: calc(100% - 28px);
     margin-top: 18px;
     padding: 20px 16px;
   }

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import { apiRequest } from '../../services/api'
 import 'leaflet/dist/leaflet.css'
+// Antonio - Atividade 13: corrige o mapa que carregava só em parte (área cinza) quando o container muda de tamanho.
+import MapResizeFix from './MapResizeFix'
 
 type DenunciaPublica = {
   id: number
@@ -32,13 +34,19 @@ const coresStatus: Record<string, string> = {
 export default function PublicComplaintsMap() {
   const [denuncias, setDenuncias] = useState<DenunciaPublica[]>([])
   const [erro, setErro] = useState('')
+  // Antonio - Atividade 13: só mostra a observação com o total depois que a lista carrega, para não exibir "0" durante o carregamento.
+  const [carregado, setCarregado] = useState(false)
   const centro: [number, number] = [-7.23056, -35.88111]
 
   useEffect(() => {
     let ativo = true
     apiRequest<{ complaints: DenunciaPublica[] }>('/api/public/complaints')
       .then((data) => {
-        if (ativo) setDenuncias(data.complaints)
+        // Antonio - Atividade 13: marca o carregamento como concluído (original: só setDenuncias).
+        if (ativo) {
+          setDenuncias(data.complaints)
+          setCarregado(true)
+        }
       })
       .catch(() => {
         if (ativo) setErro('Não foi possível carregar as denúncias no mapa.')
@@ -54,7 +62,7 @@ export default function PublicComplaintsMap() {
           <h2 id="mapa-denuncias-title">Denúncias em aberto</h2>
           <p>Veja ocorrências públicas até a etapa de atendimento. Os pontos são aproximados e não exibem dados pessoais.</p>
         </div>
-        <span className="public-complaints-map-count">{denuncias.length} no mapa</span>
+        {/* Antonio - Atividade 13: removido o selo ao lado do título (original: <span className="public-complaints-map-count">{denuncias.length} no mapa</span>); o total agora aparece como observação abaixo da legenda. */}
       </div>
       {erro && <p className="form-message" role="alert">{erro}</p>}
       <div className="public-complaints-map" aria-label="Mapa público das denúncias em aberto">
@@ -63,6 +71,8 @@ export default function PublicComplaintsMap() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          {/* Antonio - Atividade 13: reajusta o tamanho do mapa após montar e a cada mudança do container. */}
+          <MapResizeFix />
           {denuncias.map((denuncia) => (
             <CircleMarker
               key={denuncia.id}
@@ -85,6 +95,12 @@ export default function PublicComplaintsMap() {
           <span key={status}><i style={{ backgroundColor: coresStatus[status] }} />{rotulo}</span>
         ))}
       </div>
+      {/* Antonio - Atividade 13: total de denúncias em aberto como observação abaixo da legenda, no singular quando for 1. */}
+      {carregado && !erro && (
+        <p className="public-complaints-map-note">
+          <strong>Observação:</strong> {denuncias.length} {denuncias.length === 1 ? 'denúncia' : 'denúncias'} em aberto
+        </p>
+      )}
     </section>
   )
 }

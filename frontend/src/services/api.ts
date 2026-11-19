@@ -10,13 +10,17 @@ if (import.meta.env.PROD && API_URL && new URL(API_URL).protocol !== 'https:') {
 export class ApiError extends Error {
   status: number
   retryAfterSeconds: number | null
+  // Antonio - Atividade 11: campos validados pelo servidor (ex.: { categories: true, description: false }), quando a resposta de erro traz "fields". Opcional: quem não usa continua igual.
+  fields: Record<string, boolean> | null
 
   // Guarda a mensagem HTTP, o status e o tempo de espera informado pelo servidor.
-  constructor(message: string, status: number, retryAfterSeconds: number | null) {
+  // Antonio - Atividade 11: parâmetro opcional fields (original: constructor(message, status, retryAfterSeconds)).
+  constructor(message: string, status: number, retryAfterSeconds: number | null, fields: Record<string, boolean> | null = null) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.retryAfterSeconds = retryAfterSeconds
+    this.fields = fields
   }
 }
 
@@ -53,10 +57,16 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
     ? {} as T & { error?: string }
     : await response.json().catch(() => ({})) as T & { error?: string }
   if (!response.ok) {
+    // Antonio - Atividade 11: repassa o objeto "fields" do erro, se vier no formato { campo: boolean } (original: era descartado).
+    const rawFields = (data as { fields?: unknown }).fields
+    const fields = rawFields && typeof rawFields === 'object' && !Array.isArray(rawFields)
+      ? Object.fromEntries(Object.entries(rawFields).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'))
+      : null
     throw new ApiError(
       data.error ?? 'Não foi possível concluir a operação.',
       response.status,
       response.status === 429 ? readRetryAfter(response.headers.get('Retry-After')) : null,
+      fields,
     )
   }
   return data

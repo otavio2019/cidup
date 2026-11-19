@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { apiRequest } from '../../services/api'
+// Antonio - Atividade 11: ApiError para ler os campos reprovados pelo servidor (original: import { apiRequest }).
+import { ApiError, apiRequest } from '../../services/api'
+// Antonio - Atividade 11: mesmas regras e mensagens da 1ª etapa, reaproveitadas na conferência final.
+import { validateComplaintForm } from '../../features/complaints/complaintValidation'
 import BouncingText from '../../components/BouncingText'
 import CitizenMobileNav from '../../components/usuario/CitizenMobileNav'
 import CitizenHeader from '../../components/usuario/CitizenHeader'
@@ -58,6 +61,40 @@ function findResponsibleOrganizations(types: string[], organizations: Organizati
     .filter((name): name is string => Boolean(name)))]
 }
 
+// Antonio - Atividade 11: confere o rascunho antes do envio e devolve a primeira mensagem dizendo QUAL campo corrigir (ou '' se estiver tudo certo). Usa validateComplaintForm (categorias, descrição, endereço, número, referência, bairro) e acrescenta as coordenadas.
+function findDraftProblem(draft: ComplaintDraft) {
+  const errors = validateComplaintForm({
+    title: draft.title ?? '',
+    type: draft.type ?? '',
+    categories: draft.categories?.length ? draft.categories.filter(Boolean) : (draft.type ? [draft.type] : []),
+    description: draft.description ?? '',
+    address: draft.address ?? '',
+    number: draft.number ?? '',
+    neighborhood: draft.neighborhood ?? '',
+    complement: draft.complement ?? '',
+    priority: draft.priority ?? '',
+  })
+  const firstError = errors.type ?? errors.description ?? errors.address ?? errors.number ?? errors.complement ?? errors.neighborhood
+  if (firstError) return firstError
+  const latitude = Number(draft.latitude)
+  const longitude = Number(draft.longitude)
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    return 'Confirme a localização no mapa da etapa anterior.'
+  }
+  return ''
+}
+
+// Antonio - Atividade 11: traduz o objeto "fields" do erro 400 de POST /api/complaints em mensagens por campo; sem campos reprovados conhecidos, mantém a mensagem do servidor.
+function describeServerFields(error: ApiError) {
+  if (!error.fields) return error.message
+  const messages = [
+    error.fields.categories === false && 'Selecione pelo menos uma categoria.',
+    error.fields.description === false && 'A descrição precisa ter pelo menos 20 caracteres.',
+    (error.fields.latitude === false || error.fields.longitude === false) && 'A localização no mapa está inválida. Volte à etapa de localização e confirme o ponto.',
+  ].filter((message): message is string => Boolean(message))
+  return messages.length ? messages.join(' ') : error.message
+}
+
 // Recupera o rascunho da navegação ou do armazenamento temporário da sessão.
 function readDraft(state: ComplaintDraft | null): ComplaintDraft | null {
   if (state) return state
@@ -107,6 +144,14 @@ function ComplaintReviewPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+
+    // Antonio - Atividade 11: não envia dados que o servidor recusaria; mostra qual campo corrigir (original: enviava direto e exibia a mensagem genérica do servidor).
+    const draftProblem = findDraftProblem(draft!)
+    if (draftProblem) {
+      setError(`${draftProblem} Use “Editar denúncia” para corrigir.`)
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -124,6 +169,8 @@ function ComplaintReviewPage() {
         method: 'POST',
         body: JSON.stringify({
           ...draft,
+          // Antonio - Atividade 11: título vazio passa a usar a 1ª categoria (original: enviava title "" do formulário quando a IA não era usada, e o backend recusava com "Confira as categorias, a descrição e a localização da denúncia.", pois body.title ?? tipo não troca string vazia).
+          title: draft.title?.trim() || categories[0] || draft.type,
           type: categories[0] ?? draft.type,
           categories,
           latitude: Number(draft.latitude),
@@ -154,7 +201,10 @@ function ComplaintReviewPage() {
       sessionStorage.removeItem('cidup-complaint-draft')
       navigate('/denuncia/confirmacao', { state: registeredComplaint })
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Não foi possível enviar a denúncia.')
+      // Antonio - Atividade 11: em erro 400 com "fields", mostra qual campo o servidor reprovou (original: só submitError.message).
+      setError(submitError instanceof ApiError && submitError.status === 400
+        ? describeServerFields(submitError)
+        : submitError instanceof Error ? submitError.message : 'Não foi possível enviar a denúncia.')
     } finally {
       setIsSubmitting(false)
     }
